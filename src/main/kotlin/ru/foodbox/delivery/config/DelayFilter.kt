@@ -14,7 +14,6 @@ class DelayFilter : OncePerRequestFilter() {
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        Thread.sleep(2000) // Задержка 2 секунды
         filterChain.doFilter(request, response)
     }
 }
