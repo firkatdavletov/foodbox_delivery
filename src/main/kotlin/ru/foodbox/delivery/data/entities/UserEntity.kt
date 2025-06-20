@@ -9,6 +9,7 @@ data class UserEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
+    @Column(unique = true)
     val phone: String,
 
     val name: String = "",

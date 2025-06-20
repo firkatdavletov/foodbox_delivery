@@ -12,6 +12,10 @@ interface ConfirmationCodeRepository: JpaRepository<ConfirmationCodeEntity, Long
         time: LocalDateTime
     ): ConfirmationCodeEntity?
 
+    fun findByPhoneAndUsedIsFalseAndExpiresAtAfter(
+        phone: String,
+        time: LocalDateTime
+    ): ConfirmationCodeEntity?
     @Transactional
     fun deleteAllByExpiresAtBefore(time: LocalDateTime): Long
 }
