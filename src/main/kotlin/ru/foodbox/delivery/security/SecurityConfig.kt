@@ -38,7 +38,8 @@ class SecurityConfig(
                         "/files/**",
                         "/map/**",
                         "/orders/**",
-                        "/departments/**"
+                        "/departments/**",
+                        "/payment/**"
                     )
                     .permitAll()
                     .dispatcherTypeMatchers(

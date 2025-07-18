@@ -1,12 +1,13 @@
 package ru.foodbox.delivery.data.sms_client
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
 @Component
-class SmsClient {
-
-    private val apiId = "88BA6630-02B5-7D49-84E5-F614730703B3"
+class SmsClient(
+    @Value("sms.ru.api.key") private val api: String
+) {
     private val baseUrl = "https://sms.ru"
 
     private val client = WebClient.builder()
@@ -20,7 +21,7 @@ class SmsClient {
             .uri { uriBuilder ->
                 uriBuilder
                     .path(uri)
-                    .queryParam("api_id", apiId)
+                    .queryParam("api_id", api)
                     .queryParam("to", phone)
                     .queryParam("msg", code)
                     .queryParam("json", 1)

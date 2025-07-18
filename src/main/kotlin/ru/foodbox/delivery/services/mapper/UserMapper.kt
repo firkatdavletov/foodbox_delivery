@@ -9,5 +9,6 @@ class UserMapper {
     fun toDto(entity: UserEntity) = UserDto(
         phone = entity.phone,
         name = entity.name,
+        email = entity.email,
     )
 }

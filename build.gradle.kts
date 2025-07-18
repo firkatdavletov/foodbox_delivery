@@ -33,6 +33,12 @@ dependencies {
 
 	implementation("org.flywaydb:flyway-core")
 
+	implementation("io.netty:netty-resolver-dns-native-macos:4.1.107.Final") {
+		artifact {
+			classifier = "osx-aarch_64"
+		}
+	}
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

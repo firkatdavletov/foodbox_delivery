@@ -19,22 +19,23 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val userRepository: UserRepository,
     private val orderMapper: OrderMapper,
-    private val orderItemMapper: OrderItemMapper
+    private val orderItemMapper: OrderItemMapper,
 ) {
     fun createOrder(userId: Long): OrderDto {
         val userEntity = userRepository.findById(userId)
             .orElseThrow { ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден") }
+
+        val pendingOrder = orderRepository.findFirstByUserAndStatus(userEntity, OrderStatus.PENDING)
+
         val cartEntity = cartRepository.findByUserId(userId)
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Корзина не найдена")
 
         val orderItems = mutableListOf<OrderItemEntity>()
         var subtotal = 0f
 
-        val order = OrderEntity(
-            userEntity = userEntity,
-            cartEntity = cartEntity,
-            status = OrderStatus.CREATED,
-            deliveryPrice = cartEntity.deliveryPrice,
+        val order = pendingOrder ?: OrderEntity(
+            user = userEntity,
+            status = OrderStatus.PENDING,
         )
 
         cartEntity.items.forEach { cartItem ->
@@ -52,11 +53,13 @@ class OrderService(
 
         order.copy(
             items = orderItems,
-            totalAmount = subtotal + cartEntity.deliveryPrice
+            totalAmount = subtotal + cartEntity.deliveryPrice,
+            deliveryPrice = cartEntity.deliveryPrice,
         )
 
         val savedOrderEntity = orderRepository.save(order)
-        val savedOrderItems = orderItemMapper.toDto(savedOrderEntity.items)
-        return orderMapper.toDto(savedOrderEntity, savedOrderItems)
+        val items = orderItemMapper.toDto(savedOrderEntity.items)
+
+        return orderMapper.toDto(savedOrderEntity, items)
     }
 }

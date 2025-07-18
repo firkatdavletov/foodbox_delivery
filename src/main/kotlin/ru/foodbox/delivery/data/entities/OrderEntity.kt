@@ -11,7 +11,6 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
@@ -24,11 +23,7 @@ data class OrderEntity(
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    val userEntity: UserEntity,
-
-    @OneToOne
-    @JoinColumn(name = "cart_id", nullable = false)
-    val cartEntity: CartEntity,
+    val user: UserEntity,
 
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: List<OrderItemEntity> = listOf(),

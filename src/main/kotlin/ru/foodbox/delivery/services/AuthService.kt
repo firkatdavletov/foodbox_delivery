@@ -58,6 +58,7 @@ class AuthService(
                 }
                 val newUser = userRepository.save(UserEntity(
                     phone = phone,
+                    email = "dr.firkat@ya.ru"
                 ))
                 val newCart = CartEntity(user = newUser, department = defaultDepartment)
                 cartRepository.save(newCart)

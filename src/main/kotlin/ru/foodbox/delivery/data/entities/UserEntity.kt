@@ -12,6 +12,8 @@ data class UserEntity(
     @Column(unique = true)
     val phone: String,
 
+    val email: String,
+
     val name: String = "",
 
     @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL])
