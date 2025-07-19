@@ -10,6 +10,7 @@ data class CartEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
+    @Transient
     @OneToOne()
     @JoinColumn(name = "user_id")
     val user: UserEntity,
