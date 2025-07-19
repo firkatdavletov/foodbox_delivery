@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.data.cloudpayments_client.CloudPaymentsClient
+import ru.foodbox.delivery.data.cloudpayments_client.model.BankInfo
 import ru.foodbox.delivery.data.cloudpayments_client.model.CryptogramPaymentRequestBody
 import ru.foodbox.delivery.data.cloudpayments_client.model.SbpPaymentRequestBody
 import ru.foodbox.delivery.data.repository.PaymentTypeRepository
@@ -58,17 +59,6 @@ class PaymentService(
                         model = PaymentModelDto(
                             qrUrl = response.model?.qrUrl,
                             orderId = response.model?.merchantOrderId?.toLongOrNull(),
-                            transactionId = response.model?.transactionId,
-                            banks = response.model?.banks?.dictionary?.map {
-                                BankInfoDto(
-                                    bankName = it.bankName,
-                                    logoUrl = it.logoUrl,
-                                    schema = it.schema,
-                                    packageName = it.packageName,
-                                    webClientUrl = it.webClientUrl,
-                                    isWebClientActive = it.isWebClientActive
-                                )
-                            }
                         )
                     )
                 } else {
@@ -101,7 +91,6 @@ class PaymentService(
                         paymentType = paymentType,
                         model = PaymentModelDto(
                             orderId = response.model?.invoiceId?.toLongOrNull(),
-                            transactionId = response.model?.transactionId,
                         )
                     )
                 } else {
@@ -118,7 +107,6 @@ class PaymentService(
                     success = true,
                     model = PaymentModelDto(
                         orderId = orderId,
-                        transactionId = null,
                     ),
                     message = null,
                     paymentType = paymentType

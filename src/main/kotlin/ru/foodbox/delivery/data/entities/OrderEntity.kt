@@ -26,18 +26,18 @@ data class OrderEntity(
     val user: UserEntity,
 
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val items: List<OrderItemEntity> = listOf(),
+    val items: MutableList<OrderItemEntity> = mutableListOf(),
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    val status: OrderStatus = OrderStatus.PENDING,
+    var status: OrderStatus = OrderStatus.PENDING,
 
     @Column(name = "paid_at")
-    val paidAt: LocalDateTime? = null,
+    var paidAt: LocalDateTime? = null,
 
     @Column(name = "delivery_price", nullable = false)
-    val deliveryPrice: Double = 0.0,
+    var deliveryPrice: Double = 0.0,
 
     @Column(name = "total_amount", nullable = false)
-    val totalAmount: Double = 0.0
+    var totalAmount: Double = 0.0
 )

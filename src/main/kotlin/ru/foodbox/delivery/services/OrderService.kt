@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.services
 
+import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -7,6 +8,7 @@ import ru.foodbox.delivery.data.entities.OrderEntity
 import ru.foodbox.delivery.data.entities.OrderItemEntity
 import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.data.repository.CartRepository
+import ru.foodbox.delivery.data.repository.OrderItemRepository
 import ru.foodbox.delivery.data.repository.OrderRepository
 import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.services.dto.OrderDto
@@ -18,6 +20,7 @@ import kotlin.jvm.optionals.getOrNull
 class OrderService(
     private val cartRepository: CartRepository,
     private val orderRepository: OrderRepository,
+    private val orderItemRepository: OrderItemRepository,
     private val userRepository: UserRepository,
     private val orderMapper: OrderMapper,
     private val orderItemMapper: OrderItemMapper,
@@ -27,14 +30,15 @@ class OrderService(
         return orderMapper.toDto(orderEntity, orderItemMapper.toDto(orderEntity.items))
     }
 
+    @Transactional
     fun updateOrderStatus(orderId: Long, status: OrderStatus): OrderDto? {
-        val updatedRowsCount = orderRepository.updateOrderStatus(orderId, status.name)
-        return if (updatedRowsCount == 0) {
-            null
-        } else {
-            val order = orderRepository.findById(orderId).getOrNull() ?: return null
-            orderMapper.toDto(order, orderItemMapper.toDto(order.items))
-        }
+        val order = orderRepository.findById(orderId).getOrNull()
+
+        if (order == null) return null
+
+        order.status = status
+        val updatedOrder = orderRepository.save(order)
+        return orderMapper.toDto(updatedOrder, orderItemMapper.toDto(updatedOrder.items))
     }
 
     fun createOrder(userId: Long): OrderDto {
@@ -46,7 +50,7 @@ class OrderService(
         val cartEntity = cartRepository.findByUserId(userId)
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Корзина не найдена")
 
-        val orderItems = mutableListOf<OrderItemEntity>()
+        val newItems = mutableListOf<OrderItemEntity>()
         var subtotal = 0f
 
         val order = pendingOrder ?: OrderEntity(
@@ -58,24 +62,23 @@ class OrderService(
             val itemTotal = cartItem.quantity * cartItem.product.price.toFloat()
             subtotal += itemTotal
             val orderItem = OrderItemEntity(
-                order = order,
+                order = order, // OK — ссылается на будущий order
                 productId = cartItem.product.id,
                 name = cartItem.product.title,
                 quantity = cartItem.quantity,
                 price = cartItem.product.price.toFloat()
             )
-            orderItems.add(orderItem)
+            newItems.add(orderItem)
         }
 
-        order.copy(
-            items = orderItems,
-            totalAmount = subtotal + cartEntity.deliveryPrice,
-            deliveryPrice = cartEntity.deliveryPrice,
-        )
+        order.items.clear() // Hibernate удалит старые как "orphan"
+        order.items.addAll(newItems)
+
+        order.deliveryPrice = cartEntity.deliveryPrice
+        order.totalAmount = subtotal + cartEntity.deliveryPrice
 
         val savedOrderEntity = orderRepository.save(order)
-        val items = orderItemMapper.toDto(savedOrderEntity.items)
 
-        return orderMapper.toDto(savedOrderEntity, items)
+        return orderMapper.toDto(savedOrderEntity, orderItemMapper.toDto(savedOrderEntity.items))
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.payment.body.GetPaymentTypesResponse
@@ -25,6 +26,7 @@ class PaymentController(
     private val paymentService: PaymentService,
     private val orderService: OrderService,
 ) {
+
     @GetMapping("/paymentTypes")
     fun getPaymentTypes(): ResponseEntity<GetPaymentTypesResponse> {
         val authentication = SecurityContextHolder.getContext().authentication
@@ -58,9 +60,7 @@ class PaymentController(
 
         val order = orderService.createOrder(userId)
 
-        val orderTotalAmount = order.totalAmount + order.deliveryPrice
-
-        if (body.amount != orderTotalAmount) return ResponseEntity.ok(
+        if (body.amount != order.totalAmount) return ResponseEntity.ok(
             PaymentDto(
                 success = false,
                 message = "Сумма отличается",
