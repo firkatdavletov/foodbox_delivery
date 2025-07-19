@@ -24,7 +24,4 @@ data class DepartmentEntity(
 
     @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
     val workingHours: List<WorkingHourEntity> = emptyList(),
-
-    @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
-    val paymentTypes: List<PaymentTypeEntity>
 )

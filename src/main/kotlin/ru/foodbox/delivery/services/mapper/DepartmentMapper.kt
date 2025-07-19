@@ -15,7 +15,6 @@ class DepartmentMapper {
             id = dto.id,
             address = addressEntity,
             workingHours = workingHours,
-            paymentTypes = emptyList()
         )
 
     fun toDto(

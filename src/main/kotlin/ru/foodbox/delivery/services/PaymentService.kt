@@ -5,9 +5,7 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.data.cloudpayments_client.CloudPaymentsClient
-import ru.foodbox.delivery.data.cloudpayments_client.model.BankInfo
 import ru.foodbox.delivery.data.cloudpayments_client.model.CryptogramPaymentRequestBody
-import ru.foodbox.delivery.data.cloudpayments_client.model.SbpPaymentResponseBody
 import ru.foodbox.delivery.data.cloudpayments_client.model.SbpPaymentRequestBody
 import ru.foodbox.delivery.data.repository.PaymentTypeRepository
 import ru.foodbox.delivery.data.repository.UserRepository
@@ -16,6 +14,7 @@ import ru.foodbox.delivery.services.dto.PaymentDto
 import ru.foodbox.delivery.services.dto.PaymentModelDto
 import ru.foodbox.delivery.services.dto.PaymentTypeDto
 import ru.foodbox.delivery.services.mapper.PaymentTypeMapper
+import java.util.UUID
 
 @Service
 class PaymentService(
@@ -41,12 +40,13 @@ class PaymentService(
             "sbp" -> {
                 val request = SbpPaymentRequestBody(
                     publicId = publicId,
-                    amount = 1000.0,//amount,
+                    amount = amount,
                     scheme = "charge",
-                    accountId = user.phone,
+//                    accountId = user.phone,
                     email = user.email,
                     invoiceId = orderId.toString(),
                     ipAddress = ipAddress,
+                    saveCard = false,
                     isTest = false,
                 )
                 val response = paymentsClient.payBySbp(request)
@@ -54,8 +54,11 @@ class PaymentService(
                     PaymentDto(
                         success = true,
                         message = response.message,
+                        paymentType = paymentType,
                         model = PaymentModelDto(
                             qrUrl = response.model?.qrUrl,
+                            orderId = response.model?.merchantOrderId?.toLongOrNull(),
+                            transactionId = response.model?.transactionId,
                             banks = response.model?.banks?.dictionary?.map {
                                 BankInfoDto(
                                     bankName = it.bankName,
@@ -71,12 +74,13 @@ class PaymentService(
                 } else {
                     PaymentDto(
                         success = false,
+                        paymentType = paymentType,
                         message = response.message,
                     )
                 }
             }
 
-            "cryptogram" -> {
+            "card" -> {
                 val request = CryptogramPaymentRequestBody(
                     amount = amount,
                     ipAddress = ipAddress,
@@ -94,22 +98,39 @@ class PaymentService(
                     PaymentDto(
                         success = true,
                         message = response.message,
-                        model = PaymentModelDto()
+                        paymentType = paymentType,
+                        model = PaymentModelDto(
+                            orderId = response.model?.invoiceId?.toLongOrNull(),
+                            transactionId = response.model?.transactionId,
+                        )
                     )
                 } else {
                     PaymentDto(
                         success = false,
-                        message = response.message
+                        message = response.message,
+                        paymentType = paymentType,
                     )
                 }
+            }
+
+            "cash" -> {
+                return PaymentDto(
+                    success = true,
+                    model = PaymentModelDto(
+                        orderId = orderId,
+                        transactionId = null,
+                    ),
+                    message = null,
+                    paymentType = paymentType
+                )
             }
 
             else -> throw ResponseStatusException(HttpStatusCode.valueOf(403), "Unknown payment type")
         }
     }
 
-    fun getPaymentTypesByDepartmentId(id: Long): List<PaymentTypeDto> {
-        return paymentTypeRepository.getPaymentTypesByDepartmentId(id)
+    fun getPaymentTypesByDepartmentId(): List<PaymentTypeDto> {
+        return paymentTypeRepository.getPaymentTypes()
             .map { paymentTypeMapper.toDto(it) }
     }
 }

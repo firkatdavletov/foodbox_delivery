@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.payment.body.GetPaymentTypesResponse
 import ru.foodbox.delivery.controllers.payment.body.PayOrderRequestBody
+import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.services.CartService
 import ru.foodbox.delivery.services.OrderService
 import ru.foodbox.delivery.services.PaymentService
@@ -22,7 +23,6 @@ import ru.foodbox.delivery.services.dto.PaymentDto
 @RequestMapping("/payment")
 class PaymentController(
     private val paymentService: PaymentService,
-    private val cartService: CartService,
     private val orderService: OrderService,
 ) {
     @GetMapping("/paymentTypes")
@@ -32,14 +32,11 @@ class PaymentController(
             throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
         }
 
-        val userId = (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
+        (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
 
-        val cart = cartService.getCart(userId)
-        val departmentId = cart.departmentId
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Department id is null")
 
-        val paymentTypes = paymentService.getPaymentTypesByDepartmentId(departmentId)
+        val paymentTypes = paymentService.getPaymentTypesByDepartmentId()
         val body = GetPaymentTypesResponse(paymentTypes)
         return ResponseEntity.ok(body)
     }
@@ -47,6 +44,7 @@ class PaymentController(
     @PostMapping("/payOrder")
     fun payOrder(
         @RequestBody body: PayOrderRequestBody,
+        request: HttpServletRequest
     ): ResponseEntity<PaymentDto> {
         val authentication = SecurityContextHolder.getContext().authentication
         if (authentication.authorities.contains(SimpleGrantedAuthority("ROLE_ANONYMOUS"))) {
@@ -56,19 +54,42 @@ class PaymentController(
         val userId = (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
 
-        val ipAddress = "192.168.24.67"//request.getHeader("X-Forwarded-For")
+        val ipAddress = request.getHeader("X-Forwarded-For")
 
         val order = orderService.createOrder(userId)
+
+        val orderTotalAmount = order.totalAmount + order.deliveryPrice
+
+        if (body.amount != orderTotalAmount) return ResponseEntity.ok(
+            PaymentDto(
+                success = false,
+                message = "Сумма отличается",
+                paymentType = body.paymentType
+            )
+        )
 
         val paymentResponse = paymentService.pay(
             paymentType = body.paymentType,
             token = body.token,
             cryptogram = body.cryptogram,
-            amount = order.totalAmount,
+            amount = body.amount,
             userId = userId,
             orderId = order.id,
-            ipAddress = ipAddress//if (ipAddress.isNullOrBlank() || ipAddress == "unknown") request.remoteAddr else ipAddress
+            ipAddress = if (ipAddress.isNullOrBlank() || ipAddress == "unknown") request.remoteAddr else ipAddress
         )
+
+        if (paymentResponse.success && paymentResponse.model != null) {
+            val orderId = paymentResponse.model.orderId ?: throw ResponseStatusException(
+                HttpStatusCode.valueOf(404),
+                "Order not found"
+            )
+            if (paymentResponse.paymentType == "cash") {
+                orderService.updateOrderStatus(orderId, OrderStatus.AWAITING_CASH_PAYMENT)
+            } else {
+                orderService.updateOrderStatus(orderId, OrderStatus.AWAITING_PAYMENT)
+            }
+        }
+
         return ResponseEntity.ok(paymentResponse)
     }
 }

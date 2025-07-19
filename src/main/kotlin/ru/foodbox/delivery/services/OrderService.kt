@@ -12,6 +12,7 @@ import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.services.dto.OrderDto
 import ru.foodbox.delivery.services.mapper.OrderItemMapper
 import ru.foodbox.delivery.services.mapper.OrderMapper
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class OrderService(
@@ -21,6 +22,21 @@ class OrderService(
     private val orderMapper: OrderMapper,
     private val orderItemMapper: OrderItemMapper,
 ) {
+    fun getOrder(id: Long): OrderDto? {
+        val orderEntity = orderRepository.findById(id).getOrNull() ?: return null
+        return orderMapper.toDto(orderEntity, orderItemMapper.toDto(orderEntity.items))
+    }
+
+    fun updateOrderStatus(orderId: Long, status: OrderStatus): OrderDto? {
+        val updatedRowsCount = orderRepository.updateOrderStatus(orderId, status.name)
+        return if (updatedRowsCount == 0) {
+            null
+        } else {
+            val order = orderRepository.findById(orderId).getOrNull() ?: return null
+            orderMapper.toDto(order, orderItemMapper.toDto(order.items))
+        }
+    }
+
     fun createOrder(userId: Long): OrderDto {
         val userEntity = userRepository.findById(userId)
             .orElseThrow { ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден") }

@@ -4,4 +4,5 @@ data class PaymentDto(
     val success: Boolean,
     val message:  String? = null,
     val model: PaymentModelDto? = null,
+    val paymentType: String,
 )
