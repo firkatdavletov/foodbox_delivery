@@ -10,11 +10,6 @@ data class CartEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
-    @Transient
-    @OneToOne()
-    @JoinColumn(name = "user_id")
-    val user: UserEntity,
-
     @OneToMany(mappedBy = "cart", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
     val items: List<CartItemEntity> = emptyList(),
 
@@ -35,4 +30,8 @@ data class CartEntity(
     @ManyToOne()
     @JoinColumn(name = "department")
     val department: DepartmentEntity? = null
-)
+) {
+    @OneToOne()
+    @JoinColumn(name = "user_id")
+    var user: UserEntity? = null
+}

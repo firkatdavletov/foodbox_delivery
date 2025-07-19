@@ -60,7 +60,8 @@ class AuthService(
                     phone = phone,
                     email = "dr.firkat@ya.ru"
                 ))
-                val newCart = CartEntity(user = newUser, department = defaultDepartment)
+                val newCart = CartEntity(department = defaultDepartment)
+                newCart.user = newUser
                 cartRepository.save(newCart)
                 createTokenPair(newUser.id)
             } else {

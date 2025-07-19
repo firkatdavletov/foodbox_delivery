@@ -108,12 +108,12 @@ class CartService(
     }
 
     fun getCart(userId: Long): CartDto {
-        val user = userRepository.findById(userId).getOrNull()
+        var user = userRepository.findById(userId).getOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
 
         val cart = cartRepository.findByUserId(user.id)
             ?: cartRepository.save(
-                CartEntity(user = user)
+                CartEntity().apply { this.user = user }
             )
         val addressDto = cart.deliveryAddress?.let {
             addressMapper.toDto(it)
