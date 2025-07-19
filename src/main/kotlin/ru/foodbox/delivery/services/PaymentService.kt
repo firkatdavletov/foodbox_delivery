@@ -59,6 +59,16 @@ class PaymentService(
                         model = PaymentModelDto(
                             qrUrl = response.model?.qrUrl,
                             orderId = response.model?.merchantOrderId?.toLongOrNull(),
+                            banks = response.model?.banks?.dictionary?.take(5)?.map {
+                                BankInfoDto(
+                                    bankName = it.bankName,
+                                    logoUrl = it.logoUrl,
+                                    schema = it.schema,
+                                    packageName = it.packageName,
+                                    webClientUrl = it.webClientUrl,
+                                    isWebClientActive = it.isWebClientActive
+                                )
+                            }
                         )
                     )
                 } else {
