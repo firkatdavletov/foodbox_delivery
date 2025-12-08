@@ -6,7 +6,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Component
 class SmsClient(
-    @field:Value("sms.ru.api.key") private val api: String
+    @param:Value("sms.ru.api.key") private val api: String
 ) {
     private val baseUrl = "https://sms.ru"
 
