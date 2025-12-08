@@ -4,15 +4,13 @@ import jakarta.persistence.*
 
 @Entity
 @Table(name = "payment_types")
-data class PaymentTypeEntity(
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+class PaymentTypeEntity(
 
     @Column(nullable = false)
     val key: String,
 
     @Column(nullable = false)
-    val title: String,
-)
+    var title: String,
+
+    var range: Int = 0
+) : BaseEntity<Long>()

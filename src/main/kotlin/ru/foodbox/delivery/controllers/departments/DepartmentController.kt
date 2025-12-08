@@ -15,6 +15,7 @@ class DepartmentController(
     @GetMapping
     fun getDepartments(): ResponseEntity<GetDepartmentsResponse> {
         val body = departmentService.getDepartments()
-        return ResponseEntity.ok(body)
+        val response = GetDepartmentsResponse(body)
+        return ResponseEntity.ok(response)
     }
 }

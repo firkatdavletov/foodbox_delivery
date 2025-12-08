@@ -9,7 +9,7 @@ import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.data.entities.UserEntity
 
 interface OrderRepository: JpaRepository<OrderEntity, Long> {
-    fun findFirstByUserAndStatus(userEntity: UserEntity, status: OrderStatus): OrderEntity?
+    fun findByUserAndStatusInOrderByCreatedDesc(userEntity: UserEntity, status: Set<OrderStatus>): List<OrderEntity>
 
     @Modifying
     @Query(

@@ -5,17 +5,15 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.data.cloudpayments_client.CloudPaymentsClient
-import ru.foodbox.delivery.data.cloudpayments_client.model.BankInfo
 import ru.foodbox.delivery.data.cloudpayments_client.model.CryptogramPaymentRequestBody
 import ru.foodbox.delivery.data.cloudpayments_client.model.SbpPaymentRequestBody
 import ru.foodbox.delivery.data.repository.PaymentTypeRepository
 import ru.foodbox.delivery.data.repository.UserRepository
-import ru.foodbox.delivery.services.dto.BankInfoDto
+import ru.foodbox.delivery.services.dto.BankDto
 import ru.foodbox.delivery.services.dto.PaymentDto
 import ru.foodbox.delivery.services.dto.PaymentModelDto
 import ru.foodbox.delivery.services.dto.PaymentTypeDto
 import ru.foodbox.delivery.services.mapper.PaymentTypeMapper
-import java.util.UUID
 
 @Service
 class PaymentService(
@@ -38,12 +36,12 @@ class PaymentService(
             .orElseThrow { ResponseStatusException(HttpStatusCode.valueOf(404), "unknown user") }
 
         return when (paymentType) {
-            "sbp" -> {
+            "sbp_bind" -> {
                 val request = SbpPaymentRequestBody(
                     publicId = publicId,
                     amount = amount,
                     scheme = "charge",
-//                    accountId = user.phone,
+                    accountId = user.phone,
                     email = user.email,
                     invoiceId = orderId.toString(),
                     ipAddress = ipAddress,
@@ -59,16 +57,38 @@ class PaymentService(
                         model = PaymentModelDto(
                             qrUrl = response.model?.qrUrl,
                             orderId = response.model?.merchantOrderId?.toLongOrNull(),
-                            banks = response.model?.banks?.dictionary?.take(5)?.map {
-                                BankInfoDto(
-                                    bankName = it.bankName,
-                                    logoUrl = it.logoUrl,
-                                    schema = it.schema,
-                                    packageName = it.packageName,
-                                    webClientUrl = it.webClientUrl,
-                                    isWebClientActive = it.isWebClientActive
-                                )
-                            }
+                            version = response.model?.banks?.version
+                        )
+                    )
+                } else {
+                    PaymentDto(
+                        success = false,
+                        paymentType = paymentType,
+                        message = response.message,
+                    )
+                }
+            }
+            "sbp" -> {
+                val request = SbpPaymentRequestBody(
+                    publicId = publicId,
+                    amount = amount,
+                    scheme = "charge",
+                    email = user.email,
+                    invoiceId = orderId.toString(),
+                    ipAddress = ipAddress,
+                    saveCard = false,
+                    isTest = false,
+                )
+                val response = paymentsClient.payBySbp(request)
+                if (response.success) {
+                    PaymentDto(
+                        success = true,
+                        message = response.message,
+                        paymentType = paymentType,
+                        model = PaymentModelDto(
+                            qrUrl = response.model?.qrUrl,
+                            orderId = response.model?.merchantOrderId?.toLongOrNull(),
+                            version = response.model?.banks?.version
                         )
                     )
                 } else {
@@ -128,7 +148,7 @@ class PaymentService(
     }
 
     fun getPaymentTypesByDepartmentId(): List<PaymentTypeDto> {
-        return paymentTypeRepository.getPaymentTypes()
+        return paymentTypeRepository.findByOrderByRange()
             .map { paymentTypeMapper.toDto(it) }
     }
 }

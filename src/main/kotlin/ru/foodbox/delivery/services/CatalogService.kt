@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.services
 
+import org.springframework.cglib.core.Local
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -13,6 +14,8 @@ import ru.foodbox.delivery.services.dto.CategoryDto
 import ru.foodbox.delivery.services.dto.ProductDto
 import ru.foodbox.delivery.services.mapper.CategoryMapper
 import ru.foodbox.delivery.services.mapper.ProductMapper
+import java.time.LocalDateTime
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class CatalogService(
@@ -42,5 +45,32 @@ class CatalogService(
     fun getAllProducts(): List<ProductDto> {
         val products = productRepository.findAll()
         return productMapper.toDto(products)
+    }
+
+    fun insertCategory(categoryDto: CategoryDto): CategoryDto {
+        val categoryEntity = CategoryEntity(
+            title = categoryDto.title,
+            imageUrl = categoryDto.imageUrl,
+            parentCategoryId = categoryDto.parentCategory,
+            products = mutableListOf()
+        )
+        val savedEntity = categoryRepository.save(categoryEntity)
+        return categoryMapper.toDto(savedEntity)
+    }
+
+    fun insertProduct(productDto: ProductDto): ProductDto {
+        val category = categoryRepository.findById(productDto.categoryId).getOrNull()
+            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404))
+        val newProduct = ProductEntity(
+            title = productDto.title,
+            description = productDto.description,
+            price = productDto.price,
+            imageUrl = productDto.imageUrl,
+            category = category
+        )
+        newProduct.created = LocalDateTime.now()
+        newProduct.modified = LocalDateTime.now()
+        val savedProduct = productRepository.save(newProduct)
+        return productMapper.toDto(savedProduct)
     }
 }

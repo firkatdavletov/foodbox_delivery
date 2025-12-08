@@ -1,27 +1,34 @@
 package ru.foodbox.delivery.data.entities
 
-import jakarta.persistence.CascadeType
-import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
-import jakarta.persistence.Table
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "departments")
-data class DepartmentEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+class DepartmentEntity(
+    var name: String,
 
-    @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
-    @JoinColumn(name = "address")
-    val address: AddressEntity,
+    @ManyToOne
+    var cityEntity: CityEntity,
+
+    var latitude: Double,
+
+    var longitude: Double,
+
+    @Column(name = "is_active")
+    var isActive: Boolean = true,
+
+    @Column(name = "can_deliver")
+    var canDeliver: Boolean = true,
 
     @OneToMany(mappedBy = "department", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
-    val workingHours: List<WorkingHourEntity> = emptyList(),
-)
+    val workingHours: MutableList<WorkingHourEntity> = mutableListOf(),
+) : BaseEntity<Long>() {
+    fun addWorkingHours(block: DepartmentEntity.() -> WorkingHourEntity) {
+        workingHours.add(block())
+    }
+
+    fun setWorkingHours(block: DepartmentEntity.() -> MutableSet<WorkingHourEntity>) {
+        workingHours.clear()
+        workingHours.addAll(block())
+    }
+}

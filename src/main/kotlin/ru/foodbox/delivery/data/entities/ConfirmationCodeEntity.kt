@@ -10,10 +10,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "confirmation_codes")
-data class ConfirmationCodeEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+class ConfirmationCodeEntity(
     @Column(nullable = false)
     val phone: String,
     @Column(nullable = false)
@@ -24,4 +21,4 @@ data class ConfirmationCodeEntity(
     val expiresAt: LocalDateTime,
     @Column(nullable = false)
     var used: Boolean = false,
-)
+) : BaseEntity<Long>()

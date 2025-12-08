@@ -3,9 +3,15 @@ package ru.foodbox.delivery.controllers.catalog
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryRequestBody
+import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryResponseBody
+import ru.foodbox.delivery.controllers.catalog.body.CreateProductRequestBody
+import ru.foodbox.delivery.controllers.catalog.body.CreateProductResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCatalogResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCategoriesResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
@@ -27,23 +33,25 @@ class CatalogController(
     }
 
     @GetMapping("/products")
-    fun getProducts(@RequestParam categoryId: Long): GetProductsResponseBody {
+    fun getProducts(@RequestParam categoryId: Long): ResponseEntity<GetProductsResponseBody> {
         val category = catalogService.getCategory(categoryId)
         val products = catalogService.getProducts(category.id)
 
-        return GetProductsResponseBody(
+        return ResponseEntity.ok(GetProductsResponseBody(
             category = category,
             products = products
-        )
+        ))
     }
 
-    @GetMapping
-    fun getCatalog(): GetCatalogResponseBody {
-        val categories = catalogService.getCategories()
-        val products = catalogService.getAllProducts()
-        return GetCatalogResponseBody(
-            categories = categories,
-            products = products
-        )
+    @PostMapping("/products")
+    fun createProduct(@RequestBody body: CreateProductRequestBody): ResponseEntity<CreateProductResponseBody> {
+        val savedProduct = catalogService.insertProduct(body.product)
+        return ResponseEntity.ok(CreateProductResponseBody(savedProduct))
+    }
+
+    @PostMapping("/categories")
+    fun createCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
+        val savedCategory = catalogService.insertCategory(body.category)
+        return ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
     }
 }

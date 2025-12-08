@@ -7,56 +7,90 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.controllers.auth.body.AuthTypesResponseBody
+import ru.foodbox.delivery.controllers.auth.body.CartTokenResponseBody
+import ru.foodbox.delivery.controllers.auth.body.CreateCartRequestBody
 import ru.foodbox.delivery.services.AuthService
 import ru.foodbox.delivery.controllers.auth.body.SendSmsRequestBody
 import ru.foodbox.delivery.controllers.auth.body.SendSmsResponseBody
 import ru.foodbox.delivery.controllers.auth.body.RefreshTokenRequestBody
 import ru.foodbox.delivery.controllers.auth.body.RefreshTokenResponseBody
-import ru.foodbox.delivery.services.dto.TokenPairDto
 import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneRequestBody
 import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneResponseBody
+import ru.foodbox.delivery.data.DeliveryType
+import ru.foodbox.delivery.services.CartService
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val authService: AuthService,
+    private val cartService: CartService,
 ) {
     @PostMapping("/sendSms")
     fun sendSms(
         @RequestBody body: SendSmsRequestBody
     ): ResponseEntity<SendSmsResponseBody> {
-        val status = authService.sendSms(body.phone)
-        return when (status) {
-            100 -> {
-                val body = SendSmsResponseBody(
+        return when (val status = authService.sendSms(body.phone)) {
+            200 -> {
+                ResponseEntity.ok(SendSmsResponseBody(
                     status = status,
-                    success = true,
-                    message = "Успешно"
-                )
-                ResponseEntity.ok(body)
+                ))
+            }
+            407 -> {
+                ResponseEntity.ok(SendSmsResponseBody("Повторите позже", 407))
             }
             else -> ResponseEntity.status(503).build()
         }
     }
 
-    @PostMapping("/verifyPhone")
+    @PostMapping("/verify")
     fun verifyPhone(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<VerifyPhoneResponseBody> {
         val dto = authService.verifyPhone(body.phone, body.code)
-        val body = VerifyPhoneResponseBody(dto)
-        return ResponseEntity.ok(body)
+
+        return if (dto != null) {
+            ResponseEntity.ok(VerifyPhoneResponseBody(dto))
+        } else {
+            ResponseEntity.ok(VerifyPhoneResponseBody("Error", 100))
+        }
     }
 
     @GetMapping("/authTypes")
     fun getAuthTypes(): ResponseEntity<AuthTypesResponseBody> {
-        val dto =  authService.getAuthTypes()
-        val body = AuthTypesResponseBody(dto.types)
+        val authTypes =  authService.getAuthTypes().types
+
+        val body = if (authTypes.isNotEmpty()) {
+            AuthTypesResponseBody(authTypes)
+        } else {
+            AuthTypesResponseBody("Нет доступных способов авторизации", 500)
+        }
+
         return ResponseEntity.ok(body)
     }
 
-    @PostMapping("/refreshToken")
+    @PostMapping("/refreshTokens")
     fun refresh(@RequestBody body: RefreshTokenRequestBody): ResponseEntity<RefreshTokenResponseBody> {
         val dto = authService.refresh(body.refresh)
-        val body = RefreshTokenResponseBody(dto)
-        return ResponseEntity.ok(body)
+
+        return if (dto != null) {
+            ResponseEntity.ok(RefreshTokenResponseBody(dto))
+        } else {
+            ResponseEntity.ok(RefreshTokenResponseBody("Not found", 100))
+        }
+    }
+
+    @PostMapping("/createCart")
+    fun createCart(@RequestBody body: CreateCartRequestBody): ResponseEntity<CartTokenResponseBody> {
+        val token = cartService.createCart(
+            deviceId = body.deviceId,
+            departmentId = body.departmentId,
+            deliveryAddress = body.deliveryAddress,
+            deliveryType = body.deliveryType,
+            deliveryPrice = body.deliveryPrice,
+            freeDeliveryPrice = body.freeDeliveryPrice
+        )
+        return if (token != null) {
+            ResponseEntity.ok(CartTokenResponseBody(token))
+        } else {
+            ResponseEntity.ok(CartTokenResponseBody(error = "Ошибка создания корзины", code = 404))
+        }
     }
 }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class SbpPaymentResponseModel(
     @JsonProperty("Banks")
-    val banks: BankList,
+    val banks: BankDictionaryEntity,
 
     @JsonProperty("QrUrl")
     val qrUrl: String,

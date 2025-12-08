@@ -4,71 +4,63 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
-import ru.foodbox.delivery.data.entities.CartEntity
+import ru.foodbox.delivery.data.entities.RefreshTokenEntity
 import ru.foodbox.delivery.data.entities.UserEntity
 import ru.foodbox.delivery.data.repository.AuthTypeRepository
-import ru.foodbox.delivery.data.repository.CartRepository
-import ru.foodbox.delivery.data.repository.DepartmentRepository
 import ru.foodbox.delivery.data.repository.RefreshTokenRepository
 import ru.foodbox.delivery.data.repository.UserRepository
-import ru.foodbox.delivery.services.dto.AuthTypesDto
-import ru.foodbox.delivery.data.entities.RefreshTokenEntity
 import ru.foodbox.delivery.data.sms_client.SmsClient
 import ru.foodbox.delivery.data.sms_client.SmsRuResponseEntity
-import ru.foodbox.delivery.services.dto.TokenPairDto
 import ru.foodbox.delivery.security.JwtGenerator
+import ru.foodbox.delivery.services.dto.AuthTypesDto
+import ru.foodbox.delivery.services.dto.TokenPairDto
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 class AuthService(
     private val jwtGenerator: JwtGenerator,
     private val userRepository: UserRepository,
     private val smsClient: SmsClient,
-    private val cartRepository: CartRepository,
     private val confirmationCodeService: ConfirmationCodeService,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val getAuthTypeRepository: AuthTypeRepository,
-    private val departmentRepository: DepartmentRepository,
 ) {
     fun sendSms(phone: String): Int {
 
-        val saved = confirmationCodeService.createCodeForPhone(phone)
+        val savedCode = confirmationCodeService.createCodeForPhone(phone) ?: return 500
 
-        val smsSendResponse = if (phone == "79000000000") {
-            SmsRuResponseEntity(status = "true", statusCode = 100, sms = mapOf(), balance = 0.0)
+        val smsSendResponse = if (true) {
+            SmsRuResponseEntity(status = "true", statusCode = 200, sms = mapOf(), balance = 0.0)
         } else {
-            smsClient.sendSmsCode(saved.phone, saved.code)
+            smsClient.sendSmsCode(savedCode.phone, savedCode.code)
         }
-
+        println("SMS CODE: ${savedCode.code}")
         return smsSendResponse.statusCode
     }
 
-    fun verifyPhone(phone: String, code: String): TokenPairDto {
+    fun verifyPhone(phone: String, code: String): TokenPairDto? {
         val isValidated = confirmationCodeService.validateCode(phone, code)
 
         if (isValidated) {
             val user = userRepository.findByPhone(phone)
 
-            return if (user == null) {
-                val defaultDepartment = departmentRepository.findById(1).orElseThrow {
-                    ResponseStatusException(HttpStatusCode.valueOf(500), "Не найден магазин")
-                }
-                val newUser = userRepository.save(UserEntity(
-                    phone = phone,
-                    email = "dr.firkat@ya.ru"
-                ))
-                val newCart = CartEntity(department = defaultDepartment)
-                newCart.user = newUser
-                cartRepository.save(newCart)
-                createTokenPair(newUser.id)
+            val userId = if (user == null) {
+                val newUser = UserEntity(phone = phone)
+                newUser.created = LocalDateTime.now()
+                newUser.modified = LocalDateTime.now()
+                val savedUser = userRepository.save(newUser)
+                savedUser.id!!
             } else {
-                createTokenPair(user.id)
+                user.id!!
             }
+
+            return createTokenPair(userId)
         } else {
-            throw ResponseStatusException(HttpStatusCode.valueOf(401), "Invalid confirmation code")
+            return null
         }
     }
 
@@ -82,27 +74,33 @@ class AuthService(
     }
 
     @Transactional
-    fun refresh(refreshToken: String): TokenPairDto {
+    fun refresh(refreshToken: String): TokenPairDto? {
         if (!jwtGenerator.validateRefreshToken(refreshToken)) {
-            throw ResponseStatusException(HttpStatusCode.valueOf(401), "Invalid refresh token")
+            return null
         }
 
-        val userId = jwtGenerator.getUserIdFromToken(refreshToken)
+        val userId = jwtGenerator.getIdFromToken(refreshToken)
 
-        val user = userRepository.findById(userId.toLong()).orElseThrow {
-            ResponseStatusException(HttpStatusCode.valueOf(404), "Invalid refresh token")
-        }
+        val user = userRepository.findById(userId.toLong()).getOrNull() ?: return null
 
         val hashed = hashToken(refreshToken)
 
-        refreshTokenRepository.findByUserIdAndHashedToken(user.id, hashed)
+        refreshTokenRepository.findByUserIdAndHashedToken(user.id!!, hashed)
             ?: throw ResponseStatusException(
                 HttpStatusCode.valueOf(401),
                 "Refresh token is not recognised (maybe used or expired?)"
             )
-        refreshTokenRepository.deleteByUserIdAndHashedToken(user.id, hashed)
+        refreshTokenRepository.deleteByUserIdAndHashedToken(user.id!!, hashed)
 
-        return createTokenPair(user?.id!!)
+        return createTokenPair(user.id!!)
+    }
+
+    fun logout(userId: Long): Boolean {
+        val token = refreshTokenRepository.findByUserId(userId)
+        if (token != null) {
+            refreshTokenRepository.delete(token)
+        }
+        return true
     }
 
     fun getAuthTypes(): AuthTypesDto {
@@ -129,12 +127,9 @@ class AuthService(
                 )
             )
         } else {
-            val updatedToken = refreshToken.copy(
-                userId = userId,
-                expiresAt = expiresAt,
-                hashedToken = hashedToken
-            )
-            refreshTokenRepository.save(updatedToken)
+            refreshToken.expiresAt = expiresAt
+            refreshToken.hashedToken = hashedToken
+            refreshTokenRepository.save(refreshToken)
         }
     }
 

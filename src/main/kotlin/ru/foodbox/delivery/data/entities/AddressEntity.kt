@@ -2,40 +2,34 @@ package ru.foodbox.delivery.data.entities
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 
 @Entity
 @Table(name = "addresses")
-data class AddressEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+class AddressEntity(
+    @OneToOne
+    var cityEntity: CityEntity,
 
     @Column(nullable = false)
-    val lat: Double,
+    var street: String,
 
     @Column(nullable = false)
-    val long: Double,
+    var house: String,
 
-    @Column(nullable = false)
-    val city: String,
+    var entrance: Int?,
 
-    @Column(nullable = false)
-    val street: String,
+    var flat: Int?,
 
-    @Column(nullable = false)
-    val house: String,
+    var intercome: String?,
 
-    val flat: String?,
-
-    val intercome: String?,
-
-    val comment: String?,
+    var comment: String?,
 
     @ManyToOne
-    val user: UserEntity? = null
-)
+    val user: UserEntity? = null,
+
+    val latitude: Double,
+
+    val longitude: Double
+) : BaseEntity<Long>()

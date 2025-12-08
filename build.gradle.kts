@@ -31,6 +31,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.postgresql:postgresql")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
 	implementation("org.flywaydb:flyway-core")
 
@@ -39,6 +40,11 @@ dependencies {
 			classifier = "osx-aarch_64"
 		}
 	}
+
+	implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.1")
+	implementation("org.telegram:telegrambotsextensions:6.9.7.1")
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

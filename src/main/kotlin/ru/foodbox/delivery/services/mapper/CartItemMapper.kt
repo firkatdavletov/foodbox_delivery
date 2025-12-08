@@ -7,11 +7,13 @@ import ru.foodbox.delivery.services.dto.CartItemDto
 @Component
 class CartItemMapper {
     fun toDto(entity: CartItemEntity) = CartItemDto(
-        productId = entity.product.id,
+        productId = entity.product.id!!,
         title = entity.product.title,
         quantity = entity.quantity,
         price = entity.product.price
     )
 
-    fun toDto(entities: List<CartItemEntity>) = entities.map { toDto(it) }
+    fun toDto(entities: List<CartItemEntity>) = entities
+        .sortedBy { it.created }
+        .map { toDto(it) }
 }

@@ -10,9 +10,15 @@ import kotlin.random.Random
 class ConfirmationCodeService(
     private val repository: ConfirmationCodeRepository,
 ) {
-    fun createCodeForPhone(phone: String): ConfirmationCodeEntity {
-        val code = if (phone == "79000000000") "1234" else generateCode()
-        val expiresAt = LocalDateTime.now().plusMinutes(5)
+    fun createCodeForPhone(phone: String): ConfirmationCodeEntity? {
+        val noUsedCode = repository.findByPhoneAndUsedIsFalseAndExpiresAtAfter(phone, LocalDateTime.now())
+
+        if (noUsedCode != null) {
+            return null
+        }
+
+        val code = "0990"//generateCode()
+        val expiresAt = LocalDateTime.now().plusMinutes(1)
 
         val confirmationCode = ConfirmationCodeEntity(
             phone = phone,
@@ -24,11 +30,7 @@ class ConfirmationCodeService(
     }
 
     fun validateCode(phone: String, code: String): Boolean {
-        val found = repository.findByPhoneAndCodeAndUsedIsFalseAndExpiresAtAfter(
-            phone,
-            code,
-            LocalDateTime.now()
-        )
+        val found = repository.findByPhoneAndUsedIsFalseAndExpiresAtAfter(phone,LocalDateTime.now())
 
         return if (found != null) {
             found.used = true

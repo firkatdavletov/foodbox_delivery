@@ -5,9 +5,5 @@ import org.springframework.data.jpa.repository.Query
 import ru.foodbox.delivery.data.entities.PaymentTypeEntity
 
 interface PaymentTypeRepository : JpaRepository<PaymentTypeEntity, Long> {
-    @Query(
-        value = "SELECT * FROM payment_types",
-        nativeQuery = true
-    )
-    fun getPaymentTypes(): List<PaymentTypeEntity>
+    fun findByOrderByRange(): List<PaymentTypeEntity>
 }

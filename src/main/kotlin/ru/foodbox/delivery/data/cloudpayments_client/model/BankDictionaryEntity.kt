@@ -1,6 +1,6 @@
 package ru.foodbox.delivery.data.cloudpayments_client.model
 
-data class BankList(
+data class BankDictionaryEntity(
     val version: String,
-    val dictionary: List<BankInfo>
+    val dictionary: List<BankInfoEntity>
 )

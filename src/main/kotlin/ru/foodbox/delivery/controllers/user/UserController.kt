@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.user.body.DeleteUserResponseBody
 import ru.foodbox.delivery.controllers.user.body.GetUserResponseBody
+import ru.foodbox.delivery.controllers.user.body.LogoutResponseBody
 import ru.foodbox.delivery.controllers.user.body.UpdateUserRequestBody
 import ru.foodbox.delivery.controllers.user.body.UpdateUserResponseBody
+import ru.foodbox.delivery.services.AuthService
 import ru.foodbox.delivery.services.UserService
 import ru.foodbox.delivery.services.dto.UserDto
 import kotlin.collections.contains
@@ -23,6 +25,7 @@ import kotlin.collections.contains
 @RequestMapping("/user")
 class UserController(
     private val userService: UserService,
+    private val authService: AuthService,
 ) {
     @GetMapping()
     fun getUser(): ResponseEntity<GetUserResponseBody> {
@@ -51,8 +54,12 @@ class UserController(
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
 
         val savedUser = userService.updateUser(userId, body.user)
-        val response = UpdateUserResponseBody(savedUser)
-        return ResponseEntity.ok(response)
+
+        return if (savedUser != null) {
+            ResponseEntity.ok(UpdateUserResponseBody(savedUser))
+        } else {
+            ResponseEntity.ok(UpdateUserResponseBody("Update user error", 500))
+        }
     }
 
     @DeleteMapping
@@ -65,7 +72,20 @@ class UserController(
         val userId = (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
         val result = userService.deleteUser(userId)
-        val response = DeleteUserResponseBody(result)
+        val response = DeleteUserResponseBody(result, null, null)
         return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/logout")
+    fun logout(): ResponseEntity<LogoutResponseBody> {
+        val authentication = SecurityContextHolder.getContext().authentication
+        if (authentication.authorities.contains(SimpleGrantedAuthority("ROLE_ANONYMOUS"))) {
+            return ResponseEntity.status(401).build()
+        }
+
+        val userId = (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
+            ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
+        val success = authService.logout(userId)
+        return ResponseEntity.ok(LogoutResponseBody(success, null, null))
     }
 }

@@ -2,7 +2,7 @@ package ru.foodbox.delivery.data.cloudpayments_client.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class BankInfo(
+data class BankInfoEntity(
     @JsonProperty("bankName")
     val bankName: String,
 
@@ -19,5 +19,8 @@ data class BankInfo(
     val webClientUrl: String?,
 
     @JsonProperty("isWebClientActive")
-    val isWebClientActive: String? // Или Boolean, если на сервере реально `true/false`, а не строка
+    val isWebClientActive: String?, // Или Boolean, если на сервере реально `true/false`, а не строка
+
+    @JsonProperty("isDrActive")
+    val isDrActive: String?
 )
