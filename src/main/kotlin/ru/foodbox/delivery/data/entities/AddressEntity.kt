@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 @Entity
 @Table(name = "addresses")
 class AddressEntity(
-    @OneToOne
+    @ManyToOne
     var cityEntity: CityEntity,
 
     @Column(nullable = false)
