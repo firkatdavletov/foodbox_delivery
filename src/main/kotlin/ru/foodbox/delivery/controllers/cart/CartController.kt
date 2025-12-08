@@ -65,7 +65,7 @@ class CartController(
         val response = if (cart != null) {
             ResponseEntity.ok(GetCartResponseBody(cart))
         } else {
-            ResponseEntity.ok(GetCartResponseBody("Корзина не найдена", 404))
+            ResponseEntity.ok(GetCartResponseBody("Get cart error", 404))
         }
         return response
     }
