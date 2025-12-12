@@ -5,7 +5,9 @@ import io.netty.resolver.DefaultAddressResolverGroup
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Mono
 import reactor.netty.http.client.HttpClient
 import ru.foodbox.delivery.data.yandex_map_client.entity.FeatureMember
 import ru.foodbox.delivery.data.yandex_map_client.entity.SearchResultEntity
@@ -29,17 +31,17 @@ class YandexMapClient(
                     .resolver(DefaultAddressResolverGroup.INSTANCE)
             )
         )
-//        .filter(ExchangeFilterFunction.ofRequestProcessor { request ->
-//            println("Request: ${request.method()} ${request.url()}")
-//            request.headers().forEach { name, values ->
-//                println("$name: ${values.joinToString()}")
-//            }
-//            Mono.just(request)
-//        })
-//        .filter(ExchangeFilterFunction.ofResponseProcessor { response ->
-//            println("Response status: ${response.statusCode()}")
-//            response.bodyToMono(String::class.java).doOnNext { println("Response body: $it") }.then(Mono.just(response))
-//        })
+        .filter(ExchangeFilterFunction.ofRequestProcessor { request ->
+            println("Request: ${request.method()} ${request.url()}")
+            request.headers().forEach { name, values ->
+                println("$name: ${values.joinToString()}")
+            }
+            Mono.just(request)
+        })
+        .filter(ExchangeFilterFunction.ofResponseProcessor { response ->
+            println("Response status: ${response.statusCode()}")
+            response.bodyToMono(String::class.java).doOnNext { println("Response body: $it") }.then(Mono.just(response))
+        })
         .build()
 
     private val suggestClient = WebClient.builder()
