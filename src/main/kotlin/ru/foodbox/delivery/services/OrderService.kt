@@ -54,8 +54,14 @@ class OrderService(
     fun getCurrentOrders(userId: Long): List<OrderDto> {
         val user = userRepository.findById(userId)
             .orElseThrow { ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден") }
-        val orderEntities = orderRepository.findByUserAndStatusInOrderByCreatedDesc(user, setOf(OrderStatus.PROCESSING,
-            OrderStatus.PENDING))
+        val orderEntities = orderRepository.findByUserAndStatusInOrderByCreatedDesc(
+            user,
+            setOf(
+                OrderStatus.PROCESSING,
+                OrderStatus.PENDING,
+                OrderStatus.PAID,
+            )
+        )
 
         return orderMapper.toDto(orderEntities)
     }
