@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.catalog.CatalogController
+import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.data.repository.CategoryRepository
@@ -72,5 +73,17 @@ class CatalogService(
         newProduct.modified = LocalDateTime.now()
         val savedProduct = productRepository.save(newProduct)
         return productMapper.toDto(savedProduct)
+    }
+
+    fun deleteCategory(categoryId: Long): DeleteCategoryResponseBody {
+        val products = productRepository.findAllByCategoryId(categoryId)
+        if (products.isNotEmpty()) {
+            return DeleteCategoryResponseBody(
+                error = "В категории есть продукты, сначала удалите все продукты",
+                100
+            )
+        }
+        categoryRepository.deleteById(categoryId)
+        return DeleteCategoryResponseBody()
     }
 }

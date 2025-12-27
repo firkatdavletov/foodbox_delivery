@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.controllers.catalog
 
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,6 +13,7 @@ import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryRequestBody
 import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.CreateProductRequestBody
 import ru.foodbox.delivery.controllers.catalog.body.CreateProductResponseBody
+import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCatalogResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCategoriesResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
@@ -53,5 +55,11 @@ class CatalogController(
     fun createCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
         val savedCategory = catalogService.insertCategory(body.category)
         return ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
+    }
+
+    @DeleteMapping("category")
+    fun deleteCategory(@RequestParam categoryId: Long): ResponseEntity<DeleteCategoryResponseBody> {
+        val result = catalogService.deleteCategory(categoryId)
+        return ResponseEntity.ok(result)
     }
 }
