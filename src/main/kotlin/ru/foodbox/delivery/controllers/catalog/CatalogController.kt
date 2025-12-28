@@ -56,10 +56,21 @@ class CatalogController(
         return ResponseEntity.ok(CreateProductResponseBody(savedProduct))
     }
 
-    @PostMapping("/categories")
+    @PostMapping("/category/new")
     fun createCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
         val savedCategory = catalogService.insertCategory(body.category)
         return ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
+    }
+
+    @PostMapping("/category/update")
+    fun updateCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
+        val savedCategory = catalogService.updateCategory(body.category)
+
+        return if (savedCategory != null) {
+            ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
+        } else {
+            ResponseEntity.ok(CreateCategoryResponseBody("Категория не найдена", 404))
+        }
     }
 
     @DeleteMapping("category")

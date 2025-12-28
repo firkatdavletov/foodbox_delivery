@@ -57,6 +57,15 @@ class CatalogService(
         return categoryMapper.toDto(savedEntity)
     }
 
+    fun updateCategory(categoryDto: CategoryDto): CategoryDto? {
+        val foundCategory = categoryRepository.findById(categoryDto.id).getOrNull() ?: return null
+        foundCategory.title = categoryDto.title
+        foundCategory.imageUrl = categoryDto.imageUrl
+
+        val savedEntity = categoryRepository.save(foundCategory)
+        return categoryMapper.toDto(savedEntity)
+    }
+
     fun insertProduct(productDto: ProductDto): ProductDto {
         val category = categoryRepository.findById(productDto.categoryId).getOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404))
