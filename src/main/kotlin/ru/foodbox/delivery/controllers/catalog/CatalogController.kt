@@ -16,6 +16,7 @@ import ru.foodbox.delivery.controllers.catalog.body.CreateProductResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCatalogResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCategoriesResponseBody
+import ru.foodbox.delivery.controllers.catalog.body.GetCategoryResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.services.CatalogService
@@ -37,11 +38,15 @@ class CatalogController(
     @GetMapping("/products")
     fun getProducts(@RequestParam categoryId: Long): ResponseEntity<GetProductsResponseBody> {
         val category = catalogService.getCategory(categoryId)
+            ?: return ResponseEntity.ok(GetProductsResponseBody(null, emptyList(), false,"Категория не найдена", 404))
         val products = catalogService.getProducts(category.id)
 
         return ResponseEntity.ok(GetProductsResponseBody(
             category = category,
-            products = products
+            products = products,
+            true,
+            null,
+            null,
         ))
     }
 
@@ -61,5 +66,16 @@ class CatalogController(
     fun deleteCategory(@RequestParam categoryId: Long): ResponseEntity<DeleteCategoryResponseBody> {
         val result = catalogService.deleteCategory(categoryId)
         return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("category")
+    fun getCategory(@RequestParam id: Long): ResponseEntity<GetCategoryResponseBody> {
+        val result = catalogService.getCategory(id)
+
+        return if (result == null) {
+            ResponseEntity.ok(GetCategoryResponseBody("Категория не найдена", 404))
+        } else {
+            ResponseEntity.ok(GetCategoryResponseBody(result))
+        }
     }
 }

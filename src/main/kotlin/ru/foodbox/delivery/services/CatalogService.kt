@@ -31,10 +31,8 @@ class CatalogService(
         return categoryMapper.toDto(entities)
     }
 
-    fun getCategory(categoryId: Long): CategoryDto {
-        val category = categoryRepository.findById(categoryId).orElseThrow {
-            ResponseStatusException(HttpStatusCode.valueOf(404), "Категория не найдена")
-        }
+    fun getCategory(categoryId: Long): CategoryDto? {
+        val category = categoryRepository.findById(categoryId).getOrNull() ?: return null
         return categoryMapper.toDto(category)
     }
 

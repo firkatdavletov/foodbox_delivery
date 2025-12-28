@@ -1,15 +1,14 @@
 package ru.foodbox.delivery.controllers.catalog.body
 
 import ru.foodbox.delivery.controllers.base.ResponseModel
-import ru.foodbox.delivery.data.entities.CategoryEntity
-import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.services.dto.CategoryDto
-import ru.foodbox.delivery.services.dto.ProductDto
 
-class GetProductsResponseBody(
+class GetCategoryResponseBody(
     val category: CategoryDto?,
-    val products: List<ProductDto>,
     override val success: Boolean,
     override val error: String?,
     override val code: Int?
-) : ResponseModel
+) : ResponseModel {
+    constructor(category: CategoryDto) : this(category, true, null, null)
+    constructor(error: String?, code: Int?) : this(null, false, error, code)
+}
