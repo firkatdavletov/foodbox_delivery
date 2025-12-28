@@ -1,6 +1,6 @@
 package ru.foodbox.delivery.controllers.base
 
-interface ResponseModel<T> {
+interface ResponseModel {
     val success: Boolean
     val error: String?
     val code: Int?
