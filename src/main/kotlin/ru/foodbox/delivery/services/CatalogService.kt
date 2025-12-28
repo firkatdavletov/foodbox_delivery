@@ -33,7 +33,7 @@ class CatalogService(
 
     fun getCategory(categoryId: Long): CategoryDto? {
         val category = categoryRepository.findById(categoryId).getOrNull() ?: return null
-        return categoryMapper.toDto(category)
+        return categoryMapper.toDto(category, false)
     }
 
     fun getProducts(categoryId: Long): List<ProductDto> {
