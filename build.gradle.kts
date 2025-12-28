@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "ru.foodbox"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2"
 
 java {
 	toolchain {
