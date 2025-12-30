@@ -25,5 +25,5 @@ class ProductEntity(
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
-    val category: CategoryEntity
+    var category: CategoryEntity
 ) : BaseAuditEntity<Long>()

@@ -16,6 +16,7 @@ import ru.foodbox.delivery.services.dto.ProductDto
 import ru.foodbox.delivery.services.mapper.CategoryMapper
 import ru.foodbox.delivery.services.mapper.ProductMapper
 import java.time.LocalDateTime
+import java.util.Date
 import kotlin.jvm.optionals.getOrNull
 
 @Service
@@ -79,6 +80,19 @@ class CatalogService(
         newProduct.created = LocalDateTime.now()
         newProduct.modified = LocalDateTime.now()
         val savedProduct = productRepository.save(newProduct)
+        return productMapper.toDto(savedProduct)
+    }
+
+    fun updateProduct(productDto: ProductDto): ProductDto? {
+        val foundProduct = productRepository.findById(productDto.id).getOrNull() ?: return null
+        val category = categoryRepository.findById(productDto.categoryId).getOrNull() ?: return null
+        foundProduct.title = productDto.title
+        foundProduct.imageUrl = productDto.imageUrl
+        foundProduct.category = category
+        foundProduct.description = productDto.description
+        foundProduct.price = productDto.price
+        foundProduct.modified = LocalDateTime.now()
+        val savedProduct = productRepository.save(foundProduct)
         return productMapper.toDto(savedProduct)
     }
 

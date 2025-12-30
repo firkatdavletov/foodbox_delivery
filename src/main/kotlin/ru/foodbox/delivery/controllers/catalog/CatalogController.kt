@@ -38,11 +38,10 @@ class CatalogController(
     @GetMapping("/products")
     fun getProducts(@RequestParam categoryId: Long): ResponseEntity<GetProductsResponseBody> {
         val category = catalogService.getCategory(categoryId)
-            ?: return ResponseEntity.ok(GetProductsResponseBody(null, emptyList(), false,"Категория не найдена", 404))
+            ?: return ResponseEntity.ok(GetProductsResponseBody(emptyList(), false,"Категория не найдена", 404))
         val products = catalogService.getProducts(category.id)
 
         return ResponseEntity.ok(GetProductsResponseBody(
-            category = category,
             products = products,
             true,
             null,
@@ -50,10 +49,27 @@ class CatalogController(
         ))
     }
 
-    @PostMapping("/products")
+    @GetMapping("/products/all")
+    fun getAllProducts(): ResponseEntity<GetProductsResponseBody> {
+        val products = catalogService.getAllProducts()
+
+        return ResponseEntity.ok(GetProductsResponseBody(products))
+    }
+
+    @PostMapping("/product/new")
     fun createProduct(@RequestBody body: CreateProductRequestBody): ResponseEntity<CreateProductResponseBody> {
         val savedProduct = catalogService.insertProduct(body.product)
         return ResponseEntity.ok(CreateProductResponseBody(savedProduct))
+    }
+
+    @PostMapping("/product/update")
+    fun updateProduct(@RequestBody body: CreateProductRequestBody): ResponseEntity<CreateProductResponseBody> {
+        val savedProduct = catalogService.updateProduct(body.product)
+        return if (savedProduct != null) {
+            ResponseEntity.ok(CreateProductResponseBody(savedProduct))
+        } else {
+            ResponseEntity.ok(CreateProductResponseBody("Ошибка создания номенклатуры", 200))
+        }
     }
 
     @PostMapping("/category/new")
