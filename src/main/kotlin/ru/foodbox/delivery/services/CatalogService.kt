@@ -42,6 +42,11 @@ class CatalogService(
         return productMapper.toDto(products)
     }
 
+    fun getProduct(id: Long): ProductDto? {
+        val entity = productRepository.findById(id).getOrNull() ?: return null
+        return productMapper.toDto(entity)
+    }
+
     fun getAllProducts(): List<ProductDto> {
         val products = productRepository.findAll()
         return productMapper.toDto(products)

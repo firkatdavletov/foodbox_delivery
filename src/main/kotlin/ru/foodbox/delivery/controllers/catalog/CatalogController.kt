@@ -17,6 +17,7 @@ import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCatalogResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCategoriesResponseBody
 import ru.foodbox.delivery.controllers.catalog.body.GetCategoryResponseBody
+import ru.foodbox.delivery.controllers.catalog.body.GetProductResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.services.CatalogService
@@ -47,6 +48,16 @@ class CatalogController(
             null,
             null,
         ))
+    }
+
+    @GetMapping("/product")
+    fun getProduct(@RequestParam id: Long): ResponseEntity<GetProductResponseBody> {
+        val product = catalogService.getProduct(id)
+        return if (product != null) {
+            ResponseEntity.ok(GetProductResponseBody(product))
+        } else {
+            ResponseEntity.ok(GetProductResponseBody("Продукт не найден", 404))
+        }
     }
 
     @GetMapping("/products/all")
