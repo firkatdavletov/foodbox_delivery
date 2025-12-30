@@ -1,28 +1,10 @@
 package ru.foodbox.delivery.controllers.catalog
 
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
-import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryRequestBody
-import ru.foodbox.delivery.controllers.catalog.body.CreateCategoryResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.CreateProductRequestBody
-import ru.foodbox.delivery.controllers.catalog.body.CreateProductResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.GetCatalogResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.GetCategoriesResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.GetCategoryResponseBody
-import ru.foodbox.delivery.controllers.catalog.body.GetProductResponseBody
-import ru.foodbox.delivery.data.entities.CategoryEntity
-import ru.foodbox.delivery.data.entities.ProductEntity
+import org.springframework.web.bind.annotation.*
+import ru.foodbox.delivery.controllers.catalog.body.*
+import ru.foodbox.delivery.controllers.catalog.body.DeleteProductResponseBody
 import ru.foodbox.delivery.services.CatalogService
-import ru.foodbox.delivery.controllers.catalog.body.GetProductsResponseBody
-import java.math.BigDecimal
 
 @RestController
 @RequestMapping("/catalog")
@@ -81,6 +63,12 @@ class CatalogController(
         } else {
             ResponseEntity.ok(CreateProductResponseBody("Ошибка создания номенклатуры", 200))
         }
+    }
+
+    @DeleteMapping("/product")
+    fun deleteProduct(@RequestParam id: Long): DeleteProductResponseBody {
+        val result = catalogService.deleteProduct(id)
+        return DeleteProductResponseBody()
     }
 
     @PostMapping("/category/new")

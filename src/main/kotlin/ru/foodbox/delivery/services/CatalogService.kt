@@ -112,4 +112,9 @@ class CatalogService(
         categoryRepository.deleteById(categoryId)
         return DeleteCategoryResponseBody()
     }
+
+    fun deleteProduct(id: Long): Boolean {
+        productRepository.deleteById(id)
+        return true
+    }
 }
