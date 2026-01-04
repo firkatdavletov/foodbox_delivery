@@ -7,6 +7,6 @@ data class DepartmentDto(
     val latitude: Double,
     val longitude: Double,
     val workingHours: List<WorkingHourDto>,
-    val currentWorkingHours: WorkingHourDto?,
+    val currentWorkingHours: List<WorkingHourDto>?,
     val isWorkingNow: Boolean,
 )

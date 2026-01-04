@@ -23,12 +23,10 @@ class DepartmentMapper(
         val workingHours = entity.workingHours.map { entity ->
             workingHourMapper.toDto(entity)
         }
-        val currentWorkingHours = workingHours.find { it.dayOfWeek == currentDayOfWeek }
+        val currentWorkingHours = workingHours.filter { it.dayOfWeek == currentDayOfWeek }
 
-        val isWorking = if (currentWorkingHours != null) {
-            currentTime > currentWorkingHours.openTime && currentTime < currentWorkingHours.closeTime
-        } else {
-            false
+        val isWorking = currentWorkingHours.any { workingHourDto ->
+            currentTime > workingHourDto.openTime && currentTime < workingHourDto.openTime
         }
 
         return DepartmentDto(
