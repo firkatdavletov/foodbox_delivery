@@ -49,10 +49,16 @@ class MessageService(
     ): Int {
         val inlineKeyboardMarkup: InlineKeyboardMarkup
 
-        val inlineKeyboardMarkupDto = listOf(
-            MarkupDataDto(0, OrderStatus.getNextButtonText(orderStatus), MarkupDataDto.Action.CHANGE),
-            MarkupDataDto(0, "Отменить заказ", MarkupDataDto.Action.CANCEL),
-        )
+        val inlineKeyboardMarkupDto = when (orderStatus) {
+            OrderStatus.CANCELLED -> emptyList()
+            OrderStatus.DELIVERED -> emptyList()
+            else -> {
+                listOf(
+                    MarkupDataDto(0, OrderStatus.getNextButtonText(orderStatus), MarkupDataDto.Action.CHANGE),
+                    MarkupDataDto(0, "Отменить заказ", MarkupDataDto.Action.CANCEL),
+                )
+            }
+        }
 
         inlineKeyboardMarkup = inlineKeyboardMarkupDto.getInlineKeyboardMarkup(orderId)
 
