@@ -22,6 +22,7 @@ import ru.foodbox.delivery.services.dto.OrderItemDto
 import ru.foodbox.delivery.services.mapper.AddressMapper
 import ru.foodbox.delivery.services.mapper.OrderItemMapper
 import ru.foodbox.delivery.services.mapper.OrderMapper
+import ru.foodbox.delivery.services.mapper.UserMapper
 import ru.foodbox.delivery.utils.AddressUtility
 import ru.foodbox.delivery.utils.OrderUtility
 import java.time.LocalDateTime
@@ -37,6 +38,7 @@ class OrderService(
     private val addressMapper: AddressMapper,
     private val messageService: MessageService,
     private val orderStatusBroadcaster: OrderStatusBroadcaster,
+    private val userMapper: UserMapper,
 ) {
     @EventListener
     fun handleUpdate(event: ButtonClickEvent) {
@@ -100,7 +102,7 @@ class OrderService(
         newOrder.modified = LocalDateTime.now()
         val savedOrder = orderRepository.save(newOrder)
         val savedOrderDto = orderMapper.toDto(savedOrder)
-        val orderInfo = OrderUtility.createOrderInfo(savedOrderDto)
+        val orderInfo = OrderUtility.createOrderInfo(savedOrderDto, userMapper.toDto(user))
 
         val messageId = sendMessage(
             savedOrder.id!!,
@@ -138,9 +140,9 @@ class OrderService(
         val order = orderRepository.findById(orderId).getOrNull() ?: return null
         order.status = OrderStatus.CANCELLED
         val savedOrder = orderRepository.save(order)
-
+        val user = order.user
         val orderDto = orderMapper.toDto(savedOrder)
-        val orderInfo = OrderUtility.createOrderInfo(orderDto)
+        val orderInfo = OrderUtility.createOrderInfo(orderDto, userMapper.toDto(user))
         val messageId = sendMessage(
             savedOrder.id!!,
             orderInfo,
@@ -161,9 +163,9 @@ class OrderService(
         val order = orderRepository.findById(orderId).getOrNull() ?: return null
         order.status = OrderStatus.nextStatus(order.status)
         val savedOrder = orderRepository.save(order)
-
+        val user = savedOrder.user
         val orderDto = orderMapper.toDto(savedOrder)
-        val orderInfo = OrderUtility.createOrderInfo(orderDto)
+        val orderInfo = OrderUtility.createOrderInfo(orderDto, userMapper.toDto(user))
         val messageId = sendMessage(
             savedOrder.id!!,
             orderInfo,

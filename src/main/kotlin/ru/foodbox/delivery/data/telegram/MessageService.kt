@@ -92,6 +92,7 @@ class MessageService(
         }
         inlineKeyboardButtons.add(inlineKeyboardButtonsInner)
         inlineKeyboardMarkup.keyboard = inlineKeyboardButtons
+
         return inlineKeyboardMarkup
     }
 

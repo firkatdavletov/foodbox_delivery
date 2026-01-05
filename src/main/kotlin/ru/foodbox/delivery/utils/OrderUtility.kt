@@ -3,11 +3,21 @@ package ru.foodbox.delivery.utils
 import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.services.dto.OrderDto
+import ru.foodbox.delivery.services.dto.UserDto
 
 object OrderUtility {
-    fun createOrderInfo(order: OrderDto): String {
+    fun createOrderInfo(order: OrderDto, user: UserDto): String {
         val info = buildString {
             append("Заказ №${order.id}")
+            append("\n")
+            append("\n")
+            append("Гость: ")
+
+            if (user.name.isNotBlank()) {
+                append(user.name)
+            }
+
+            append(user.phone)
             append("\n")
             append("\n")
             append("Состав заказа:")
