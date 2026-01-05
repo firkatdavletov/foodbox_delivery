@@ -11,13 +11,11 @@ object OrderUtility {
             append("Заказ №${order.id}")
             append("\n")
             append("\n")
-            append("Гость: ")
-
-            if (user.name.isNotBlank()) {
-                append(user.name)
-            }
-
-            append(user.phone)
+            append("Гость:")
+            append("\n")
+            append("Имя: ${user.name}")
+            append("\n")
+            append("Номер телефона: +${user.phone}")
             append("\n")
             append("\n")
             append("Состав заказа:")
