@@ -42,7 +42,12 @@ class AuthService(
             smsClient.sendSmsCode(savedCode.phone, savedCode.code)
         }
         println("SMS CODE: ${savedCode.code}")
-        return smsSendResponse?.statusCode
+        return if (smsSendResponse != null && smsSendResponse.statusCode == 100) {
+            val sms = smsSendResponse.sms?.get(phone)
+            sms?.statusCode ?: 500
+        } else {
+            500
+        }
     }
 
     fun authByCall(phone: String): CallPhoneModel? {

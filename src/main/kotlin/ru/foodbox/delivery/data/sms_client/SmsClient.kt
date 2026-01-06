@@ -6,7 +6,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Component
 class SmsClient(
-    @param:Value("sms.ru.api.key") private val api: String
+    @param:Value("\${sms.ru.api.key}") private val apiKey: String
 ) {
     private val baseUrl = "https://sms.ru"
 
@@ -21,7 +21,7 @@ class SmsClient(
             .uri { uriBuilder ->
                 uriBuilder
                     .path(uri)
-                    .queryParam("api_id", api)
+                    .queryParam("api_id", apiKey)
                     .queryParam("to", phone)
                     .queryParam("msg", code)
                     .queryParam("json", 1)
@@ -39,7 +39,7 @@ class SmsClient(
             .uri { uriBuilder ->
                 uriBuilder
                     .path(uri)
-                    .queryParam("api_id", api)
+                    .queryParam("api_id", apiKey)
                     .queryParam("phone", phone)
                     .queryParam("json", 1)
                     .build()

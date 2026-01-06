@@ -31,15 +31,18 @@ class AuthController(
         @RequestBody body: SendSmsRequestBody
     ): ResponseEntity<SendSmsResponseBody> {
         return when (val status = authService.sendSms(body.phone)) {
-            200 -> {
+            100 -> {
                 ResponseEntity.ok(SendSmsResponseBody(
                     status = status,
                 ))
             }
+            200 -> {
+                ResponseEntity.ok(SendSmsResponseBody("Ошибка сервиса: невалидный токен", 200))
+            }
             407 -> {
                 ResponseEntity.ok(SendSmsResponseBody("Повторите позже", 407))
             }
-            else -> ResponseEntity.status(503).build()
+            else -> ResponseEntity.ok(SendSmsResponseBody("Ошибка сервиса. Код ошибки: $status", status))
         }
     }
     @PostMapping("/byCall")
