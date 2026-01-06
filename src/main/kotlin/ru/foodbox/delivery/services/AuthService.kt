@@ -12,8 +12,10 @@ import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.data.sms_client.SmsClient
 import ru.foodbox.delivery.data.sms_client.SmsRuResponseEntity
 import ru.foodbox.delivery.security.JwtGenerator
+import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import ru.foodbox.delivery.services.dto.AuthTypesDto
 import ru.foodbox.delivery.services.dto.TokenPairDto
+import ru.foodbox.delivery.services.model.CallPhoneModel
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.*
@@ -28,18 +30,36 @@ class AuthService(
     private val confirmationCodeService: ConfirmationCodeService,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val getAuthTypeRepository: AuthTypeRepository,
+    private val authBroadcaster: AuthBroadcaster,
 ) {
-    fun sendSms(phone: String): Int {
+    fun sendSms(phone: String): Int? {
 
         val savedCode = confirmationCodeService.createCodeForPhone(phone) ?: return 500
 
-        val smsSendResponse = if (true) {
+        val smsSendResponse = if (false) {
             SmsRuResponseEntity(status = "true", statusCode = 200, sms = mapOf(), balance = 0.0)
         } else {
             smsClient.sendSmsCode(savedCode.phone, savedCode.code)
         }
         println("SMS CODE: ${savedCode.code}")
-        return smsSendResponse.statusCode
+        return smsSendResponse?.statusCode
+    }
+
+    fun authByCall(phone: String): CallPhoneModel? {
+        val responseEntity = smsClient.authByCall(phone) ?: return null
+
+        val responseModel = CallPhoneModel(
+            checkId = responseEntity.checkId,
+            callPhone = responseEntity.callPhone,
+            callPhonePretty = responseEntity.callPhonePretty,
+            callPhoneHtml = responseEntity.callPhoneHtml,
+        )
+
+        return responseModel
+    }
+
+    fun callCheckStatus(checkId: String, status: Int?, createdAt: Long?) {
+        authBroadcaster.broadcastUpdate(checkId)
     }
 
     fun verifyPhone(phone: String, code: String): TokenPairDto? {

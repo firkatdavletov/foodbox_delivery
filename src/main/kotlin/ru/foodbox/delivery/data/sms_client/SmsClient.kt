@@ -14,7 +14,7 @@ class SmsClient(
         .baseUrl(baseUrl)
         .build()
 
-    fun sendSmsCode(phone: String, code: String): SmsRuResponseEntity {
+    fun sendSmsCode(phone: String, code: String): SmsRuResponseEntity? {
         val uri = "/sms/send"
 
         return client.get()
@@ -29,6 +29,23 @@ class SmsClient(
             }
             .retrieve()
             .bodyToMono(SmsRuResponseEntity::class.java)
-            .block() ?: throw RuntimeException("Empty response from SMS service")
+            .block()
+    }
+
+    fun authByCall(phone: String): AuthByCallResponseEntity? {
+        val uri = "callcheck/add"
+
+        return client.get()
+            .uri { uriBuilder ->
+                uriBuilder
+                    .path(uri)
+                    .queryParam("api_id", api)
+                    .queryParam("phone", phone)
+                    .queryParam("json", 1)
+                    .build()
+            }
+            .retrieve()
+            .bodyToMono(AuthByCallResponseEntity::class.java)
+            .block()
     }
 }

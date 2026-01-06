@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import ru.foodbox.delivery.controllers.auth.body.AuthByCallResponseModel
 import ru.foodbox.delivery.controllers.auth.body.AuthTypesResponseBody
 import ru.foodbox.delivery.controllers.auth.body.CartTokenResponseBody
 import ru.foodbox.delivery.controllers.auth.body.CreateCartRequestBody
@@ -16,7 +17,7 @@ import ru.foodbox.delivery.controllers.auth.body.RefreshTokenRequestBody
 import ru.foodbox.delivery.controllers.auth.body.RefreshTokenResponseBody
 import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneRequestBody
 import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneResponseBody
-import ru.foodbox.delivery.data.DeliveryType
+import ru.foodbox.delivery.data.sms_client.WebhookRequestBody
 import ru.foodbox.delivery.services.CartService
 
 @RestController
@@ -40,6 +41,36 @@ class AuthController(
             }
             else -> ResponseEntity.status(503).build()
         }
+    }
+    @PostMapping("/byCall")
+    fun authByCall(@RequestBody body: SendSmsRequestBody): AuthByCallResponseModel {
+        val callCheck = authService.authByCall(body.phone)
+
+        return if (callCheck != null) {
+            AuthByCallResponseModel(callCheck)
+        } else {
+            AuthByCallResponseModel("Ошибка сервиса", 500)
+        }
+    }
+
+    @PostMapping("/webhookSmsClient1003700")
+    fun webhookSmsClient(@RequestBody body: WebhookRequestBody): Int {
+        if (body.data.isEmpty()) return 100
+
+        val type = body.data[0]
+
+        when (type) {
+            "callcheck_status" -> {
+                if (body.data.size != 4) return 100
+
+                val checkId = body.data[1]
+                val status = body.data[2].toIntOrNull()
+                val createdAt = body.data[3].toLongOrNull()
+                authService.callCheckStatus(checkId, status, createdAt)
+            }
+        }
+
+        return 100
     }
 
     @PostMapping("/verify")

@@ -17,7 +17,7 @@ class ConfirmationCodeService(
             return null
         }
 
-        val code = "0990"//generateCode()
+        val code = generateCode()
         val expiresAt = LocalDateTime.now().plusMinutes(1)
 
         val confirmationCode = ConfirmationCodeEntity(
