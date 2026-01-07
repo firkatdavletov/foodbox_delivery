@@ -48,7 +48,7 @@ class AuthController(
 
     @PostMapping("/webhookClient", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun webhookClient(
-        @RequestParam("data") data: List<String>,
+        @RequestParam("data[]") data: List<String>,
         @RequestParam("hash") hash: String
     ): Int {
         // === Проверка подписи ===
