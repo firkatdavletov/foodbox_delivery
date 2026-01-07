@@ -57,7 +57,7 @@ class AuthController(
     ): String {
         val params = request.parameterMap
         val data = params["data"] ?: params["data[]"] ?: emptyArray()
-        val hash = params["hash"]?.firstOrNull() ?: return "403"
+        val hash = params["hash"]?.firstOrNull() ?: return "406"
 
         // === Проверка подписи ===
         val concatenatedData = buildString {
@@ -68,7 +68,7 @@ class AuthController(
 
         if (!hash.equals(calculatedHash, ignoreCase = true)) {
             // Можно залогировать попытку
-            return "403"
+            return "407"
         }
 
         // === Обработка данных ===
