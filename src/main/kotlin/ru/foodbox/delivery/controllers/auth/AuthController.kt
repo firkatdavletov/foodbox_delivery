@@ -59,6 +59,10 @@ class AuthController(
         val data = params["data"] ?: params["data[]"] ?: emptyArray()
         val hash = params["hash"]?.firstOrNull() ?: return "406"
 
+        if (data.isEmpty()) {
+            return "100"
+        }
+
         // === Проверка подписи ===
         val concatenatedData = buildString {
             data.forEach { append(it) }
