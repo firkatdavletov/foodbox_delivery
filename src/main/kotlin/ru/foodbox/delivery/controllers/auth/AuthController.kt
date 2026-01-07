@@ -46,7 +46,7 @@ class AuthController(
         }
     }
 
-    @PostMapping("/webhookClient", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    @PostMapping("/webhookClient", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun webhookClient(
         @RequestParam("data") data: List<String>,
         @RequestParam("hash") hash: String
