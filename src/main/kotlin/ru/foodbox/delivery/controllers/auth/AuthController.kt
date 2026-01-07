@@ -1,30 +1,20 @@
 package ru.foodbox.delivery.controllers.auth
 
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
-import ru.foodbox.delivery.controllers.auth.body.AuthByCallResponseModel
-import ru.foodbox.delivery.controllers.auth.body.AuthTypesResponseBody
-import ru.foodbox.delivery.controllers.auth.body.CartTokenResponseBody
-import ru.foodbox.delivery.controllers.auth.body.CreateCartRequestBody
+import org.springframework.web.bind.annotation.*
+import ru.foodbox.delivery.controllers.auth.body.*
 import ru.foodbox.delivery.services.AuthService
-import ru.foodbox.delivery.controllers.auth.body.SendSmsRequestBody
-import ru.foodbox.delivery.controllers.auth.body.SendSmsResponseBody
-import ru.foodbox.delivery.controllers.auth.body.RefreshTokenRequestBody
-import ru.foodbox.delivery.controllers.auth.body.RefreshTokenResponseBody
-import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneRequestBody
-import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneResponseBody
-import ru.foodbox.delivery.data.sms_client.WebhookRequestBody
 import ru.foodbox.delivery.services.CartService
+import java.security.MessageDigest
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val authService: AuthService,
     private val cartService: CartService,
+    @param:Value("\${sms.ru.api.key}") private val apiKey: String
 ) {
     @PostMapping("/sendSms")
     fun sendSms(
@@ -56,20 +46,46 @@ class AuthController(
         }
     }
 
-    @PostMapping("/webhookSmsClient1003700")
-    fun webhookSmsClient(@RequestBody body: WebhookRequestBody): Int {
-        if (body.data.isEmpty()) return 100
+    @PostMapping("/webhookClient", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
+    fun webhookClient(
+        @RequestParam("data") data: List<String>,
+        @RequestParam("hash") hash: String
+    ): Int {
+        // === Проверка подписи ===
+        val concatenatedData = buildString {
+            data.forEach { append(it) }
+        }
 
-        val type = body.data[0]
+        val calculatedHash = sha256(apiKey + concatenatedData)
 
-        when (type) {
-            "callcheck_status" -> {
-                if (body.data.size != 4) return 100
+        if (!hash.equals(calculatedHash, ignoreCase = true)) {
+            // Можно залогировать попытку
+            return 403
+        }
 
-                val checkId = body.data[1]
-                val status = body.data[2].toIntOrNull()
-                val createdAt = body.data[3].toLongOrNull()
-                authService.callCheckStatus(checkId, status, createdAt)
+        // === Обработка данных ===
+        data.forEach { entry ->
+            val lines = entry.split("\n")
+
+            when (lines[0]) {
+                "sms_status" -> {
+                    // Здесь ваша бизнес-логика
+                    // updateSmsStatus(smsId, smsStatus, unixTimestamp)
+                }
+
+                "callcheck_status" -> {
+                    val checkId = lines.getOrNull(1)
+                    val checkStatus = lines.getOrNull(2)
+
+                    when (checkStatus) {
+                        "401" -> {
+                            authService.callCheckStatus(checkId)
+                        }
+                        "402" -> {
+                            // Таймаут авторизации
+                        }
+                    }
+                }
             }
         }
 
@@ -126,5 +142,11 @@ class AuthController(
         } else {
             ResponseEntity.ok(CartTokenResponseBody(error = "Ошибка создания корзины", code = 404))
         }
+    }
+
+    private fun sha256(input: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes: ByteArray = digest.digest(input.toByteArray(Charsets.UTF_8))
+        return hashBytes.joinToString("") { "%02x".format(it) }
     }
 }

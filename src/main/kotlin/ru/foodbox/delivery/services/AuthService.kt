@@ -33,7 +33,7 @@ class AuthService(
 ) {
     fun sendSms(phone: String): Int? {
 
-        val savedCode = confirmationCodeService.createCodeForPhone(phone, 1) ?: return 500
+        val savedCode = confirmationCodeService.createCodeForPhone(phone, 5) ?: return 500
 
         val smsSendResponse = smsClient.sendSmsCode(savedCode.phone, savedCode.code)
 
@@ -48,7 +48,7 @@ class AuthService(
     fun authByCall(phone: String): CallPhoneModel? {
         val responseEntity = smsClient.authByCall(phone) ?: return null
 
-       val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 1)
+       val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5)
 
         val responseModel = CallPhoneModel(
             status = responseEntity.statusCode,
@@ -61,7 +61,9 @@ class AuthService(
         return responseModel
     }
 
-    fun callCheckStatus(checkId: String, status: Int?, createdAt: Long?) {
+    fun callCheckStatus(checkId: String?) {
+        if (checkId == null) return
+
         val confirmationCode = confirmationCodeService.findByCode(checkId) ?: return
         val phone = confirmationCode.phone
 
