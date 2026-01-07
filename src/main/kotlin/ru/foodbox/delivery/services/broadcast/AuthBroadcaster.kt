@@ -5,6 +5,7 @@ import org.junit.platform.commons.logging.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
+import ru.foodbox.delivery.services.dto.TokenPairDto
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -40,13 +41,15 @@ class AuthBroadcaster {
         }
     }
 
-    fun broadcastUpdate(checkId: String) {
+    fun broadcastUpdate(checkId: String, tokenPairDto: TokenPairDto) {
         val subscribers = subscriptions[checkId]?.toList().orEmpty()
 
         if (subscribers.isEmpty()) {
             return
         }
-        val message = TextMessage("OK")
+
+        val payload = mapper.writeValueAsString(tokenPairDto)
+        val message = TextMessage(payload)
 
         subscribers.forEach { session ->
             try {

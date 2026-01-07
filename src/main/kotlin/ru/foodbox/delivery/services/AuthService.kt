@@ -10,7 +10,6 @@ import ru.foodbox.delivery.data.repository.AuthTypeRepository
 import ru.foodbox.delivery.data.repository.RefreshTokenRepository
 import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.data.sms_client.SmsClient
-import ru.foodbox.delivery.data.sms_client.SmsRuResponseEntity
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import ru.foodbox.delivery.services.dto.AuthTypesDto
@@ -34,14 +33,10 @@ class AuthService(
 ) {
     fun sendSms(phone: String): Int? {
 
-        val savedCode = confirmationCodeService.createCodeForPhone(phone) ?: return 500
+        val savedCode = confirmationCodeService.createCodeForPhone(phone, 1) ?: return 500
 
-        val smsSendResponse = if (false) {
-            SmsRuResponseEntity(status = "true", statusCode = 200, sms = mapOf(), balance = 0.0)
-        } else {
-            smsClient.sendSmsCode(savedCode.phone, savedCode.code)
-        }
-        println("SMS CODE: ${savedCode.code}")
+        val smsSendResponse = smsClient.sendSmsCode(savedCode.phone, savedCode.code)
+
         return if (smsSendResponse != null && smsSendResponse.statusCode == 100) {
             val sms = smsSendResponse.sms?.get(phone)
             sms?.statusCode ?: 500
@@ -53,8 +48,11 @@ class AuthService(
     fun authByCall(phone: String): CallPhoneModel? {
         val responseEntity = smsClient.authByCall(phone) ?: return null
 
+       val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 1)
+
         val responseModel = CallPhoneModel(
-            checkId = responseEntity.checkId,
+            status = responseEntity.statusCode,
+            checkId = confirmationCode.code,
             callPhone = responseEntity.callPhone,
             callPhonePretty = responseEntity.callPhonePretty,
             callPhoneHtml = responseEntity.callPhoneHtml,
@@ -64,29 +62,38 @@ class AuthService(
     }
 
     fun callCheckStatus(checkId: String, status: Int?, createdAt: Long?) {
-        authBroadcaster.broadcastUpdate(checkId)
+        val confirmationCode = confirmationCodeService.findByCode(checkId) ?: return
+        val phone = confirmationCode.phone
+
+        val tokenPair = checkUserAndCreateTokenPair(phone)
+
+        authBroadcaster.broadcastUpdate(checkId, tokenPair)
     }
 
     fun verifyPhone(phone: String, code: String): TokenPairDto? {
         val isValidated = confirmationCodeService.validateCode(phone, code)
 
         if (isValidated) {
-            val user = userRepository.findByPhone(phone)
-
-            val userId = if (user == null) {
-                val newUser = UserEntity(phone = phone)
-                newUser.created = LocalDateTime.now()
-                newUser.modified = LocalDateTime.now()
-                val savedUser = userRepository.save(newUser)
-                savedUser.id!!
-            } else {
-                user.id!!
-            }
-
-            return createTokenPair(userId)
+            return checkUserAndCreateTokenPair(phone)
         } else {
             return null
         }
+    }
+
+    private fun checkUserAndCreateTokenPair(phone: String): TokenPairDto {
+        val user = userRepository.findByPhone(phone)
+
+        val userId = if (user == null) {
+            val newUser = UserEntity(phone = phone)
+            newUser.created = LocalDateTime.now()
+            newUser.modified = LocalDateTime.now()
+            val savedUser = userRepository.save(newUser)
+            savedUser.id!!
+        } else {
+            user.id!!
+        }
+
+        return createTokenPair(userId)
     }
 
     private fun createTokenPair(userId: Long): TokenPairDto {

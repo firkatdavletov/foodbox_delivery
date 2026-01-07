@@ -3,6 +3,7 @@ package ru.foodbox.delivery.services.model
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class CallPhoneModel(
+    val status: Int,
     @field:JsonProperty("check_id")
     val checkId: String,
     @field:JsonProperty("call_phone")

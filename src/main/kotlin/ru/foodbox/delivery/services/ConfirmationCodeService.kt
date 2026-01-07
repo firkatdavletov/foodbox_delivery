@@ -10,23 +10,47 @@ import kotlin.random.Random
 class ConfirmationCodeService(
     private val repository: ConfirmationCodeRepository,
 ) {
-    fun createCodeForPhone(phone: String): ConfirmationCodeEntity? {
-        val noUsedCode = repository.findByPhoneAndUsedIsFalseAndExpiresAtAfter(phone, LocalDateTime.now())
-
-        if (noUsedCode != null) {
-            return null
-        }
+    fun createCodeForPhone(phone: String, duration: Long): ConfirmationCodeEntity? {
+        deleteNoUsedCode(phone)
 
         val code = generateCode()
-        val expiresAt = LocalDateTime.now().plusMinutes(1)
+        val confirmationCode = saveCode(duration, phone, code)
+
+        return repository.save(confirmationCode)
+    }
+
+    fun saveCheckId(phone: String, checkId: String, duration: Long): ConfirmationCodeEntity {
+        deleteNoUsedCode(phone)
+        val confirmationCode = saveCode(duration, phone, checkId)
+
+        return repository.save(confirmationCode)
+    }
+
+    fun findByCode(code: String): ConfirmationCodeEntity? {
+        return repository.findByCodeAndUsedIsFalseAndExpiresAtAfter(code, LocalDateTime.now())
+    }
+
+    private fun saveCode(
+        duration: Long,
+        phone: String,
+        code: String
+    ): ConfirmationCodeEntity {
+        val expiresAt = LocalDateTime.now().plusMinutes(duration)
 
         val confirmationCode = ConfirmationCodeEntity(
             phone = phone,
             code = code,
             expiresAt = expiresAt
         )
+        return confirmationCode
+    }
 
-        return repository.save(confirmationCode)
+    private fun deleteNoUsedCode(phone: String) {
+        val noUsedCode = repository.findByPhoneAndUsedIsFalseAndExpiresAtAfter(phone, LocalDateTime.now())
+
+        if (noUsedCode != null) {
+            repository.delete(noUsedCode)
+        }
     }
 
     fun validateCode(phone: String, code: String): Boolean {

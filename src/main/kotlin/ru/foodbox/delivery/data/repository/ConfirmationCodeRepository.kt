@@ -7,10 +7,9 @@ import java.time.LocalDateTime
 
 interface ConfirmationCodeRepository: JpaRepository<ConfirmationCodeEntity, Long> {
 
-    fun findByPhoneAndUsedIsFalseAndExpiresAtAfter(
-        phone: String,
-        time: LocalDateTime
-    ): ConfirmationCodeEntity?
+    fun findByPhoneAndUsedIsFalseAndExpiresAtAfter(phone: String, time: LocalDateTime): ConfirmationCodeEntity?
+
+    fun findByCodeAndUsedIsFalseAndExpiresAtAfter(code: String, time: LocalDateTime): ConfirmationCodeEntity?
 
     @Transactional
     fun deleteAllByExpiresAtBefore(time: LocalDateTime): Long
