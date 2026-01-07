@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartHttpServletRequest
 import ru.foodbox.delivery.controllers.auth.body.*
 import ru.foodbox.delivery.services.AuthService
 import ru.foodbox.delivery.services.CartService
@@ -46,11 +47,18 @@ class AuthController(
         }
     }
 
-    @PostMapping("/webhookClient", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @PostMapping(
+        "/webhookClient",
+        consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
+        produces = [MediaType.TEXT_PLAIN_VALUE]
+    )
     fun webhookClient(
-        @RequestParam("data[]") data: List<String>,
-        @RequestParam("hash") hash: String
+        request: MultipartHttpServletRequest
     ): Int {
+        val params = request.parameterMap
+        val data = params["data"] ?: params["data[]"] ?: emptyArray()
+        val hash = params["hash"]?.firstOrNull() ?: return 403
+
         // === Проверка подписи ===
         val concatenatedData = buildString {
             data.forEach { append(it) }
