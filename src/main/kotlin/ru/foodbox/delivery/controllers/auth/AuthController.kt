@@ -56,7 +56,6 @@ class AuthController(
             when (lines[0]) {
                 "sms_status" -> {
                     // Здесь ваша бизнес-логика
-                    // updateSmsStatus(smsId, smsStatus, unixTimestamp)
                 }
 
                 "callcheck_status" -> {
