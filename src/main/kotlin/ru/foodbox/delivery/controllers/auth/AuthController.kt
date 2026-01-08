@@ -54,6 +54,7 @@ class AuthController(
 
                         when (checkStatus) {
                             "401" -> {
+                                log.info("Callcheck status for checkId: $checkId")
                                 authService.callCheckStatus(checkId)
                             }
                             "402" -> {
