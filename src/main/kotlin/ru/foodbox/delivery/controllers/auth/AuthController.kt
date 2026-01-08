@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.controllers.auth
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -17,6 +18,7 @@ class AuthController(
     private val cartService: CartService,
     @param:Value("\${sms.ru.api.key}") private val apiKey: String
 ) {
+    private val log = LoggerFactory.getLogger(AuthController::class.java)
     @PostMapping("/verifyPhoneNumber")
     fun verifyPhoneNumber(
         @RequestBody body: VerifyPhoneNumberRequestBody
@@ -33,9 +35,35 @@ class AuthController(
     fun webhookClient(
         request: MultipartHttpServletRequest
     ): String {
+        log.info("Webhook received from IP: {}", request.remoteAddr)
+        log.info("Content-Type: {}", request.contentType)
+        request.parameterMap.forEach { (key, values) ->
+            log.info("Param: {} -> {}", key, values.joinToString())
+        }
+
+        request.fileMap.forEach { (name, file) ->
+            log.info(
+                "File part: name={}, originalFilename={}, size={}, contentType={}",
+                name,
+                file.originalFilename,
+                file.size,
+                file.contentType
+            )
+
+            val content = file.inputStream.bufferedReader().use { it.readText() }
+            log.info("File content:\n{}", content)
+        }
+
         val params = request.parameterMap
         val data = params["data"] ?: params["data[]"] ?: emptyArray()
         val hash = params["hash"]?.firstOrNull() ?: return "406"
+
+        log.info("Raw data entries count: {}", data.size)
+        data.forEachIndexed { index, entry ->
+            log.info("Data[{}]:\n{}", index, entry)
+        }
+
+        log.info("Received hash: {}", hash)
 
         // === Проверка подписи ===
         val concatenatedData = buildString {
@@ -43,6 +71,8 @@ class AuthController(
         }
 
         val calculatedHash = sha256(apiKey + concatenatedData)
+
+        log.info("Calculated hash: {}", calculatedHash)
 
         if (!hash.equals(calculatedHash, ignoreCase = true)) {
             // Можно залогировать попытку
