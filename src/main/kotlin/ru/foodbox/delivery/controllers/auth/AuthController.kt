@@ -37,70 +37,39 @@ class AuthController(
     ): String {
         log.info("Webhook received from IP: {}", request.remoteAddr)
         log.info("Content-Type: {}", request.contentType)
+        val map: MutableMap<String, Array<String>> = HashMap()
+
         request.parameterMap.forEach { (key, values) ->
             log.info("Param: {} -> {}", key, values.joinToString())
-        }
+            map[key] = values
+            if (key.startsWith("data")) {
+                when (values[0]) {
+                    "sms_status" -> {
+                        // Здесь ваша бизнес-логика
+                    }
 
-        request.fileMap.forEach { (name, file) ->
-            log.info(
-                "File part: name={}, originalFilename={}, size={}, contentType={}",
-                name,
-                file.originalFilename,
-                file.size,
-                file.contentType
-            )
+                    "callcheck_status" -> {
+                        val checkId = values.getOrNull(1)
+                        val checkStatus = values.getOrNull(2)
 
-            val content = file.inputStream.bufferedReader().use { it.readText() }
-            log.info("File content:\n{}", content)
-        }
-
-        val params = request.parameterMap
-        val data = params["data"] ?: params["data[]"] ?: emptyArray()
-        val hash = params["hash"]?.firstOrNull() ?: return "406"
-
-        log.info("Raw data entries count: {}", data.size)
-        data.forEachIndexed { index, entry ->
-            log.info("Data[{}]:\n{}", index, entry)
-        }
-
-        log.info("Received hash: {}", hash)
-
-        // === Проверка подписи ===
-        val concatenatedData = buildString {
-            data.forEach { append(it) }
-        }
-
-        val calculatedHash = sha256(apiKey + concatenatedData)
-
-        log.info("Calculated hash: {}", calculatedHash)
-
-        if (!hash.equals(calculatedHash, ignoreCase = true)) {
-            // Можно залогировать попытку
-            return "407"
-        }
-
-        // === Обработка данных ===
-        data.forEach { entry ->
-            val lines = entry.split("\n")
-
-            when (lines[0]) {
-                "sms_status" -> {
-                    // Здесь ваша бизнес-логика
-                }
-
-                "callcheck_status" -> {
-                    val checkId = lines.getOrNull(1)
-                    val checkStatus = lines.getOrNull(2)
-
-                    when (checkStatus) {
-                        "401" -> {
-                            authService.callCheckStatus(checkId)
-                        }
-                        "402" -> {
-                            // Таймаут авторизации
+                        when (checkStatus) {
+                            "401" -> {
+                                authService.callCheckStatus(checkId)
+                            }
+                            "402" -> {
+                                // Таймаут авторизации
+                            }
                         }
                     }
                 }
+            } else if (key == "hash") {
+                val hash = values.getOrNull(0)
+                val concatenatedData = buildString {
+                    map.forEach { append(it) }
+                }
+                val calculatedHash = sha256(concatenatedData)
+                log.info("Received hash: {}", hash)
+                log.info("Calculated hash: {}", calculatedHash)
             }
         }
 
