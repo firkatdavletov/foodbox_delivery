@@ -1,9 +1,11 @@
 package ru.foodbox.delivery.services
 
 import org.springframework.http.HttpStatusCode
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import ru.foodbox.delivery.controllers.auth.body.VerifyPhoneNumberResponseBody
 import ru.foodbox.delivery.data.entities.RefreshTokenEntity
 import ru.foodbox.delivery.data.entities.UserEntity
 import ru.foodbox.delivery.data.repository.AuthTypeRepository
@@ -31,34 +33,73 @@ class AuthService(
     private val getAuthTypeRepository: AuthTypeRepository,
     private val authBroadcaster: AuthBroadcaster,
 ) {
-    fun sendSms(phone: String): Int? {
+    fun verifyPhoneNumber(phone: String, type: String): VerifyPhoneNumberResponseBody {
 
-        val savedCode = confirmationCodeService.createCodeForPhone(phone, 5) ?: return 500
+        return when (type) {
+            "sms" -> {
+                verifyPhoneNumberBySmsCode(phone)
+            }
+            "call" -> {
+                verifyPhoneNumberByCall(phone)
+            }
 
-        val smsSendResponse = smsClient.sendSmsCode(savedCode.phone, savedCode.code)
-
-        return if (smsSendResponse != null && smsSendResponse.statusCode == 100) {
-            val sms = smsSendResponse.sms?.get(phone)
-            sms?.statusCode ?: 500
-        } else {
-            500
+            else -> {
+                VerifyPhoneNumberResponseBody("Неизвестный тип подтверждения", 404)
+            }
         }
     }
 
-    fun authByCall(phone: String): CallPhoneModel? {
-        val responseEntity = smsClient.authByCall(phone) ?: return null
+    private fun verifyPhoneNumberBySmsCode(phoneNumber: String): VerifyPhoneNumberResponseBody {
+        val savedCode = confirmationCodeService.createCodeForPhone(phoneNumber, 5)
+            ?: return VerifyPhoneNumberResponseBody("Ошибка создания кода подтверждения", 200)
 
-       val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5)
+        val smsSendResponse = smsClient.sendSmsCode(savedCode.phone, savedCode.code)
+            ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса отправки СМС", 200)
 
-        val responseModel = CallPhoneModel(
-            status = responseEntity.statusCode,
-            checkId = confirmationCode.code,
-            callPhone = responseEntity.callPhone,
-            callPhonePretty = responseEntity.callPhonePretty,
-            callPhoneHtml = responseEntity.callPhoneHtml,
-        )
+        return when (val status = smsSendResponse.statusCode) {
+            100 -> {
+                VerifyPhoneNumberResponseBody(
+                    status = status,
+                    null,
+                    null
+                )
+            }
+            200 -> {
+                VerifyPhoneNumberResponseBody("Ошибка сервиса: невалидный токен", 200)
+            }
+            407 -> {
+                VerifyPhoneNumberResponseBody("Повторите позже", 407)
+            }
+            else -> {
+                VerifyPhoneNumberResponseBody("Ошибка сервиса. Код ошибки: $status", status)
+            }
+        }
+    }
 
-        return responseModel
+    private fun verifyPhoneNumberByCall(phone: String): VerifyPhoneNumberResponseBody {
+        val responseEntity = smsClient.authByCall(phone)
+            ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса подтверждения номера телефона", 200)
+
+        return when (val status = responseEntity.statusCode) {
+            100 -> {
+                val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5)
+
+                VerifyPhoneNumberResponseBody(
+                    status = responseEntity.statusCode,
+                    checkId = confirmationCode.code,
+                    callPhone = responseEntity.callPhone
+                )
+            }
+            200 -> {
+                VerifyPhoneNumberResponseBody("Ошибка сервиса: невалидный токен", 200)
+            }
+            407 -> {
+                VerifyPhoneNumberResponseBody("Повторите позже", 407)
+            }
+            else -> {
+                VerifyPhoneNumberResponseBody("Ошибка сервиса. Код ошибки: $status", status)
+            }
+        }
     }
 
     fun callCheckStatus(checkId: String?) {

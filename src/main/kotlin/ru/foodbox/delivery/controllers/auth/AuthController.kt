@@ -17,34 +17,12 @@ class AuthController(
     private val cartService: CartService,
     @param:Value("\${sms.ru.api.key}") private val apiKey: String
 ) {
-    @PostMapping("/sendSms")
-    fun sendSms(
-        @RequestBody body: SendSmsRequestBody
-    ): ResponseEntity<SendSmsResponseBody> {
-        return when (val status = authService.sendSms(body.phone)) {
-            100 -> {
-                ResponseEntity.ok(SendSmsResponseBody(
-                    status = status,
-                ))
-            }
-            200 -> {
-                ResponseEntity.ok(SendSmsResponseBody("Ошибка сервиса: невалидный токен", 200))
-            }
-            407 -> {
-                ResponseEntity.ok(SendSmsResponseBody("Повторите позже", 407))
-            }
-            else -> ResponseEntity.ok(SendSmsResponseBody("Ошибка сервиса. Код ошибки: $status", status))
-        }
-    }
-    @PostMapping("/byCall")
-    fun authByCall(@RequestBody body: SendSmsRequestBody): AuthByCallResponseModel {
-        val callCheck = authService.authByCall(body.phone)
-
-        return if (callCheck != null) {
-            AuthByCallResponseModel(callCheck)
-        } else {
-            AuthByCallResponseModel("Ошибка сервиса", 500)
-        }
+    @PostMapping("/verifyPhoneNumber")
+    fun verifyPhoneNumber(
+        @RequestBody body: VerifyPhoneNumberRequestBody
+    ): ResponseEntity<VerifyPhoneNumberResponseBody> {
+        val response = authService.verifyPhoneNumber(body.phone, body.type)
+        return ResponseEntity.ok(response)
     }
 
     @PostMapping(
@@ -58,10 +36,6 @@ class AuthController(
         val params = request.parameterMap
         val data = params["data"] ?: params["data[]"] ?: emptyArray()
         val hash = params["hash"]?.firstOrNull() ?: return "406"
-
-        if (data.isEmpty()) {
-            return "100"
-        }
 
         // === Проверка подписи ===
         val concatenatedData = buildString {
@@ -104,14 +78,14 @@ class AuthController(
         return "100"
     }
 
-    @PostMapping("/verify")
-    fun verifyPhone(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<VerifyPhoneResponseBody> {
+    @PostMapping("/checkSmsCode")
+    fun checkSmsCode(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<CheckSmsCodeResponseBody> {
         val dto = authService.verifyPhone(body.phone, body.code)
 
         return if (dto != null) {
-            ResponseEntity.ok(VerifyPhoneResponseBody(dto))
+            ResponseEntity.ok(CheckSmsCodeResponseBody(dto))
         } else {
-            ResponseEntity.ok(VerifyPhoneResponseBody("Error", 100))
+            ResponseEntity.ok(CheckSmsCodeResponseBody("Error", 200))
         }
     }
 

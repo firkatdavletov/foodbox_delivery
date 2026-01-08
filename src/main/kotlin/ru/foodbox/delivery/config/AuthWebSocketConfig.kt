@@ -9,11 +9,13 @@ import ru.foodbox.delivery.controllers.websockets.AuthWebSocketHandler
 @Configuration
 @EnableWebSocket
 class AuthWebSocketConfig(
-    private val handler: AuthWebSocketHandler
+    private val handler: AuthWebSocketHandler,
+    private val interceptor: AuthHandshakeInterceptor,
 ) : WebSocketConfigurer {
     override fun registerWebSocketHandlers(registry: WebSocketHandlerRegistry) {
         registry
-            .addHandler(handler, "/ws/callcheck")
+            .addHandler(handler, "/ws/callcheck/{check_id}")
+            .addInterceptors(interceptor)
             .setAllowedOrigins("*")
     }
 }
