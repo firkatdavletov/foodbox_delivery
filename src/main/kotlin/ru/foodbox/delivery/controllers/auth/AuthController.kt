@@ -44,7 +44,8 @@ class AuthController(
             map[key] = values
             log.info("Key: $key")
             if (key.startsWith("data")) {
-                val type = values[0]
+                val entries = values.getOrNull(0)?.split("\n")
+                val type = entries?.getOrNull(0)
                 log.info("Type: $type")
 
                 when (type) {
