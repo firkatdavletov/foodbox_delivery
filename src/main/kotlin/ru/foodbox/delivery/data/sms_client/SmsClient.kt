@@ -22,6 +22,7 @@ class SmsClient(
                 uriBuilder
                     .path(uri)
                     .queryParam("api_id", apiKey)
+                    .queryParam("from", "FoodBox")
                     .queryParam("to", phone)
                     .queryParam("msg", code)
                     .queryParam("json", 1)
