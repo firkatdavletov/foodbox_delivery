@@ -25,10 +25,6 @@ class AuthWebSocketHandler(
     override fun handleTextMessage(session: WebSocketSession, message: TextMessage) {
         val payload = message.payload.trim()
         log.debug { "WS message from ${session.id}: $payload" }
-
-        // simple protocol:
-        // subscribe:ORDER_ID
-        // unsubscribe:ORDER_ID
         when {
             payload.startsWith("subscribe") -> {
                 val checkId = session.attributes["check_id"] as? String ?: return

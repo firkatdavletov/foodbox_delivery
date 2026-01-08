@@ -40,7 +40,8 @@ class SecurityConfig(
                         "/map/**",
                         "/orders/**",
                         "/departments/**",
-                        "/payment/**"
+                        "/payment/**",
+                        "/ws/callcheck/**"
                     )
                     .permitAll()
                     .dispatcherTypeMatchers(
