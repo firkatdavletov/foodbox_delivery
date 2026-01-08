@@ -54,8 +54,8 @@ class AuthController(
                     }
 
                     "callcheck_status" -> {
-                        val checkId = values.getOrNull(1)
-                        val checkStatus = values.getOrNull(2)
+                        val checkId = entries.getOrNull(1)
+                        val checkStatus = entries.getOrNull(2)
 
                         log.info("CheckId: $checkId, CheckStatus: $checkStatus")
 
