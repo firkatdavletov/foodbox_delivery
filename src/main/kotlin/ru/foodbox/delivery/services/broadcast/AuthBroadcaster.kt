@@ -1,7 +1,7 @@
 package ru.foodbox.delivery.services.broadcast
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.junit.platform.commons.logging.LoggerFactory
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class AuthBroadcaster {
-    private val logger = LoggerFactory.getLogger(AuthBroadcaster::class.java)
+    private val log = LoggerFactory.getLogger(AuthBroadcaster::class.java)
 
     private val subscriptions: ConcurrentHashMap<String, MutableSet<WebSocketSession>> = ConcurrentHashMap()
 
@@ -37,6 +37,7 @@ class AuthBroadcaster {
         subscriptions.forEach { (userId, set) ->
             if (set.remove(session)) {
                 if (set.isEmpty()) subscriptions.remove(userId)
+                log.debug("Removed session ${session.id} from $userId")
             }
         }
     }
@@ -45,11 +46,14 @@ class AuthBroadcaster {
         val subscribers = subscriptions[checkId]?.toList().orEmpty()
 
         if (subscribers.isEmpty()) {
+            log.info("No subscribers for checkId $checkId, skipping broadcast")
             return
         }
 
         val payload = mapper.writeValueAsString(tokenPairDto)
         val message = TextMessage(payload)
+
+        log.info("Broadcasting update for checkId $checkId to ${subscribers.size} sessions")
 
         subscribers.forEach { session ->
             try {
@@ -59,6 +63,7 @@ class AuthBroadcaster {
                     unsubscribe(checkId, session)
                 }
             } catch (e: Exception) {
+                log.warn("Failed to send update to session ${session.id}: ${e.message}")
                 unsubscribe(checkId, session)
                 try { session.close() } catch (_: Exception) {}
             }
