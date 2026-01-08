@@ -42,8 +42,12 @@ class AuthController(
         request.parameterMap.forEach { (key, values) ->
             log.info("Param: {} -> {}", key, values.joinToString())
             map[key] = values
+            log.info("Key: $key")
             if (key.startsWith("data")) {
-                when (values[0]) {
+                val type = values[0]
+                log.info("Type: $type")
+
+                when (type) {
                     "sms_status" -> {
                         // Здесь ваша бизнес-логика
                     }
@@ -52,9 +56,10 @@ class AuthController(
                         val checkId = values.getOrNull(1)
                         val checkStatus = values.getOrNull(2)
 
+                        log.info("CheckId: $checkId, CheckStatus: $checkStatus")
+
                         when (checkStatus) {
                             "401" -> {
-                                log.info("Callcheck status for checkId: $checkId")
                                 authService.callCheckStatus(checkId)
                             }
                             "402" -> {
@@ -66,7 +71,7 @@ class AuthController(
             } else if (key == "hash") {
                 val hash = values.getOrNull(0)
                 val concatenatedData = buildString {
-                    map.forEach { append(it) }
+                    map.values.forEach { append(it) }
                 }
                 val calculatedHash = sha256(concatenatedData)
                 log.info("Received hash: {}", hash)
