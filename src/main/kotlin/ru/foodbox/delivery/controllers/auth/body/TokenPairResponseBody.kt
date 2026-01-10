@@ -3,7 +3,7 @@ package ru.foodbox.delivery.controllers.auth.body
 import ru.foodbox.delivery.controllers.base.ResponseModel
 import ru.foodbox.delivery.services.dto.TokenPairDto
 
-data class CheckSmsCodeResponseBody(
+data class TokenPairResponseBody(
     val tokens: TokenPairDto?,
     override val success: Boolean,
     override val error: String?,

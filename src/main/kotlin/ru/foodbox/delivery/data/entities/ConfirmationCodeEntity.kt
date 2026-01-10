@@ -21,4 +21,6 @@ class ConfirmationCodeEntity(
     val expiresAt: LocalDateTime,
     @Column(nullable = false)
     var used: Boolean = false,
+    @Column
+    var confirmed: Boolean = false,
 ) : BaseEntity<Long>()

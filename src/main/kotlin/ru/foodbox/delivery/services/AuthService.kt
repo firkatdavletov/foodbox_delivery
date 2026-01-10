@@ -1,7 +1,6 @@
 package ru.foodbox.delivery.services
 
 import org.springframework.http.HttpStatusCode
-import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
@@ -16,7 +15,6 @@ import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import ru.foodbox.delivery.services.dto.AuthTypesDto
 import ru.foodbox.delivery.services.dto.TokenPairDto
-import ru.foodbox.delivery.services.model.CallPhoneModel
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.*
@@ -105,21 +103,20 @@ class AuthService(
     fun callCheckStatus(checkId: String?) {
         if (checkId == null) return
 
-        val confirmationCode = confirmationCodeService.findByCode(checkId) ?: return
-        val phone = confirmationCode.phone
+        val confirmed = confirmationCodeService.confirmCheckId(checkId)
 
-        val tokenPair = checkUserAndCreateTokenPair(phone)
-
-        authBroadcaster.broadcastUpdate(checkId, tokenPair)
+        if (confirmed) {
+            authBroadcaster.broadcastUpdate(checkId)
+        }
     }
 
     fun verifyPhone(phone: String, code: String): TokenPairDto? {
         val isValidated = confirmationCodeService.validateCode(phone, code)
 
-        if (isValidated) {
-            return checkUserAndCreateTokenPair(phone)
+        return if (isValidated) {
+            checkUserAndCreateTokenPair(phone)
         } else {
-            return null
+            null
         }
     }
 

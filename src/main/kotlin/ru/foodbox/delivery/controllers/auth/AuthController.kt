@@ -84,13 +84,13 @@ class AuthController(
     }
 
     @PostMapping("/checkSmsCode")
-    fun checkSmsCode(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<CheckSmsCodeResponseBody> {
+    fun checkSmsCode(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<TokenPairResponseBody> {
         val dto = authService.verifyPhone(body.phone, body.code)
 
         return if (dto != null) {
-            ResponseEntity.ok(CheckSmsCodeResponseBody(dto))
+            ResponseEntity.ok(TokenPairResponseBody(dto))
         } else {
-            ResponseEntity.ok(CheckSmsCodeResponseBody("Error", 200))
+            ResponseEntity.ok(TokenPairResponseBody("Not authorized", 200))
         }
     }
 
