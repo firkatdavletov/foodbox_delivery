@@ -31,7 +31,7 @@ class ConfirmationCodeService(
     }
 
     fun confirmCheckId(checkId: String): Boolean {
-        val foundCode = repository.findByCodeAndUsedIsFalseAndExpiresAtAfter(checkId, LocalDateTime.now())
+        val foundCode = repository.findByCodeAndUsedIsFalseAndConfirmedIsFalseAndExpiresAtAfter(checkId, LocalDateTime.now())
             ?: return false
         foundCode.confirmed = true
         repository.save(foundCode)
@@ -56,7 +56,7 @@ class ConfirmationCodeService(
     }
 
     private fun deleteNoUsedCode(phone: String) {
-        val noUsedCode = repository.findByPhoneAndUsedIsFalseAnsConfirmedIsTrueAndExpiresAtAfter(phone, LocalDateTime.now())
+        val noUsedCode = repository.findByPhoneAndUsedIsFalseAndConfirmedIsTrueAndExpiresAtAfter(phone, LocalDateTime.now())
 
         if (noUsedCode != null) {
             repository.delete(noUsedCode)
@@ -64,7 +64,7 @@ class ConfirmationCodeService(
     }
 
     fun validateCode(phone: String, code: String): Boolean {
-        val found = repository.findByPhoneAndUsedIsFalseAnsConfirmedIsTrueAndExpiresAtAfter(phone,LocalDateTime.now())
+        val found = repository.findByPhoneAndUsedIsFalseAndConfirmedIsTrueAndExpiresAtAfter(phone,LocalDateTime.now())
 
         return if (found != null) {
             found.used = true
