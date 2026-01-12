@@ -29,11 +29,14 @@ class AuthWebSocketHandler(
         log.debug { "WS message from ${session.id}: $payload" }
         when {
             payload.startsWith("subscribe") -> {
-                val checkId = session.attributes["check_id"] as? String ?: return
-                broadcaster.subscribe(checkId, session)
-                session.sendMessage(TextMessage("pending"))
-                authService.callCheckStatus(checkId)
-                log.info {"Session ${session.id} subscribed to check_id $checkId" }
+                val checkId = session.attributes["check_id"] as? String
+                if (checkId != null) {
+                    broadcaster.subscribe(checkId, session)
+                    authService.callCheckStatus(checkId)
+                    log.info {"Session ${session.id} subscribed to check_id $checkId" }
+                } else {
+                    session.sendMessage(PongMessage())
+                }
             }
             payload.startsWith("unsubscribe") -> {
                 val checkId = session.attributes["check_id"] as? String ?: return
