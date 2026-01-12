@@ -36,9 +36,9 @@ enum class OrderStatus {
         fun getNextButtonText(currentStatus: OrderStatus): String {
             return when (currentStatus) {
                 PENDING -> {
-                    "Заказ готовится"
+                    "Подтвердить заказ"
                 }
-                AWAITING_PAYMENT -> ""
+                AWAITING_PAYMENT -> "Заказ оплачен"
                 AWAITING_CASH_PAYMENT -> ""
                 PAID -> "Заказ передан курьеру"
                 PROCESSING -> "Заказ доставлен"

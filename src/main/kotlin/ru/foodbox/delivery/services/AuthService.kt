@@ -105,8 +105,10 @@ class AuthService(
 
         val confirmed = confirmationCodeService.confirmCheckId(checkId)
 
-        if (confirmed) {
-            authBroadcaster.broadcastUpdate(checkId)
+        if (confirmed != null) {
+            val phone = confirmed.phone
+            val tokenPairDto = checkUserAndCreateTokenPair(phone)
+            authBroadcaster.broadcastUpdate(checkId, tokenPairDto)
         }
     }
 

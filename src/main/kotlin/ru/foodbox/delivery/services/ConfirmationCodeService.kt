@@ -26,16 +26,8 @@ class ConfirmationCodeService(
         return repository.save(confirmationCode)
     }
 
-    fun saveConfirmation(code: ConfirmationCodeEntity): ConfirmationCodeEntity {
-        return repository.save(code)
-    }
-
-    fun confirmCheckId(checkId: String): Boolean {
-        val foundCode = repository.findByCodeAndUsedIsFalseAndConfirmedIsFalseAndExpiresAtAfter(checkId, LocalDateTime.now())
-            ?: return false
-        foundCode.confirmed = true
-        repository.save(foundCode)
-        return true
+    fun confirmCheckId(checkId: String): ConfirmationCodeEntity? {
+        return repository.findByCodeAndUsedIsFalseAndConfirmedIsFalseAndExpiresAtAfter(checkId, LocalDateTime.now())
     }
 
     private fun saveCode(

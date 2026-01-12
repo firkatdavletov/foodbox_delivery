@@ -7,12 +7,14 @@ import org.springframework.web.socket.PongMessage
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
+import ru.foodbox.delivery.services.AuthService
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class AuthWebSocketHandler(
-    private val broadcaster: AuthBroadcaster
+    private val broadcaster: AuthBroadcaster,
+    private val authService: AuthService,
 ) : TextWebSocketHandler() {
     private val log = LoggerFactory.getLogger(AuthWebSocketHandler::class.java)
     private val sessions = ConcurrentHashMap.newKeySet<WebSocketSession>()
@@ -29,13 +31,14 @@ class AuthWebSocketHandler(
             payload.startsWith("subscribe") -> {
                 val checkId = session.attributes["check_id"] as? String ?: return
                 broadcaster.subscribe(checkId, session)
-                session.sendMessage(PongMessage())
+                session.sendMessage(TextMessage("pending"))
+                authService.callCheckStatus(checkId)
                 log.info {"Session ${session.id} subscribed to check_id $checkId" }
             }
             payload.startsWith("unsubscribe") -> {
                 val checkId = session.attributes["check_id"] as? String ?: return
                 broadcaster.unsubscribe(checkId, session)
-                session.sendMessage(PongMessage())
+                session.sendMessage(TextMessage("unsubscribed"))
                 log.info {"Session ${session.id} unsubscribed from $checkId" }
             }
             else -> {
