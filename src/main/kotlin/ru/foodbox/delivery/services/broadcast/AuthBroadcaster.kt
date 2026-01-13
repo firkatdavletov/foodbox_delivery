@@ -42,6 +42,10 @@ class AuthBroadcaster {
         }
     }
 
+    fun containsActiveSession(checkId: String): Boolean {
+        return !subscriptions[checkId]?.toList().isNullOrEmpty()
+    }
+
     fun broadcastUpdate(checkId: String, tokenPairDto: TokenPairDto) {
         val subscribers = subscriptions[checkId]?.toList().orEmpty()
 

@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.controllers.websockets
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.platform.commons.logging.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.CloseStatus
@@ -17,6 +18,7 @@ class AuthWebSocketHandler(
     private val authService: AuthService,
 ) : TextWebSocketHandler() {
     private val log = LoggerFactory.getLogger(AuthWebSocketHandler::class.java)
+    private val mapper = jacksonObjectMapper()
     private val sessions = ConcurrentHashMap.newKeySet<WebSocketSession>()
 
     override fun afterConnectionEstablished(session: WebSocketSession) {
@@ -29,12 +31,17 @@ class AuthWebSocketHandler(
         log.debug { "WS message from ${session.id}: $payload" }
         when {
             payload.startsWith("subscribe") -> {
-                session.sendMessage(PongMessage())
-
                 val checkId = session.attributes["check_id"] as? String
                 if (checkId != null) {
                     broadcaster.subscribe(checkId, session)
-                    authService.callCheckStatus(checkId)
+                    val tokenPair = authService.checkConfirmation(checkId)
+
+                    if (tokenPair != null) {
+                        val message = mapper.writeValueAsString(tokenPair)
+                        session.sendMessage(TextMessage(message))
+                    } else {
+                        session.sendMessage(PongMessage())
+                    }
                     log.info {"Session ${session.id} subscribed to check_id $checkId" }
                 }
             }

@@ -11,6 +11,8 @@ interface ConfirmationCodeRepository: JpaRepository<ConfirmationCodeEntity, Long
 
     fun findByCodeAndUsedIsFalseAndConfirmedIsFalseAndExpiresAtAfter(code: String, time: LocalDateTime): ConfirmationCodeEntity?
 
+    fun findByCodeAndUsedIsFalseAndConfirmedIsTrueAndExpiresAtAfter(code: String, time: LocalDateTime): ConfirmationCodeEntity?
+
     @Transactional
     fun deleteAllByExpiresAtBefore(time: LocalDateTime): Long
 }

@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.services
 
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +32,7 @@ class AuthService(
     private val getAuthTypeRepository: AuthTypeRepository,
     private val authBroadcaster: AuthBroadcaster,
 ) {
+    private val logger = LoggerFactory.getLogger(AuthService::class.java)
     fun verifyPhoneNumber(phone: String, type: String): VerifyPhoneNumberResponseBody {
 
         return when (type) {
@@ -81,6 +83,7 @@ class AuthService(
         return when (val status = responseEntity.statusCode) {
             100 -> {
                 val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5)
+                logger.info("Saved code $confirmationCode")
 
                 VerifyPhoneNumberResponseBody(
                     status = responseEntity.statusCode,
@@ -103,13 +106,28 @@ class AuthService(
     fun callCheckStatus(checkId: String?) {
         if (checkId == null) return
 
-        val confirmed = confirmationCodeService.confirmCheckId(checkId)
+        val confirmedCode = confirmationCodeService.confirmCheckId(checkId)
+        logger.info("Confirmed code: $confirmedCode")
 
-        if (confirmed != null) {
-            val phone = confirmed.phone
-            val tokenPairDto = checkUserAndCreateTokenPair(phone)
+        if (confirmedCode == null) return
+
+        if (authBroadcaster.containsActiveSession(checkId)) {
+            val usedCode = confirmationCodeService.checkConfirmedCode(checkId) ?: return
+            val tokenPairDto = checkUserAndCreateTokenPair(usedCode.phone)
+            logger.info("Confirmed code: $usedCode")
             authBroadcaster.broadcastUpdate(checkId, tokenPairDto)
         }
+    }
+
+    fun checkConfirmation(checkId: String): TokenPairDto? {
+        logger.info("Checking code for: $checkId")
+        val confirmedCode = confirmationCodeService.checkConfirmedCode(checkId)
+            ?: return null
+
+        logger.info("Checked code: $confirmedCode")
+
+        val phone = confirmedCode.phone
+        return checkUserAndCreateTokenPair(phone)
     }
 
     fun verifyPhone(phone: String, code: String): TokenPairDto? {

@@ -83,6 +83,12 @@ class AuthController(
         return "100"
     }
 
+    @GetMapping("/webhookTest")
+    fun webhookTest(@RequestParam checkId: String): String {
+        authService.callCheckStatus(checkId)
+        return "100"
+    }
+
     @PostMapping("/checkSmsCode")
     fun checkSmsCode(@RequestBody body: VerifyPhoneRequestBody): ResponseEntity<TokenPairResponseBody> {
         val dto = authService.verifyPhone(body.phone, body.code)
