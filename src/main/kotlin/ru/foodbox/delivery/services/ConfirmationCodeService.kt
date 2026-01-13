@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.services
 
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Service
 import ru.foodbox.delivery.data.entities.ConfirmationCodeEntity
 import ru.foodbox.delivery.data.repository.ConfirmationCodeRepository
@@ -10,6 +11,8 @@ import kotlin.random.Random
 class ConfirmationCodeService(
     private val repository: ConfirmationCodeRepository,
 ) {
+
+    @Transactional
     fun createCodeForPhone(phone: String, duration: Long): ConfirmationCodeEntity? {
         deleteNoUsedCode(phone)
 
@@ -19,6 +22,7 @@ class ConfirmationCodeService(
         return repository.save(confirmationCode)
     }
 
+    @Transactional
     fun saveCheckId(phone: String, checkId: String, duration: Long): ConfirmationCodeEntity {
         deleteNoUsedCode(phone)
         val confirmationCode = saveCode(duration, phone, checkId, false)
@@ -26,6 +30,7 @@ class ConfirmationCodeService(
         return repository.save(confirmationCode)
     }
 
+    @Transactional
     fun confirmCheckId(checkId: String): ConfirmationCodeEntity? {
         val found = repository.findByCodeAndUsedIsFalseAndConfirmedIsFalseAndExpiresAtAfter(checkId, LocalDateTime.now())
             ?: return null
@@ -33,6 +38,7 @@ class ConfirmationCodeService(
         return repository.save(found)
     }
 
+    @Transactional
     fun checkConfirmedCode(checkId: String): ConfirmationCodeEntity? {
         val found = repository.findByCodeAndUsedIsFalseAndConfirmedIsTrueAndExpiresAtAfter(checkId, LocalDateTime.now())
             ?: return null
@@ -65,6 +71,7 @@ class ConfirmationCodeService(
         }
     }
 
+    @Transactional
     fun validateCode(phone: String, code: String): Boolean {
         val found = repository.findByPhoneAndUsedIsFalseAndConfirmedIsTrueAndExpiresAtAfter(phone,LocalDateTime.now())
 
@@ -80,6 +87,7 @@ class ConfirmationCodeService(
         }
     }
 
+    @Transactional
     fun deleteExpiredCodes(): Long {
         val deletedCount = repository.deleteAllByExpiresAtBefore(LocalDateTime.now())
         println("[CLEANUP] Удалено просроченных кодов: $deletedCount")
