@@ -10,5 +10,4 @@ data class WorkingHourDto(
     val openTime: LocalTime,
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm")
     val closeTime: LocalTime,
-    val workTime: String,
 )

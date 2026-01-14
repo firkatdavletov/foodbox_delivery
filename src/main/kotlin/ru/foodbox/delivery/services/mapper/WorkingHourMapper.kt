@@ -13,7 +13,6 @@ class WorkingHourMapper {
             dayOfWeek = entity.dayOfWeek,
             openTime = entity.openTime,
             closeTime = entity.closeTime,
-            workTime = entity.workTime,
         )
     }
 }
