@@ -3,9 +3,11 @@ package ru.foodbox.delivery.services
 import jakarta.transaction.Transactional
 import org.springframework.context.event.EventListener
 import org.springframework.http.HttpStatusCode
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import reactor.netty.transport.AddressUtils
+import ru.foodbox.delivery.controllers.order.body.CreateOrderResponse
 import ru.foodbox.delivery.controllers.websockets.model.UserOrdersStatusUpdate
 import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.OrderEntity
@@ -20,6 +22,7 @@ import ru.foodbox.delivery.services.dto.AddressDto
 import ru.foodbox.delivery.services.dto.OrderDto
 import ru.foodbox.delivery.services.dto.OrderItemDto
 import ru.foodbox.delivery.services.mapper.AddressMapper
+import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.mapper.OrderItemMapper
 import ru.foodbox.delivery.services.mapper.OrderMapper
 import ru.foodbox.delivery.services.mapper.UserMapper
@@ -39,6 +42,7 @@ class OrderService(
     private val messageService: MessageService,
     private val orderStatusBroadcaster: OrderStatusBroadcaster,
     private val userMapper: UserMapper,
+    private val departmentMapper: DepartmentMapper,
 ) {
     @EventListener
     fun handleUpdate(event: ButtonClickEvent) {
@@ -86,8 +90,18 @@ class OrderService(
         departmentId: Long,
         amount: Double,
         deliveryPrice: Double,
-    ): OrderDto? {
-        val user = userRepository.findById(userId).getOrNull() ?: return null
+    ): CreateOrderResponse {
+        val departmentEntity = departmentRepository.findById(departmentId).getOrNull()
+            ?: return CreateOrderResponse("Ошибка определения ресторана", 500)
+
+        val departmentDto = departmentMapper.toDto(departmentEntity)
+
+        if (!departmentDto.isWorkingNow) {
+            return CreateOrderResponse("Ресторан закрыт", 404)
+        }
+        val user = userRepository.findById(userId).getOrNull()
+            ?: return CreateOrderResponse("Ошибка определения пользователя", 500)
+
         val newOrder = OrderEntity(
             user = user,
             deliveryType = deliveryType,
@@ -115,7 +129,7 @@ class OrderService(
             setOrderMessageId(savedOrder, messageId)
         }
 
-        return savedOrderDto
+        return CreateOrderResponse(savedOrderDto)
     }
 
     private fun sendMessage(

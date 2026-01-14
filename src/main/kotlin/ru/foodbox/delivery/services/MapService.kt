@@ -87,7 +87,15 @@ class MapService(
         lon: Double,
         departments: List<DepartmentDto>
     ): DepartmentDto? {
-        return departments.minByOrNull { department ->
+        // Сначала фильтруем только работающие
+        val workingDepartments = departments.filter { it.isWorkingNow }
+
+        val candidates = workingDepartments.ifEmpty {
+            departments // если нет работающих, берём всех
+        }
+
+        // Ищем ближайший
+        return candidates.minByOrNull { department ->
             distanceCalculator.haversineDistance(lat, lon, department.latitude, department.longitude)
         }
     }

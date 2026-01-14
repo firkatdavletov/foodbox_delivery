@@ -67,7 +67,7 @@ class OrderController(
         val userId = (SecurityContextHolder.getContext().authentication.principal as String).toLongOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
 
-        val orderDto = orderService.createOrder(
+        val responseBody = orderService.createOrder(
             userId = userId,
             deliveryType = request.deliveryType,
             deliveryAddress = request.deliveryAddress,
@@ -77,10 +77,6 @@ class OrderController(
             amount = request.amount,
             deliveryPrice = request.deliveryPrice,
         )
-        return if (orderDto != null) {
-            ResponseEntity.ok(CreateOrderResponse(orderDto))
-        } else {
-            ResponseEntity.ok(CreateOrderResponse("Orders is null", 100))
-        }
+        return ResponseEntity.ok(responseBody)
     }
 }
