@@ -51,13 +51,14 @@ class DepartmentMapper(
                         time < wh.closeTime
             } else {
                 (day == wh.dayOfWeek && time >= wh.openTime) ||
-                        (day == wh.dayOfWeek.plus(1) && time < wh.closeTime)
+                        (day == wh.dayOfWeek.next() && time < wh.closeTime)
             }
 
-            if (isOpen) {
-                return true
-            }
+            if (isOpen) return true
         }
         return false
     }
+
+    private fun DayOfWeek.next(): DayOfWeek =
+        DayOfWeek.of((this.value % 7) + 1)
 }
