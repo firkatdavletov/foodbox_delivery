@@ -26,17 +26,4 @@ class DepartmentService(
 
         return departments
     }
-
-    fun updateWorkingHours(departmentId: Long, newDtos: List<WorkingHourDto>) {
-        val department = departmentRepository.findById(departmentId)
-            .orElseThrow { EntityNotFoundException("Department not found") }
-
-        val newWorkingHours = newDtos.map { dto ->
-            workingHourMapper.toEntity(dto, department)
-        }.toMutableSet()
-
-        department.setWorkingHours { newWorkingHours }
-
-        departmentRepository.save(department)
-    }
 }

@@ -27,6 +27,9 @@ class WorkingHourEntity(
     @Column(name = "close_time", nullable = false)
     var closeTime: LocalTime,
 
+    @Column(name = "work_time", nullable = false)
+    var workTime: String,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     val department: DepartmentEntity
