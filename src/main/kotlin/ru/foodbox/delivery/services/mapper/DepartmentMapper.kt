@@ -5,8 +5,8 @@ import ru.foodbox.delivery.data.entities.DepartmentEntity
 import ru.foodbox.delivery.services.dto.DepartmentDto
 import ru.foodbox.delivery.services.dto.WorkingHourDto
 import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 @Component
 class DepartmentMapper(
@@ -16,17 +16,15 @@ class DepartmentMapper(
     fun toDto(
         entity: DepartmentEntity,
     ): DepartmentDto {
-        val currentDate = LocalDate.now()
-        val currentTime = LocalTime.now()
-        val currentDayOfWeek = currentDate.dayOfWeek
+        val zoneId = ZoneId.of("Asia/Yekaterinburg") // UTC+5
+        val now = ZonedDateTime.now(zoneId)
 
         val workingHours = entity.workingHours.map { entity ->
             workingHourMapper.toDto(entity)
         }
 
         val workingState = getCurrentWorkingState(
-            currentDayOfWeek,
-            currentTime,
+            now,
             workingHours
         )
 
@@ -42,10 +40,11 @@ class DepartmentMapper(
     }
 
     fun getCurrentWorkingState(
-        day: DayOfWeek,
-        time: LocalTime,
+        now: ZonedDateTime,
         workingHours: List<WorkingHourDto>
     ): WorkingState {
+        val day = now.dayOfWeek
+        val time = now.toLocalTime()
 
         workingHours.forEach { wh ->
             val crossesMidnight = wh.openTime >= wh.closeTime
