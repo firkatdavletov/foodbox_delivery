@@ -24,28 +24,33 @@ class DepartmentMapper(
             workingHourMapper.toDto(entity)
         }
 
-        val currentWorkingHours = workingHours.firstOrNull { it.dayOfWeek == currentDayOfWeek }
+        val workingState = getCurrentWorkingState(
+            currentDayOfWeek,
+            currentTime,
+            workingHours
+        )
 
         return DepartmentDto(
             id = entity.id!!,
             city = cityMapper.toDto(entity.cityEntity),
             name = entity.name,
-            currentWorkingHours = currentWorkingHours,
-            isWorkingNow = isOpen(currentDayOfWeek, currentTime, workingHours),
+            currentWorkingHours = workingState.currentWorkingHours,
+            isWorkingNow = workingState.isOpen,
             latitude = entity.latitude,
             longitude = entity.longitude,
         )
     }
 
-    fun isOpen(
+    fun getCurrentWorkingState(
         day: DayOfWeek,
         time: LocalTime,
         workingHours: List<WorkingHourDto>
-    ): Boolean {
+    ): WorkingState {
+
         workingHours.forEach { wh ->
             val crossesMidnight = wh.openTime >= wh.closeTime
 
-            val isOpen = if (!crossesMidnight) {
+            val isOpenNow = if (!crossesMidnight) {
                 day == wh.dayOfWeek &&
                         time >= wh.openTime &&
                         time < wh.closeTime
@@ -54,11 +59,26 @@ class DepartmentMapper(
                         (day == wh.dayOfWeek.next() && time < wh.closeTime)
             }
 
-            if (isOpen) return true
+            if (isOpenNow) {
+                return WorkingState(
+                    isOpen = true,
+                    currentWorkingHours = wh
+                )
+            }
         }
-        return false
+
+        return WorkingState(
+            isOpen = false,
+            currentWorkingHours = null
+        )
     }
+
 
     private fun DayOfWeek.next(): DayOfWeek =
         DayOfWeek.of((this.value % 7) + 1)
+
+    data class WorkingState(
+        val isOpen: Boolean,
+        val currentWorkingHours: WorkingHourDto?
+    )
 }
