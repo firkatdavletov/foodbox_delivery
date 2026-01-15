@@ -11,6 +11,7 @@ import ru.foodbox.delivery.data.entities.UserEntity
 import ru.foodbox.delivery.data.repository.AuthTypeRepository
 import ru.foodbox.delivery.data.repository.RefreshTokenRepository
 import ru.foodbox.delivery.data.repository.UserRepository
+import ru.foodbox.delivery.data.sms_client.AuthByCallResponseEntity
 import ru.foodbox.delivery.data.sms_client.SmsClient
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
@@ -77,12 +78,23 @@ class AuthService(
     }
 
     private fun verifyPhoneNumberByCall(phone: String): VerifyPhoneNumberResponseBody {
-        val responseEntity = smsClient.authByCall(phone)
-            ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса подтверждения номера телефона", 200)
+        val responseEntity = if (phone == "79999999999") {
+            AuthByCallResponseEntity(
+                status = "",
+                statusCode = 100,
+                checkId = "999-999-test",
+                callPhone = "+79999999999",
+                callPhonePretty = "",
+                callPhoneHtml = ""
+            )
+        } else {
+            smsClient.authByCall(phone)
+                ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса подтверждения номера телефона", 200)
+        }
 
         return when (val status = responseEntity.statusCode) {
             100 -> {
-                val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5)
+                val confirmationCode = confirmationCodeService.saveCheckId(phone, responseEntity.checkId, 5, phone == "79999999999")
                 logger.info("Saved code $confirmationCode")
 
                 VerifyPhoneNumberResponseBody(

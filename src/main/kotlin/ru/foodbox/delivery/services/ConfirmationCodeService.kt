@@ -23,9 +23,9 @@ class ConfirmationCodeService(
     }
 
     @Transactional
-    fun saveCheckId(phone: String, checkId: String, duration: Long): ConfirmationCodeEntity {
+    fun saveCheckId(phone: String, checkId: String, duration: Long, isConfirmed: Boolean = false): ConfirmationCodeEntity {
         deleteNoUsedCode(phone)
-        val confirmationCode = saveCode(duration, phone, checkId, false)
+        val confirmationCode = saveCode(duration, phone, checkId, isConfirmed)
 
         return repository.save(confirmationCode)
     }
