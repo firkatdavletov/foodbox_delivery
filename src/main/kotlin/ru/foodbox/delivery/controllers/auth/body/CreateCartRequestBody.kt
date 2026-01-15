@@ -6,7 +6,7 @@ import ru.foodbox.delivery.services.dto.AddressDto
 data class CreateCartRequestBody(
     val deviceId: String,
     val deliveryType: DeliveryType,
-    val deliveryAddress: AddressDto,
+    val deliveryAddress: AddressDto?,
     val departmentId: Int,
     val deliveryPrice: Double,
     val freeDeliveryPrice: Double?
