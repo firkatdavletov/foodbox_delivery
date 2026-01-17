@@ -55,10 +55,17 @@ class CartEntity(
     }
 
     fun updateTotalPrice() {
+        val itemsPrice = items.sumOf { it.product.price * it.quantity }
+        val freeDeliveryPrice = freeDeliveryPrice
+        val totalDeliveryPrice = if (freeDeliveryPrice != null && itemsPrice >= freeDeliveryPrice) {
+            0.0
+        } else {
+            deliveryPrice
+        }
         totalPrice = if (items.isEmpty()) {
             0.0
         } else {
-            items.sumOf { it.product.price * it.quantity } + deliveryPrice
+            itemsPrice + totalDeliveryPrice
         }
     }
 }
