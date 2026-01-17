@@ -122,6 +122,7 @@ class CartService(
         return cartMapper.toDto(cart, cartItems, addressDto)
     }
 
+    @Transactional
     fun updateDeliveryAddress(
         userId: Long,
         deliveryType: DeliveryType,
