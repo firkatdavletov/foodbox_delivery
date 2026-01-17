@@ -158,6 +158,7 @@ class CartService(
         return cartMapper.toDto(updatedCartEntity)
     }
 
+    @Transactional
     fun updateDeliveryAddress(
         deviceId: String,
         deliveryType: DeliveryType,
