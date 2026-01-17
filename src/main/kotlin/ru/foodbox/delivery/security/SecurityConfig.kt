@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter,
+    private val jwtCartFilter: JwtCartFilter,
 ) {
 
     @Bean
@@ -27,7 +28,7 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(
-                        "/users/**",
+                        "/user/**",
                         "/auth/**",
                         "/cart/**",
                         "/catalog/**",
@@ -38,7 +39,9 @@ class SecurityConfig(
                         "/files/**",
                         "/map/**",
                         "/orders/**",
-                        "/departments/**"
+                        "/departments/**",
+                        "/payment/**",
+                        "/ws/callcheck/**"
                     )
                     .permitAll()
                     .dispatcherTypeMatchers(
@@ -54,6 +57,7 @@ class SecurityConfig(
                     .authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             }
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(jwtCartFilter, UsernamePasswordAuthenticationFilter::class.java)
             .build()
     }
 }

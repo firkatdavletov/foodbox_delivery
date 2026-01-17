@@ -4,18 +4,20 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 data class SmsRuResponseEntity(
     val status: String,
-    @JsonProperty("status_code")
+    @field:JsonProperty("status_code")
     val statusCode: Int,
-    val sms: Map<String, SmsStatus>,
+    val sms: Map<String, SmsStatus>?,
     val balance: Double
 )
 
 data class SmsStatus(
     val status: String,
-    @JsonProperty("status_code")
+    @field:JsonProperty("status_code")
     val statusCode: Int,
-    @JsonProperty("status_text")
+    @field:JsonProperty("status_text")
     val statusText: String? = null,
-    @JsonProperty("sms_id")
-    val smsId: String? = null
+    @field:JsonProperty("sms_id")
+    val smsId: String? = null,
+    val cost: Double? = null,
+    val sms: Int? = null
 )

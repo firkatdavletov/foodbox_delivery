@@ -4,15 +4,18 @@ import jakarta.persistence.*
 
 @Entity
 @Table(name = "users")
-data class UserEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
-
+class UserEntity(
+    @Column(unique = true)
     val phone: String,
 
-    val name: String = "",
+    var email: String = "",
 
-    @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL])
-    val cart: CartEntity? = null,
-)
+    var name: String = "",
+
+    @OneToMany(
+        mappedBy = "user",
+        cascade = [CascadeType.REMOVE], // или ALL, если нужно каскадировать всё
+        orphanRemoval = true
+    )
+    val orders: MutableList<OrderEntity> = mutableListOf()
+) : BaseAuditEntity<Long>()

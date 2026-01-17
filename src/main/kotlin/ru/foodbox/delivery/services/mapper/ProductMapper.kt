@@ -7,9 +7,9 @@ import ru.foodbox.delivery.services.dto.ProductDto
 @Component
 class ProductMapper {
     fun toDto(entity: ProductEntity) = ProductDto(
-        id = entity.id,
-        categoryId = entity.categoryId,
-        price = entity.price.toFloat(),
+        id = entity.id!!,
+        categoryId = entity.category.id!!,
+        price = entity.price,
         title = entity.title,
         description = entity.description,
         imageUrl = entity.imageUrl,

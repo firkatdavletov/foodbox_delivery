@@ -7,6 +7,6 @@ data class GeoObject(
     val name: String,
     val description: String,
     val uri: String,
-    @JsonProperty("Point")
+    @field:JsonProperty("Point")
     val point: GeoPoint
 )

@@ -16,22 +16,18 @@ import java.time.LocalTime
 
 @Entity
 @Table(name = "working_hours")
-data class WorkingHourEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
-
+class WorkingHourEntity(
     @Enumerated(EnumType.STRING)
     @Column(name = "day_of_week", nullable = false)
-    val dayOfWeek: DayOfWeek, // java.time.DayOfWeek
+    var dayOfWeek: DayOfWeek, // java.time.DayOfWeek
 
     @Column(name = "open_time", nullable = false)
-    val openTime: LocalTime,
+    var openTime: LocalTime,
 
     @Column(name = "close_time", nullable = false)
-    val closeTime: LocalTime,
+    var closeTime: LocalTime,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     val department: DepartmentEntity
-)
+) : BaseEntity<Long>()

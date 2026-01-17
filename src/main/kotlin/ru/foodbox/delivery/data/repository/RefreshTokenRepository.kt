@@ -9,4 +9,6 @@ interface RefreshTokenRepository: JpaRepository<RefreshTokenEntity, Long> {
     fun findByUserIdAndHashedToken(userId: Long, hashedToken: String): RefreshTokenEntity?
 
     fun deleteByUserIdAndHashedToken(userId: Long, hashedToken: String)
+
+    fun deleteByUserId(userId: Long)
 }

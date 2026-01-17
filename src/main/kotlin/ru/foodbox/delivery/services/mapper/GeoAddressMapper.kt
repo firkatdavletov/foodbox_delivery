@@ -2,21 +2,25 @@ package ru.foodbox.delivery.services.mapper
 
 import org.springframework.stereotype.Component
 import ru.foodbox.delivery.data.yandex_map_client.entity.GeoObject
+import ru.foodbox.delivery.services.dto.CityDto
 import ru.foodbox.delivery.services.dto.GeoAddressDto
+import ru.foodbox.delivery.services.model.DeliveryInfo
 
 @Component
 class GeoAddressMapper {
-    fun toDto(entity: GeoObject, deliveryPrice: Double, deliveryTime: Int): GeoAddressDto {
+    fun toDto(entity: GeoObject, cityDto: CityDto, deliveryInfo: DeliveryInfo, deliveryTime: Int, entrance: Int?): GeoAddressDto? {
         val components = entity.metaDataProperty.geocoderMetaData.address.components
         val (longitude, latitude) = entity.point.pos.split(" ")
         return GeoAddressDto(
-            city = components.firstOrNull { it.kind == "locality" }?.name,
-            street = components.firstOrNull { it.kind == "street" }?.name,
-            house = components.firstOrNull { it.kind == "house" }?.name,
-            deliveryPrice = deliveryPrice,
+            city = cityDto,
+            street = components.firstOrNull { it.kind == "street" }?.name ?: return null,
+            house = components.firstOrNull { it.kind == "house" }?.name ?: return null,
+            entrance = entrance,
+            deliveryInfo = deliveryInfo,
             deliveryTime = deliveryTime,
-            latitude = latitude.toDoubleOrNull(),
-            longitude = longitude.toDoubleOrNull(),
+            latitude = latitude.toDoubleOrNull() ?: return null,
+            longitude = longitude.toDoubleOrNull() ?: return null,
+            uri = null
         )
     }
 }

@@ -8,186 +8,203 @@ import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.AddressEntity
 import ru.foodbox.delivery.data.entities.CartEntity
 import ru.foodbox.delivery.data.entities.CartItemEntity
-import ru.foodbox.delivery.data.repository.AddressRepository
-import ru.foodbox.delivery.data.repository.CartRepository
-import ru.foodbox.delivery.data.repository.DepartmentRepository
-import ru.foodbox.delivery.data.repository.ProductRepository
-import ru.foodbox.delivery.data.repository.UserRepository
+import ru.foodbox.delivery.data.repository.*
+import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.dto.AddressDto
 import ru.foodbox.delivery.services.dto.CartDto
-import ru.foodbox.delivery.services.mapper.AddressMapper
-import ru.foodbox.delivery.services.mapper.CartItemMapper
 import ru.foodbox.delivery.services.mapper.CartMapper
+import ru.foodbox.delivery.services.mapper.DepartmentMapper
+import ru.foodbox.delivery.services.model.DeliveryInfo
 import ru.foodbox.delivery.utils.DeliveryPriceCalculator
+import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
 @Service
 class CartService(
     private val cartRepository: CartRepository,
-    private val addressRepository: AddressRepository,
     private val productRepository: ProductRepository,
-    private val userRepository: UserRepository,
     private val departmentRepository: DepartmentRepository,
-    private val deliveryPriceCalculator: DeliveryPriceCalculator,
+    private val cityRepository: CityRepository,
     private val cartMapper: CartMapper,
-    private val addressMapper: AddressMapper,
-    private val cartItemMapper: CartItemMapper,
+    private val departmentMapper: DepartmentMapper,
+    private val addressRepository: AddressRepository,
+    private val jwtGenerator: JwtGenerator,
+    private val deliveryPriceCalculator: DeliveryPriceCalculator,
 ) {
 
     @Transactional
-    fun updateItemQuantity(userId: Long, productId: Long, quantity: Int): CartDto {
-        val user = userRepository.findById(userId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
+    fun createCart(
+        deviceId: String,
+        departmentId: Int,
+        deliveryType: DeliveryType,
+        deliveryAddress: AddressDto?,
+        deliveryPrice: Double,
+        freeDeliveryPrice: Double?,
+    ): String? {
+        val department = departmentRepository.findById(departmentId.toLong()).getOrNull() ?: return null
 
-        val cart = cartRepository.findByUserId(user.id)
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Корзина не найдена")
+        val address = deliveryAddress?.let {
+            val city = cityRepository.findById(it.city.id).getOrNull() ?: return null
+            val addressEntity = AddressEntity(
+                street = it.street,
+                house = it.house,
+                entrance = it.entrance,
+                flat = it.flat,
+                intercome = it.intercome,
+                comment = it.comment,
+                cityEntity = city,
+                latitude = it.latitude,
+                longitude = it.longitude
+            )
+            addressRepository.save(addressEntity)
+        }
+        val newCart = CartEntity(
+            deviceId = deviceId,
+            department = department,
+            deliveryType = deliveryType,
+            deliveryAddress = address,
+            deliveryPrice = deliveryPrice,
+            freeDeliveryPrice = freeDeliveryPrice,
+            comment = null,
+        )
+        val savedCart = cartRepository.save(newCart)
+        val token = jwtGenerator.generateCartToken(savedCart.deviceId)
+        return token
+    }
 
-        val product = productRepository.findById(productId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Продукт не найден")
+    @Transactional
+    fun updateItemQuantity(deviceId: String, productId: Long, quantity: Int): CartDto {
+        val cart = cartRepository.findByDeviceId(deviceId)
+            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Cart not found")
+
+        val product = productRepository.findById(productId).orElseThrow {
+            ResponseStatusException(HttpStatusCode.valueOf(404), "Продукт не найден")
+        }
 
         val existingItem = cart.items.find { it.product.id == productId }
 
-        val updatedCart = if (existingItem != null) {
-            val updatedItem = existingItem.copy(
-                quantity = quantity
-            )
-            val updatedCartItems = if (updatedItem.quantity > 0) {
-                cart.items.map {
-                    if (it.id == updatedItem.id) {
-                        updatedItem
-                    } else {
-                        it
-                    }
-                }
+        if (existingItem != null) {
+            if (quantity == 0) {
+                cart.removeItem { existingItem }
             } else {
-                cart.items.filter { it.id != updatedItem.id }
+                existingItem.quantity = quantity
             }
-            val totalPrice = updatedCartItems.sumOf { it.product.price * it.quantity }
-
-            cart.copy(
-                items = updatedCartItems,
-                totalPrice = totalPrice
-            )
         } else {
-            val newItem = CartItemEntity(
+            val newCartItem = CartItemEntity(
                 cart = cart,
                 product = product,
-                quantity = quantity
+                quantity = quantity,
             )
-            val updatedCartItems = cart.items + newItem
-            val totalPrice = updatedCartItems.sumOf { it.product.price * it.quantity }
-            cart.copy(
-                items = updatedCartItems,
-                totalPrice = totalPrice
-            )
+            newCartItem.created = LocalDateTime.now()
+            newCartItem.modified = LocalDateTime.now()
+            cart.addItem { newCartItem }
         }
 
-        val savedCart = cartRepository.save(updatedCart)
-        val addressDto = savedCart.deliveryAddress?.let {
-            addressMapper.toDto(it)
-        }
-        val cartItems = cartItemMapper.toDto(savedCart.items).sortedBy { it.title }
-        return cartMapper.toDto(savedCart, cartItems, addressDto)
+        cart.updateTotalPrice()
+
+        val savedCart = cartRepository.save(cart)
+
+        return cartMapper.toDto(savedCart)
     }
 
     @Transactional
-    fun removeAll(userId: Long): CartDto {
-        val user = userRepository.findById(userId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
-
-        val cart = cartRepository.findByUserId(user.id)
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Корзина не найдена")
-
-        val updatedCart = cart.copy(items = emptyList())
-        val savedCart = cartRepository.save(updatedCart)
-        val addressDto = savedCart.deliveryAddress?.let {
-            addressMapper.toDto(it)
-        }
-        val cartItems = cartItemMapper.toDto(savedCart.items)
-        return cartMapper.toDto(savedCart, cartItems, addressDto)
+    fun removeAll(deviceId: String): CartDto? {
+        val cart = cartRepository.findByDeviceId(deviceId) ?: return null
+        cart.items.clear()
+        cart.totalPrice = 0.0
+        val savedCart = cartRepository.save(cart)
+        return cartMapper.toDto(savedCart)
     }
 
-    fun getCart(userId: Long): CartDto {
-        val user = userRepository.findById(userId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
+    fun getCart(deviceId: String): CartDto? {
+        val cartEntity = cartRepository.findByDeviceId(deviceId) ?: return null
 
-        val cart = cartRepository.findByUserId(user.id)
-            ?: cartRepository.save(
-                CartEntity(user = user)
-            )
-        val addressDto = cart.deliveryAddress?.let {
-            addressMapper.toDto(it)
+        val deliveryInfo = deliveryPriceCalculator.calculateDeliveryPrice(
+            cartEntity.deliveryType,
+            cartEntity.deliveryAddress?.latitude,
+            cartEntity.deliveryAddress?.longitude,
+            cartEntity.deliveryAddress?.cityEntity?.id,
+            departmentMapper.toDto(cartEntity.department)
+        )
+
+        when (cartEntity.deliveryType) {
+            DeliveryType.PICKUP -> {
+                cartEntity.deliveryAddress = null
+                cartEntity.deliveryPrice = 0.0
+                cartEntity.freeDeliveryPrice = 0.0
+            }
+            DeliveryType.DELIVERY -> {
+
+                cartEntity.deliveryPrice = deliveryInfo?.deliveryPrice ?: 250.0
+                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice
+            }
         }
-        val cartItems = cartItemMapper.toDto(cart.items).sortedBy { it.title }
-        return cartMapper.toDto(cart, cartItems, addressDto)
+
+        val cartProductIds = cartEntity.items.map { it.product.id!! }
+
+        val products = productRepository.findAllById(cartProductIds)
+
+        val cartItems = cartEntity.items.mapNotNull { cartItem ->
+            val productEntity = products.firstOrNull { it.id == cartItem.product.id!! } ?: return@mapNotNull null
+            cartItem.apply {
+                product = productEntity
+            }
+        }.toMutableSet()
+
+        cartEntity.setItems { cartItems }
+        cartEntity.updateTotalPrice()
+
+        val updatedCartEntity = cartRepository.save(cartEntity)
+        return cartMapper.toDto(updatedCartEntity)
     }
 
-    @Transactional
     fun updateDeliveryAddress(
-        userId: Long,
+        deviceId: String,
         deliveryType: DeliveryType,
-        deliveryAddress: AddressDto, 
-        departmentId: Long
-    ): CartDto {
-        val user = userRepository.findById(userId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
+        deliveryAddress: AddressDto?,
+        departmentId: Long,
+        deliveryInfo: DeliveryInfo,
+        comment: String?,
+    ): CartDto? {
+        val cart = cartRepository.findByDeviceId(deviceId) ?: return null
+        val department = departmentRepository.findById(departmentId).getOrNull() ?: return null
+        val newAddress = if (deliveryType == DeliveryType.DELIVERY && deliveryAddress != null) {
+            val cartAddress = cart.deliveryAddress
+            val city = cityRepository.findById(deliveryAddress.city.id).getOrNull() ?: return null
 
-        val cart = cartRepository.findByUserId(user.id)
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Корзина не найдена")
-
-
-        val updatedDeliveryAddress = if (cart.deliveryAddress != null) {
-            cart.deliveryAddress.copy(
-                lat = deliveryAddress.latitude,
-                long = deliveryAddress.longitude,
-                city = deliveryAddress.city,
-                street = deliveryAddress.street,
-                house = deliveryAddress.house,
-                flat = deliveryAddress.flat,
-                intercome = deliveryAddress.intercome,
-                comment = deliveryAddress.comment
-            )
-        } else {
-            addressRepository.save(
+            if (cartAddress == null) {
                 AddressEntity(
-                    lat = deliveryAddress.latitude,
-                    long = deliveryAddress.longitude,
-                    city = deliveryAddress.city,
+                    cityEntity = city,
                     street = deliveryAddress.street,
                     house = deliveryAddress.house,
+                    entrance = deliveryAddress.entrance,
                     flat = deliveryAddress.flat,
                     intercome = deliveryAddress.intercome,
                     comment = deliveryAddress.comment,
-                    user = user
+                    latitude = deliveryAddress.latitude,
+                    longitude = deliveryAddress.longitude
                 )
-            )
-        }
-
-        val deliveryPrice = when (deliveryType) {
-            DeliveryType.PICKUP -> 0.0
-            DeliveryType.DELIVERY -> {
-                deliveryPriceCalculator.calculateDeliveryPrice(
-                    updatedDeliveryAddress.lat,
-                    updatedDeliveryAddress.long
-                )
+            } else {
+                cartAddress.cityEntity = city
+                cartAddress.street = deliveryAddress.street
+                cartAddress.house = deliveryAddress.house
+                cartAddress.entrance = deliveryAddress.entrance
+                cartAddress.flat = deliveryAddress.flat
+                cartAddress.intercome = deliveryAddress.intercome
+                cartAddress.comment = deliveryAddress.comment
+                cartAddress
             }
-        }
+        } else null
 
-        val department = departmentRepository.findById(departmentId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Магазин не найден")
+        cart.deliveryType = deliveryType
+        cart.department = department
+        cart.deliveryPrice = deliveryInfo.deliveryPrice
+        cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice
+        cart.deliveryAddress = newAddress
+        cart.comment = comment
+        cart.updateTotalPrice()
 
-        val updatedCart = cart.copy(
-            deliveryAddress = updatedDeliveryAddress,
-            deliveryType = deliveryType,
-            deliveryPrice = deliveryPrice,
-            department = department
-        )
-        val savedCart = cartRepository.save(updatedCart)
-
-        val savedAddress = savedCart.deliveryAddress?.let { addressMapper.toDto(it) }
-
-        val cartItems = cartItemMapper.toDto(cart.items).sortedBy { it.title }
-
-        return cartMapper.toDto(savedCart, cartItems, savedAddress)
+        val savedCart = cartRepository.save(cart)
+        return cartMapper.toDto(savedCart)
     }
 }

@@ -11,11 +11,7 @@ import jakarta.persistence.Table
 
 @Entity
 @Table(name = "order_items")
-data class OrderItemEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
-
+class OrderItemEntity(
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)
     val order: OrderEntity,
@@ -30,5 +26,5 @@ data class OrderItemEntity(
     val quantity: Int,
 
     @Column(nullable = false)
-    val price: Float,
-)
+    val price: Double,
+) : BaseEntity<Long>()

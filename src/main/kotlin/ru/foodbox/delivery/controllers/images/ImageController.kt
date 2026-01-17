@@ -10,19 +10,46 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.server.ResponseStatusException
+import ru.foodbox.delivery.data.repository.CategoryRepository
+import ru.foodbox.delivery.data.repository.ProductRepository
+import ru.foodbox.delivery.services.CatalogService
 import ru.foodbox.delivery.services.ImageService
 import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.jvm.optionals.getOrNull
 
 @RestController
 @RequestMapping("/images")
 class ImageController(
-    private val imageService: ImageService
+    private val imageService: ImageService,
+    private val productRepository: ProductRepository,
+    private val categoryRepository: CategoryRepository,
 ) {
 
     @PostMapping("/upload")
-    fun uploadImage(@RequestParam("file") file: MultipartFile): ResponseEntity<String> {
+    fun uploadImage(
+        @RequestParam("file") file: MultipartFile,
+        @RequestParam("id") id: String,
+        @RequestParam("target") target: String,
+    ): ResponseEntity<String> {
         val imageUrl = imageService.uploadImage(file)
+
+        when (target) {
+            "category" -> {
+                val category = categoryRepository.findById(id.toLong()).getOrNull()
+                    ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+                category.imageUrl = imageUrl
+                categoryRepository.save(category)
+            }
+            "product" -> {
+                val product = productRepository.findById(id.toLong()).getOrNull()
+                    ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+                product.imageUrl = imageUrl
+                productRepository.save(product)
+            }
+        }
+
         return ResponseEntity.ok("Image uploaded successfully: $imageUrl")
     }
 

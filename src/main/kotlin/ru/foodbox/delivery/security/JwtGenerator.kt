@@ -15,11 +15,12 @@ class JwtGenerator(
 
     private val secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret))
 
-    val accessTokenValidityMs = 15L * 60L * 1000L
+    val carTokenValidityMs = 365L * 24L * 60L * 60L * 1000L
+    val accessTokenValidityMs = 24L * 60L * 60L * 1000L
     val refreshTokenValidityMs = 30L * 24L * 60L * 60L * 1000L
 
     private fun generateToken(
-        userId: String,
+        id: String,
         type: String,
         expiry: Long,
     ): String {
@@ -27,7 +28,7 @@ class JwtGenerator(
         val expireTime = Date(now.time + expiry)
 
         return Jwts.builder()
-            .subject(userId)
+            .subject(id)
             .claim("type", type)
             .issuedAt(now)
             .expiration(expireTime)
@@ -35,12 +36,25 @@ class JwtGenerator(
             .compact()
     }
 
+    fun generateCartToken(deviceId: String): String {
+        println("[JWT_GENERATOR] generateCartToken")
+        return generateToken(deviceId, "cart", carTokenValidityMs)
+    }
+
     fun generateAccessToken(userId: String): String {
+        println("[JWT_GENERATOR] generateAccessToken")
         return generateToken(userId, "access", accessTokenValidityMs)
     }
 
     fun generateRefreshToken(userId: String): String {
+        println("[JWT_GENERATOR] generateRefreshToken")
         return generateToken(userId, "refresh", refreshTokenValidityMs)
+    }
+
+    fun validateCartToken(token: String): Boolean {
+        val claims = parseAllClaims(token) ?: return false
+        val tokenType = claims["type"] as? String ?: return false
+        return tokenType == "cart"
     }
 
     fun validateAccessToken(token: String): Boolean {
@@ -55,7 +69,7 @@ class JwtGenerator(
         return tokenType == "refresh"
     }
 
-    fun getUserIdFromToken(token: String): String {
+    fun getIdFromToken(token: String): String {
         val rawToken = if (token.startsWith("Bearer ")) {
             token.removePrefix("Bearer ")
         } else {
@@ -73,7 +87,7 @@ class JwtGenerator(
                 .build()
                 .parseSignedClaims(token)
                 .payload
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

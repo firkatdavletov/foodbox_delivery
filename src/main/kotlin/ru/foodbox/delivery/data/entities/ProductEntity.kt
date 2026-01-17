@@ -5,25 +5,25 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.math.BigDecimal
 
 @Entity
 @Table(name = "products")
-data class ProductEntity(
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+class ProductEntity(
+    @Column(nullable = false)
+    var title: String,
+
+    var description: String? = null,
 
     @Column(nullable = false)
-    val title: String,
+    var price: Double,
 
-    val description: String? = null,
+    var imageUrl: String? = null,
 
-    @Column(nullable = false)
-    val price: Double,
-
-    val imageUrl: String? = null,
-
-    val categoryId: Long
-)
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    var category: CategoryEntity
+) : BaseAuditEntity<Long>()

@@ -7,12 +7,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
-import ru.foodbox.delivery.security.JwtGenerator
 
 @Component
 class JwtAuthFilter(
     private val jwtGenerator: JwtGenerator,
 ) : OncePerRequestFilter() {
+
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        return request.requestURI.startsWith("/cart")
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -23,8 +27,8 @@ class JwtAuthFilter(
 
         if (!token.isNullOrBlank()) {
             if (jwtGenerator.validateAccessToken(token)) {
-                val userId = jwtGenerator.getUserIdFromToken(authHeader)
-                val auth = UsernamePasswordAuthenticationToken(userId, null, emptyList())
+                val id = jwtGenerator.getIdFromToken(authHeader)
+                val auth = UsernamePasswordAuthenticationToken(id, null, emptyList())
                 SecurityContextHolder.getContext().authentication = auth
             }
         }

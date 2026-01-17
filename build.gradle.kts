@@ -16,6 +16,7 @@ java {
 }
 
 repositories {
+	maven { url = uri("https://maven.aliyun.com/repository/public") }
 	mavenCentral()
 }
 
@@ -30,8 +31,20 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.postgresql:postgresql")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 
 	implementation("org.flywaydb:flyway-core")
+
+	implementation("io.netty:netty-resolver-dns-native-macos:4.1.107.Final") {
+		artifact {
+			classifier = "osx-aarch_64"
+		}
+	}
+
+	implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.1")
+	implementation("org.telegram:telegrambotsextensions:6.9.7.1")
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

@@ -9,7 +9,8 @@ import java.util.UUID
 
 @Service
 class ImageService(
-    @Value("\${image.upload-dir}") val uploadDir: String
+    @Value("\${image.upload-dir}") val uploadDir: String,
+    @Value("\${base_url}") val baseUrl: String,
 ) {
 
     init {
@@ -27,10 +28,6 @@ class ImageService(
             Files.copy(inputStream, targetPath)
         }
 
-        return "/images/$fileName"
-    }
-
-    fun getImageUrl(fileName: String): String {
-        return "/images/$fileName"
+        return "$baseUrl/images/$fileName"
     }
 }

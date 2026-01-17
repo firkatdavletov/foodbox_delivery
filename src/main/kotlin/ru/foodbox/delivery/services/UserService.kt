@@ -13,6 +13,7 @@ import kotlin.jvm.optionals.getOrNull
 @Service
 class UserService(
     private val userRepository: UserRepository,
+    private val authService: AuthService,
     private val userMapper: UserMapper,
 ) {
     fun getUser(id: Long): UserDto {
@@ -21,22 +22,19 @@ class UserService(
         return userMapper.toDto(entity)
     }
 
-    fun updateUser(id: Long, dto: UserDto): UserDto {
-        val entity = userRepository.findById(id).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
-        val updatedUser = entity.copy(
-            name = dto.name,
-            phone = dto.phone
-        )
+    fun updateUser(id: Long, dto: UserDto): UserDto? {
+        val user = userRepository.findById(id).getOrNull() ?: return null
+        user.name = dto.name
+        user.email = dto.email
 
-        val savedUser = userRepository.save(updatedUser)
+        val savedUser = userRepository.save(user)
         return userMapper.toDto(savedUser)
     }
 
     fun deleteUser(userId: Long): Boolean {
-        val entity = userRepository.findById(userId).getOrNull()
+        val user = userRepository.findById(userId).getOrNull()
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Пользователь не найден")
-        userRepository.deleteById(entity.id)
+        userRepository.deleteById(user.id!!)
         return true
     }
 }
