@@ -38,7 +38,7 @@ class DeliveryPriceCalculator(
 
     fun calculateDeliveryPrice(distanceInMetres: Double): DeliveryInfo {
         val (deliveryPrice, freeDeliveryPrice) = when (distanceInMetres) {
-            in 0.0..< 1340.0 -> 100.0 to 1200.0
+            in 0.0..< 1340.0 -> 100.0 to 1500.0
             in 1340.0..2740.0 -> 100.0 to null
             else -> 200.0 to null
         }

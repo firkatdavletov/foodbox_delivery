@@ -1,65 +1,68 @@
 package ru.foodbox.delivery.data.entities
 
+import ru.foodbox.delivery.data.DeliveryType
+
 enum class OrderStatus {
-    PENDING, AWAITING_PAYMENT, AWAITING_CASH_PAYMENT, PAID, PROCESSING, FAILED, CANCELLED, DELIVERED;
+    PENDING,
+    AWAITING_PAYMENT,
+    PAID,
+    PROCESSING,
+    AWAITING_COURIER,
+    AWAITING_RECEIPT,
+    DELIVERY,
+    FAILED,
+    CANCELLED,
+    COMPLETED;
 
     companion object {
-        fun nextStatus(currentStatus: OrderStatus): OrderStatus {
+        fun nextStatus(currentStatus: OrderStatus, deliveryType: DeliveryType, paymentType: PaymentType): OrderStatus {
             return when (currentStatus) {
-                PENDING -> {
-                    PAID
+                PENDING -> when (paymentType) {
+                    PaymentType.CASH -> PROCESSING
+                    PaymentType.ONLINE -> AWAITING_PAYMENT
                 }
-                AWAITING_PAYMENT -> {
-                    PROCESSING
+                AWAITING_PAYMENT -> PAID
+                PAID -> PROCESSING
+                PROCESSING -> when (deliveryType) {
+                    DeliveryType.DELIVERY -> AWAITING_COURIER
+                    DeliveryType.PICKUP -> AWAITING_RECEIPT
                 }
-                AWAITING_CASH_PAYMENT -> {
-                    PROCESSING
-                }
-                PAID -> {
-                    PROCESSING
-                }
-                PROCESSING -> {
-                    DELIVERED
-                }
-                FAILED -> {
-                    FAILED
-                }
-                CANCELLED -> {
-                    CANCELLED
-                }
-                DELIVERED -> {
-                    DELIVERED
-                }
+                AWAITING_COURIER -> DELIVERY
+                AWAITING_RECEIPT -> COMPLETED
+                DELIVERY -> COMPLETED
+                FAILED -> FAILED
+                CANCELLED -> CANCELLED
+                COMPLETED -> COMPLETED
             }
         }
 
-        fun getNextButtonText(currentStatus: OrderStatus): String {
+        fun getNextButtonText(currentStatus: OrderStatus, deliveryType: DeliveryType, paymentType: PaymentType): String {
             return when (currentStatus) {
-                PENDING -> {
-                    "Подтвердить заказ"
-                }
+                PENDING -> "Подтвердить заказ"
                 AWAITING_PAYMENT -> "Заказ оплачен"
-                AWAITING_CASH_PAYMENT -> ""
-                PAID -> "Заказ передан курьеру"
-                PROCESSING -> "Заказ доставлен"
-                FAILED -> ""
+                PAID -> "Передан на кухню"
+                PROCESSING -> "Заказ готов"
+                AWAITING_COURIER -> "Курьер забрал заказ"
+                DELIVERY -> "Заказ доставлен"
+                AWAITING_RECEIPT -> "Заказ получен"
+                FAILED -> "Заказ отменен по ошибке"
                 CANCELLED -> "Заказ отменен"
-                DELIVERED -> "Заказ доставлен"
+                COMPLETED -> "Заказ выполнен"
             }
         }
 
         fun getStatusName(currentStatus: OrderStatus): String {
             return when (currentStatus) {
-                PENDING -> {
-                    "Ожидание"
-                }
-                AWAITING_PAYMENT -> ""
-                AWAITING_CASH_PAYMENT -> ""
-                PAID -> "Готовится"
-                PROCESSING -> "В доставке"
-                FAILED -> ""
+                PENDING -> "Ожидает подтверждения"
+                AWAITING_PAYMENT -> "Ожидает оплаты"
+                PAID -> "Оплачен"
+                PROCESSING -> "Готовится"
+                AWAITING_COURIER -> "Ожидает курьера"
+                AWAITING_RECEIPT -> "Ожидает получения"
+                DELIVERY -> "В доставке"
+                FAILED -> "Ошибка"
                 CANCELLED -> "Заказ отменен"
-                DELIVERED -> "Заказ доставлен"
+                COMPLETED -> "Заказ выполнен"
             }
         }
     }
