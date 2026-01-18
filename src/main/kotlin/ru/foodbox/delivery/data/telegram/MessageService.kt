@@ -8,7 +8,9 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.OrderStatus
+import ru.foodbox.delivery.data.entities.PaymentType
 import ru.foodbox.delivery.data.telegram.model.MarkupDataDto
 
 @Service
@@ -20,9 +22,10 @@ class MessageService(
         message: String,
         orderId: Long,
         orderStatus: OrderStatus,
+        deliveryType: DeliveryType,
     ): Int? {
         val chatId = telegramCache.getChatId() ?: return null
-        return foodBoxBot.sendInlineKeyboardMarkup(chatId, orderId, message, orderStatus)
+        return foodBoxBot.sendInlineKeyboardMarkup(chatId, orderId, message, orderStatus, deliveryType)
     }
 
     // SendMessage - объект телеграм АПИ для отправки сообщения
@@ -45,16 +48,17 @@ class MessageService(
         chatId: Long,
         orderId: Long,
         message: String,
-        orderStatus: OrderStatus
+        orderStatus: OrderStatus,
+        deliveryType: DeliveryType,
     ): Int {
         val inlineKeyboardMarkup: InlineKeyboardMarkup
 
         val inlineKeyboardMarkupDto = when (orderStatus) {
             OrderStatus.CANCELLED -> emptyList()
-            OrderStatus.DELIVERED -> emptyList()
+            OrderStatus.COMPLETED -> emptyList()
             else -> {
                 listOf(
-                    MarkupDataDto(0, OrderStatus.getNextButtonText(orderStatus), MarkupDataDto.Action.CHANGE),
+                    MarkupDataDto(0, OrderStatus.getNextButtonText(orderStatus, deliveryType, PaymentType.CASH), MarkupDataDto.Action.CHANGE),
                     MarkupDataDto(0, "Отменить заказ", MarkupDataDto.Action.CANCEL),
                 )
             }

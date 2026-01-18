@@ -3,16 +3,13 @@ package ru.foodbox.delivery.services
 import jakarta.transaction.Transactional
 import org.springframework.context.event.EventListener
 import org.springframework.http.HttpStatusCode
-import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
-import reactor.netty.transport.AddressUtils
 import ru.foodbox.delivery.controllers.order.body.CreateOrderResponse
-import ru.foodbox.delivery.controllers.websockets.model.UserOrdersStatusUpdate
 import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.OrderEntity
 import ru.foodbox.delivery.data.entities.OrderStatus
-import ru.foodbox.delivery.data.entities.UserEntity
+import ru.foodbox.delivery.data.entities.PaymentType
 import ru.foodbox.delivery.data.repository.*
 import ru.foodbox.delivery.data.telegram.MessageService
 import ru.foodbox.delivery.data.telegram.model.ButtonClickEvent
@@ -65,7 +62,7 @@ class OrderService(
             setOf(
                 OrderStatus.PROCESSING,
                 OrderStatus.PENDING,
-                OrderStatus.PAID,
+                OrderStatus.DELIVERY,
             )
         )
 
@@ -122,7 +119,8 @@ class OrderService(
             savedOrder.id!!,
             orderInfo,
             savedOrder.status,
-            savedOrder.messageId
+            savedOrder.messageId,
+            savedOrder.deliveryType
         )
 
         if (messageId != null) {
@@ -136,7 +134,8 @@ class OrderService(
         orderId: Long,
         orderInfo: String,
         orderStatus: OrderStatus,
-        orderMessageId: Int?
+        orderMessageId: Int?,
+        deliveryType: DeliveryType,
     ): Int? {
 
         if (orderMessageId != null) {
@@ -146,7 +145,8 @@ class OrderService(
         return messageService.sendMessageToBot(
             message = orderInfo,
             orderId = orderId,
-            orderStatus = orderStatus
+            orderStatus = orderStatus,
+            deliveryType = deliveryType
         )
     }
 
@@ -161,7 +161,8 @@ class OrderService(
             savedOrder.id!!,
             orderInfo,
             savedOrder.status,
-            savedOrder.messageId
+            savedOrder.messageId,
+            orderDto.deliveryType
         )
 
         if (messageId != null) {
@@ -175,7 +176,7 @@ class OrderService(
 
     fun proceedOrderStatus(orderId: Long): OrderDto? {
         val order = orderRepository.findById(orderId).getOrNull() ?: return null
-        order.status = OrderStatus.nextStatus(order.status)
+        order.status = OrderStatus.nextStatus(order.status, order.deliveryType, PaymentType.CASH)
         val savedOrder = orderRepository.save(order)
         val user = savedOrder.user
         val orderDto = orderMapper.toDto(savedOrder)
@@ -184,7 +185,8 @@ class OrderService(
             savedOrder.id!!,
             orderInfo,
             savedOrder.status,
-            savedOrder.messageId
+            savedOrder.messageId,
+            orderDto.deliveryType
         )
 
         if (messageId != null) {
