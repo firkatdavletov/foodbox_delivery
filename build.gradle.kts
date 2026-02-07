@@ -45,6 +45,8 @@ dependencies {
 	implementation("org.telegram:telegrambotsextensions:6.9.7.1")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+	implementation("com.opencsv:opencsv:5.9")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

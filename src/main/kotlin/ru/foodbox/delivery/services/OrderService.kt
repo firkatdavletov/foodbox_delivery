@@ -2,6 +2,9 @@ package ru.foodbox.delivery.services
 
 import jakarta.transaction.Transactional
 import org.springframework.context.event.EventListener
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -18,6 +21,7 @@ import ru.foodbox.delivery.services.broadcast.OrderStatusBroadcaster
 import ru.foodbox.delivery.services.dto.AddressDto
 import ru.foodbox.delivery.services.dto.OrderDto
 import ru.foodbox.delivery.services.dto.OrderItemDto
+import ru.foodbox.delivery.services.dto.OrderPreviewDto
 import ru.foodbox.delivery.services.mapper.AddressMapper
 import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.mapper.OrderItemMapper
@@ -25,6 +29,7 @@ import ru.foodbox.delivery.services.mapper.OrderMapper
 import ru.foodbox.delivery.services.mapper.UserMapper
 import ru.foodbox.delivery.utils.AddressUtility
 import ru.foodbox.delivery.utils.OrderUtility
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -49,6 +54,51 @@ class OrderService(
         }
     }
 
+    fun allOrders(): List<OrderDto> {
+        val orders = orderRepository.findAll()
+        return orderMapper.toDto(orders)
+    }
+
+    fun takeOrder(id: Long): OrderDto? {
+        val order = orderRepository.findById(id).getOrNull() ?: return null
+
+        order.take()
+
+        val savedOrder = orderRepository.save(order)
+
+        return orderMapper.toDto(savedOrder)
+    }
+
+    fun completeOrder(id: Long): OrderDto? {
+        val order = orderRepository.findById(id).getOrNull() ?: return null
+
+        order.complete()
+
+        val savedOrder = orderRepository.save(order)
+
+        return orderMapper.toDto(savedOrder)
+    }
+
+    fun cancelOrderTest(id: Long): OrderDto? {
+        val order = orderRepository.findById(id).getOrNull() ?: return null
+
+        order.cancel()
+
+        val savedOrder = orderRepository.save(order)
+
+        return orderMapper.toDto(savedOrder)
+    }
+
+    fun pendingOrder(id: Long): OrderDto? {
+        val order = orderRepository.findById(id).getOrNull() ?: return null
+
+        order.pending()
+
+        val savedOrder = orderRepository.save(order)
+
+        return orderMapper.toDto(savedOrder)
+    }
+
     fun getOrderById(id: Long): OrderDto? {
         val entity = orderRepository.findById(id).getOrNull() ?: return null
         return orderMapper.toDto(entity)
@@ -69,15 +119,6 @@ class OrderService(
         return orderMapper.toDto(orderEntities)
     }
 
-    @Transactional
-    fun updateOrderStatus(orderId: Long, status: OrderStatus): OrderDto? {
-        val order = orderRepository.findById(orderId).getOrNull() ?: return null
-
-        order.status = status
-        val updatedOrder = orderRepository.save(order)
-        return orderMapper.toDto(updatedOrder)
-    }
-
     fun createOrder(
         userId: Long,
         deliveryType: DeliveryType,
@@ -85,8 +126,8 @@ class OrderService(
         comment: String?,
         products: List<OrderItemDto>,
         departmentId: Long,
-        amount: Double,
-        deliveryPrice: Double,
+        amount: BigDecimal,
+        deliveryPrice: BigDecimal,
     ): CreateOrderResponse {
         val departmentEntity = departmentRepository.findById(departmentId).getOrNull()
             ?: return CreateOrderResponse("Ошибка определения ресторана", 500)
@@ -152,7 +193,7 @@ class OrderService(
 
     fun cancelOrder(orderId: Long): OrderDto? {
         val order = orderRepository.findById(orderId).getOrNull() ?: return null
-        order.status = OrderStatus.CANCELLED
+        order.cancel()
         val savedOrder = orderRepository.save(order)
         val user = order.user
         val orderDto = orderMapper.toDto(savedOrder)
@@ -176,7 +217,7 @@ class OrderService(
 
     fun proceedOrderStatus(orderId: Long): OrderDto? {
         val order = orderRepository.findById(orderId).getOrNull() ?: return null
-        order.status = OrderStatus.nextStatus(order.status, order.deliveryType, PaymentType.CASH)
+        order.complete()
         val savedOrder = orderRepository.save(order)
         val user = savedOrder.user
         val orderDto = orderMapper.toDto(savedOrder)
@@ -209,5 +250,16 @@ class OrderService(
             orderId,
             status
         )
+    }
+
+    fun getOrders(page: Int, size: Int): Page<OrderPreviewDto> {
+
+        val pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(Sort.Direction.DESC, "created")
+        )
+
+        return orderRepository.findOrderPreviews(pageable)
     }
 }

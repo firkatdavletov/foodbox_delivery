@@ -1,28 +1,30 @@
 package ru.foodbox.delivery.services
 
-import org.springframework.cglib.core.Local
+import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
-import ru.foodbox.delivery.controllers.catalog.CatalogController
 import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
+import ru.foodbox.delivery.data.repository.CartItemRepository
 import ru.foodbox.delivery.data.repository.CategoryRepository
 import ru.foodbox.delivery.data.repository.ProductRepository
 import ru.foodbox.delivery.services.dto.CategoryDto
+import ru.foodbox.delivery.services.dto.ProductCsvDto
 import ru.foodbox.delivery.services.dto.ProductDto
 import ru.foodbox.delivery.services.mapper.CategoryMapper
 import ru.foodbox.delivery.services.mapper.ProductMapper
+import ru.foodbox.delivery.services.model.UnitOfMeasure
+import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.Date
 import kotlin.jvm.optionals.getOrNull
 
 @Service
 class CatalogService(
     private val productRepository: ProductRepository,
     private val categoryRepository: CategoryRepository,
+    private val cartItemRepository: CartItemRepository,
     private val categoryMapper: CategoryMapper,
     private val productMapper: ProductMapper,
 ) {
@@ -34,7 +36,7 @@ class CatalogService(
 
     fun getCategory(categoryId: Long): CategoryDto? {
         val category = categoryRepository.findById(categoryId).getOrNull() ?: return null
-        return categoryMapper.toDto(category, false)
+        return categoryMapper.toDto(category)
     }
 
     fun getProducts(categoryId: Long): List<ProductDto> {
@@ -56,11 +58,48 @@ class CatalogService(
         val categoryEntity = CategoryEntity(
             title = categoryDto.title,
             imageUrl = categoryDto.imageUrl,
-            parentCategoryId = categoryDto.parentCategory,
             products = mutableListOf()
         )
         val savedEntity = categoryRepository.save(categoryEntity)
         return categoryMapper.toDto(savedEntity)
+    }
+    @Transactional
+    fun insertCatalogFromCsv(csvs: List<ProductCsvDto>) {
+        // 1. Очистка
+        cartItemRepository.deleteAllInBatch()
+        productRepository.deleteAllInBatch()
+        categoryRepository.deleteAllInBatch()
+
+        // 2. Создание категорий
+        val categoryMap = csvs
+            .mapNotNull { it.category }
+            .distinct()
+            .associateWith { title ->
+                CategoryEntity(title = title)
+            }
+
+        categoryRepository.saveAll(categoryMap.values)
+
+        // 3. Создание продуктов
+        val products = csvs.map { csv ->
+            val category = categoryMap[csv.category]
+                ?: error("Category missing")
+
+            ProductEntity(
+                title = csv.name ?: "",
+                description = csv.description,
+                price = csv.price ?: BigDecimal(9999.0),
+                category = category,
+                unit = UnitOfMeasure.PIECE,
+                countStep = 1,
+                displayWeight = null,
+            ).apply {
+                created = LocalDateTime.now()
+                modified = LocalDateTime.now()
+            }
+        }
+
+        productRepository.saveAll(products)
     }
 
     fun updateCategory(categoryDto: CategoryDto): CategoryDto? {
@@ -78,9 +117,12 @@ class CatalogService(
         val newProduct = ProductEntity(
             title = productDto.title,
             description = productDto.description,
-            price = productDto.price,
+            price = BigDecimal(productDto.price / 100),
             imageUrl = productDto.imageUrl,
-            category = category
+            category = category,
+            unit = productDto.unit,
+            countStep = productDto.countStep,
+            displayWeight = productDto.displayWeight,
         )
         newProduct.created = LocalDateTime.now()
         newProduct.modified = LocalDateTime.now()
@@ -95,7 +137,7 @@ class CatalogService(
         foundProduct.imageUrl = productDto.imageUrl
         foundProduct.category = category
         foundProduct.description = productDto.description
-        foundProduct.price = productDto.price
+        foundProduct.price = BigDecimal(productDto.price / 100)
         foundProduct.modified = LocalDateTime.now()
         val savedProduct = productRepository.save(foundProduct)
         return productMapper.toDto(savedProduct)

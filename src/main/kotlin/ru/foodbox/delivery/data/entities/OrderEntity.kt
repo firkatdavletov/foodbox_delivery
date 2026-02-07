@@ -1,38 +1,27 @@
 package ru.foodbox.delivery.data.entities
 
-import jakarta.persistence.CascadeType
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToMany
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import ru.foodbox.delivery.data.DeliveryType
+import java.math.BigDecimal
 import java.time.LocalDateTime
 
 @Entity
 @Table(name = "orders")
 class OrderEntity(
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     val user: UserEntity,
 
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItemEntity> = mutableListOf(),
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    var status: OrderStatus = OrderStatus.PENDING,
-
     @Column(name = "delivery_type", nullable = false)
     var deliveryType: DeliveryType,
 
     var deliveryAddress: String?,
+
+    @Column(name = "delivery_time", nullable = true)
+    var deliveryTime: LocalDateTime? = null,
 
     var comment: String? = null,
 
@@ -40,14 +29,18 @@ class OrderEntity(
     var paidAt: LocalDateTime? = null,
 
     @Column(name = "delivery_price", nullable = false)
-    var deliveryPrice: Double = 0.0,
+    var deliveryPrice: BigDecimal = BigDecimal.ZERO,
 
     @Column(name = "total_amount", nullable = false)
-    var totalAmount: Double = 0.0,
+    var totalAmount: BigDecimal = BigDecimal.ZERO,
 
     @Column(name = "message_id", nullable = true)
     var messageId: Int? = null,
 ) : BaseAuditEntity<Long>() {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var status: OrderStatus = OrderStatus.PENDING
+        private set
 
     fun addItem(block: OrderEntity.() -> OrderItemEntity) {
         items.add(block())
@@ -58,7 +51,19 @@ class OrderEntity(
         items.addAll(block())
     }
 
-    fun updateTotalPrice() {
-        totalAmount = items.sumOf { it.price * it.quantity }
+    fun cancel() {
+        status = OrderStatus.CANCELLED
+    }
+
+    fun complete() {
+        status = OrderStatus.COMPLETED
+    }
+
+    fun take() {
+        status = OrderStatus.PROCESSING
+    }
+
+    fun pending() {
+        status = OrderStatus.PENDING
     }
 }

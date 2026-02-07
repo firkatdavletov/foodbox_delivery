@@ -1,6 +1,8 @@
 package ru.foodbox.delivery.services.model
 
+import java.math.BigDecimal
+
 data class DeliveryInfo(
-    val deliveryPrice: Double,
-    val freeDeliveryPrice: Double?,
+    val deliveryPrice: BigDecimal,
+    val freeDeliveryPrice: BigDecimal?,
 )

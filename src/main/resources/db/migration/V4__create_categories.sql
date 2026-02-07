@@ -6,3 +6,6 @@ CREATE TABLE categories (
     parent_category_id INTEGER,
     image_url VARCHAR(255)
 );
+
+-- categories
+create index idx_categories_parent on categories(parent_category_id);

@@ -15,8 +15,9 @@ import ru.foodbox.delivery.data.sms_client.AuthByCallResponseEntity
 import ru.foodbox.delivery.data.sms_client.SmsClient
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
-import ru.foodbox.delivery.services.dto.AuthTypesDto
+import ru.foodbox.delivery.services.dto.AuthTypeDto
 import ru.foodbox.delivery.services.dto.TokenPairDto
+import ru.foodbox.delivery.services.model.UserRole
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.*
@@ -156,7 +157,7 @@ class AuthService(
         val user = userRepository.findByPhone(phone)
 
         val userId = if (user == null) {
-            val newUser = UserEntity(phone = phone)
+            val newUser = UserEntity(phone = phone, role = UserRole.CUSTOMER)
             newUser.created = LocalDateTime.now()
             newUser.modified = LocalDateTime.now()
             val savedUser = userRepository.save(newUser)
@@ -207,10 +208,14 @@ class AuthService(
         return true
     }
 
-    fun getAuthTypes(): AuthTypesDto {
-        return AuthTypesDto(
-            types = getAuthTypeRepository.findAll().map { it.name }
-        )
+    fun getAuthTypes(): List<AuthTypeDto> {
+        val entities = getAuthTypeRepository.findAll()
+        return entities.map {
+            AuthTypeDto(
+                key = it.key,
+                title = it.title,
+            )
+        }
     }
 
     private fun storeRefreshToken(userId: Long, rawRefreshToken: String) {

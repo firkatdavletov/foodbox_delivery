@@ -1,30 +1,34 @@
 package ru.foodbox.delivery.data.entities
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.Table
+import jakarta.persistence.*
+import ru.foodbox.delivery.services.model.UnitOfMeasure
+import java.math.BigDecimal
 
 @Entity
 @Table(name = "order_items")
 class OrderItemEntity(
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    val order: OrderEntity,
+    var order: OrderEntity,
 
     @Column(name = "product_id", nullable = false)
-    val productId: Long,
+    var productId: Long,
+
+    @Column(name = "image_url")
+    var imageUrl: String?,
 
     @Column(nullable = false)
-    val name: String,
+    var name: String,
+
+    @Enumerated(EnumType.STRING)
+    var unit: UnitOfMeasure,
 
     @Column(nullable = false)
-    val quantity: Int,
+    var quantity: Int,
 
-    @Column(nullable = false)
-    val price: Double,
+    @Column(nullable = false, precision = 19, scale = 2)
+    var price: BigDecimal,
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    var totalPrice: BigDecimal,
 ) : BaseEntity<Long>()

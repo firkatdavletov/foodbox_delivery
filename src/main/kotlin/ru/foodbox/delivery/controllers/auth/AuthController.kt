@@ -102,7 +102,7 @@ class AuthController(
 
     @GetMapping("/authTypes")
     fun getAuthTypes(): ResponseEntity<AuthTypesResponseBody> {
-        val authTypes =  authService.getAuthTypes().types
+        val authTypes =  authService.getAuthTypes()
 
         val body = if (authTypes.isNotEmpty()) {
             AuthTypesResponseBody(authTypes)

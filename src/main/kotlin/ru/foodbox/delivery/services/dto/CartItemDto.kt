@@ -6,5 +6,5 @@ data class CartItemDto(
     val productId: Long,
     val title: String,
     val quantity: Int,
-    val price: Double,
+    val price: BigDecimal,
 )

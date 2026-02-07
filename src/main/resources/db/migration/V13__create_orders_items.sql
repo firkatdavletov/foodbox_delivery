@@ -8,3 +8,6 @@ CREATE TABLE order_items (
     quantity INTEGER NOT NULL,
     price REAL NOT NULL
 );
+
+-- order_items
+create index idx_order_items_order on order_items(order_id);
