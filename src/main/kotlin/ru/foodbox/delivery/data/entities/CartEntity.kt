@@ -14,6 +14,7 @@ class CartEntity(
     @JoinColumn(name = "department")
     var department: DepartmentEntity,
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "delivery_type", nullable = false)
     var deliveryType: DeliveryType,
 

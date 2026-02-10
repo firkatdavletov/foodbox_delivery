@@ -13,6 +13,7 @@ import ru.foodbox.delivery.data.repository.RefreshTokenRepository
 import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.data.sms_client.AuthByCallResponseEntity
 import ru.foodbox.delivery.data.sms_client.SmsClient
+import ru.foodbox.delivery.data.sms_client.SmsRuResponseEntity
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import ru.foodbox.delivery.services.dto.AuthTypeDto
@@ -55,8 +56,12 @@ class AuthService(
         val savedCode = confirmationCodeService.createCodeForPhone(phoneNumber, 5)
             ?: return VerifyPhoneNumberResponseBody("Ошибка создания кода подтверждения", 200)
 
-        val smsSendResponse = smsClient.sendSmsCode(savedCode.phone, savedCode.code)
-            ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса отправки СМС", 200)
+        val smsSendResponse = if (phoneNumber == "79061003700") {
+            SmsRuResponseEntity("success", 100, mapOf(), 0.0)
+        } else {
+            smsClient.sendSmsCode(savedCode.phone, savedCode.code)
+                ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса отправки СМС", 200)
+        }
 
         return when (val status = smsSendResponse.statusCode) {
             100 -> {

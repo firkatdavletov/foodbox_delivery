@@ -15,6 +15,7 @@ class OrderEntity(
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItemEntity> = mutableListOf(),
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "delivery_type", nullable = false)
     var deliveryType: DeliveryType,
 

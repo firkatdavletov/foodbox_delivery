@@ -9,7 +9,7 @@ data class CartDto(
     val deliveryType: DeliveryType,
     val deliveryAddress: AddressDto?,
     val deliveryInfo: DeliveryInfo,
-    val totalPrice: BigDecimal,
+    val totalPrice: Long,
     val department: DepartmentDto,
     val comment: String?,
 )

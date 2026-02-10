@@ -139,8 +139,8 @@ class CartService(
             }
             DeliveryType.DELIVERY -> {
 
-                cartEntity.deliveryPrice = deliveryInfo?.deliveryPrice ?: BigDecimal(250)
-                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice
+                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 250)
+                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let { BigDecimal(it) }
             }
         }
 
@@ -203,8 +203,10 @@ class CartService(
 
         cart.deliveryType = deliveryType
         cart.department = department
-        cart.deliveryPrice = deliveryInfo.deliveryPrice
-        cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice
+        cart.deliveryPrice = BigDecimal(deliveryInfo.deliveryPrice)
+        cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice?.let {
+            BigDecimal(it)
+        }
         cart.deliveryAddress = newAddress
         cart.comment = comment
         cart.updateTotalPrice()
