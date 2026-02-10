@@ -56,11 +56,12 @@ class AuthService(
         val savedCode = confirmationCodeService.createCodeForPhone(phoneNumber, 5)
             ?: return VerifyPhoneNumberResponseBody("Ошибка создания кода подтверждения", 200)
 
-        val smsSendResponse = if (phoneNumber == "79061003700") {
+        val smsSendResponse = if (phoneNumber == "79656543535") {
             SmsRuResponseEntity("success", 100, mapOf(), 0.0)
         } else {
-            smsClient.sendSmsCode(savedCode.phone, savedCode.code)
-                ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса отправки СМС", 200)
+            return VerifyPhoneNumberResponseBody("У Вас нет доступа. Обратитесь к администратору", 401)
+//            smsClient.sendSmsCode(savedCode.phone, savedCode.code)
+//                ?: return VerifyPhoneNumberResponseBody("Ошибка сервиса отправки СМС", 200)
         }
 
         return when (val status = smsSendResponse.statusCode) {
