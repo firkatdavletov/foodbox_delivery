@@ -1,24 +1,20 @@
 package ru.foodbox.delivery.controllers.order
 
+import org.springframework.data.domain.Page
 import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.order.body.CreateOrderRequestBody
 import ru.foodbox.delivery.controllers.order.body.CreateOrderResponse
-import ru.foodbox.delivery.services.OrderService
 import ru.foodbox.delivery.controllers.order.body.GetCurrentOrdersResponse
-import ru.foodbox.delivery.controllers.order.body.GetOrderRequestBody
 import ru.foodbox.delivery.controllers.order.body.GetOrderResponse
+import ru.foodbox.delivery.controllers.order.body.GetOrdersResponse
 import ru.foodbox.delivery.services.CartService
-import kotlin.collections.contains
+import ru.foodbox.delivery.services.OrderService
+import ru.foodbox.delivery.services.dto.OrderPreviewDto
 
 @RestController
 @RequestMapping("/orders")
@@ -26,19 +22,65 @@ class OrderController(
     private val orderService: OrderService,
     private val cartService: CartService,
 ) {
-    @GetMapping("/currentOrder")
+    @GetMapping("/order")
     fun getOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {
-        val authentication = SecurityContextHolder.getContext().authentication
-
-        if (authentication.authorities.contains(SimpleGrantedAuthority("ROLE_ANONYMOUS"))) {
-            throw ResponseStatusException(HttpStatusCode.valueOf(401), "Access denied")
-        }
         val orderDto = orderService.getOrderById(id.toLong())
         return if (orderDto != null) {
             ResponseEntity.ok(GetOrderResponse(orderDto))
         } else {
             ResponseEntity.ok(GetOrderResponse("Get order error", 100))
         }
+    }
+
+    @GetMapping("/takeOrder")
+    fun takeOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {
+        val orderDto = orderService.takeOrder(id.toLong())
+        return if (orderDto != null) {
+            ResponseEntity.ok(GetOrderResponse(orderDto))
+        } else {
+            ResponseEntity.ok(GetOrderResponse("Get order error", 100))
+        }
+    }
+
+    @GetMapping("/completeOrder")
+    fun completeOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {
+        val orderDto = orderService.completeOrder(id.toLong())
+        return if (orderDto != null) {
+            ResponseEntity.ok(GetOrderResponse(orderDto))
+        } else {
+            ResponseEntity.ok(GetOrderResponse("Get order error", 100))
+        }
+    }
+
+    @GetMapping("/cancelOrder")
+    fun cancelOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {
+        val orderDto = orderService.cancelOrderTest(id.toLong())
+        return if (orderDto != null) {
+            ResponseEntity.ok(GetOrderResponse(orderDto))
+        } else {
+            ResponseEntity.ok(GetOrderResponse("Get order error", 100))
+        }
+    }
+
+    @GetMapping("/pendingOrder")
+    fun pendingOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {
+        val orderDto = orderService.pendingOrder(id.toLong())
+        return if (orderDto != null) {
+            ResponseEntity.ok(GetOrderResponse(orderDto))
+        } else {
+            ResponseEntity.ok(GetOrderResponse("Get order error", 100))
+        }
+    }
+
+    @GetMapping
+    fun getOrders(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int
+    ): ResponseEntity<GetOrdersResponse> {
+        val orders = orderService.getOrders(page, size)
+
+        val responses = GetOrdersResponse(orders)
+        return ResponseEntity.ok(responses)
     }
 
     @GetMapping("/current")

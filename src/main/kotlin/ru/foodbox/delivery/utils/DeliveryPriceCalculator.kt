@@ -5,6 +5,7 @@ import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.services.dto.CityDto
 import ru.foodbox.delivery.services.dto.DepartmentDto
 import ru.foodbox.delivery.services.model.DeliveryInfo
+import java.math.BigDecimal
 
 @Service
 class DeliveryPriceCalculator(
@@ -18,7 +19,7 @@ class DeliveryPriceCalculator(
         department: DepartmentDto
     ): DeliveryInfo? {
         if (deliveryType == DeliveryType.PICKUP) {
-            return DeliveryInfo(0.0, 0.0)
+            return DeliveryInfo(0, 0)
         }
         val deliveryInfo = if (department.city.id == cityId && lat != null && lon != null) {
             val distanceInMetres = distanceCalculator.haversineDistance(
@@ -29,7 +30,7 @@ class DeliveryPriceCalculator(
             )
             calculateDeliveryPrice(distanceInMetres)
         } else if (department.city.subCities.any { it.id == cityId }) {
-            DeliveryInfo(250.0, null)
+            DeliveryInfo(25000, null)
         } else {
             null
         }
@@ -38,9 +39,9 @@ class DeliveryPriceCalculator(
 
     fun calculateDeliveryPrice(distanceInMetres: Double): DeliveryInfo {
         val (deliveryPrice, freeDeliveryPrice) = when (distanceInMetres) {
-            in 0.0..< 1340.0 -> 100.0 to 1500.0
-            in 1340.0..2740.0 -> 100.0 to null
-            else -> 200.0 to null
+            in 0.0..< 1340.0 -> 1000L to 15000L
+            in 1340.0..2740.0 -> 1000L to null
+            else -> 20000L to null
         }
 
         return DeliveryInfo(deliveryPrice, freeDeliveryPrice)

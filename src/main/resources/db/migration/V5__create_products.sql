@@ -8,3 +8,7 @@ CREATE TABLE products (
     image_url VARCHAR(255),
     category_id INTEGER NOT NULL
 );
+
+-- products
+create index idx_products_category on products(category_id);
+create index idx_products_active on products(active);

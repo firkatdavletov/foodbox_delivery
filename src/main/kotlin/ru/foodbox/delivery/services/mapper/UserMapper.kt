@@ -10,5 +10,6 @@ class UserMapper {
         phone = entity.phone,
         name = entity.name,
         email = entity.email,
+        company = entity.company,
     )
 }

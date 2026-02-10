@@ -5,6 +5,6 @@ data class CategoryDto(
     val parentCategory: Long?,
     var title: String,
     var imageUrl: String?,
-    val products: List<ProductDto>,
-    val span: Int,
+    val products: List<ProductDto> = emptyList(),
+    val children: List<CategoryDto> = emptyList(),
 )

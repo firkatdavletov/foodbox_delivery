@@ -19,6 +19,7 @@ class AuthController(
     @param:Value("\${sms.ru.api.key}") private val apiKey: String
 ) {
     private val log = LoggerFactory.getLogger(AuthController::class.java)
+
     @PostMapping("/verifyPhoneNumber")
     fun verifyPhoneNumber(
         @RequestBody body: VerifyPhoneNumberRequestBody
@@ -102,7 +103,7 @@ class AuthController(
 
     @GetMapping("/authTypes")
     fun getAuthTypes(): ResponseEntity<AuthTypesResponseBody> {
-        val authTypes =  authService.getAuthTypes().types
+        val authTypes =  authService.getAuthTypes()
 
         val body = if (authTypes.isNotEmpty()) {
             AuthTypesResponseBody(authTypes)

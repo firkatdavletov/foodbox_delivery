@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.data.entities
 
 import jakarta.persistence.*
+import ru.foodbox.delivery.services.model.UserRole
 
 @Entity
 @Table(name = "users")
@@ -11,6 +12,12 @@ class UserEntity(
     var email: String = "",
 
     var name: String = "",
+
+    var company: String = "",
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var role: UserRole,
 
     @OneToMany(
         mappedBy = "user",

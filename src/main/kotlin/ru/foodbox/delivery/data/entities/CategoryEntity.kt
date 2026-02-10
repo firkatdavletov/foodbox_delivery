@@ -3,9 +3,12 @@ package ru.foodbox.delivery.data.entities
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 
@@ -15,14 +18,19 @@ class CategoryEntity(
 
     var title: String,
 
-    @Column(name = "parent_category_id")
-    var parentCategoryId: Long? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_category_id")
+    var parent: CategoryEntity? = null,
+
+    @OneToMany(mappedBy = "parent")
+    val children: MutableList<CategoryEntity> = mutableListOf(),
 
     var imageUrl: String? = null,
 
-    @OneToMany(mappedBy = "category", cascade = [CascadeType.ALL], orphanRemoval = true)
-    val products: MutableList<ProductEntity>,
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    val products: MutableList<ProductEntity> = mutableListOf(),
 
-    val span: Int = 1
+    @Column(name = "is_active")
+    var isActive: Boolean = true,
 
 ) : BaseEntity<Long>()

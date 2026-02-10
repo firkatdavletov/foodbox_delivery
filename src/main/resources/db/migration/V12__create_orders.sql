@@ -9,3 +9,7 @@ CREATE TABLE orders (
     delivery_price DOUBLE PRECISION NOT NULL DEFAULT 0.0,
     total_amount DOUBLE PRECISION NOT NULL DEFAULT 0.0
 );
+
+-- orders
+create index idx_orders_user on orders(user_id);
+create index idx_orders_status on orders(status);

@@ -8,20 +8,25 @@ import ru.foodbox.delivery.services.dto.CategoryDto
 class CategoryMapper(
     private val productMapper: ProductMapper,
 ) {
-    fun toDto(entity: CategoryEntity, withProducts: Boolean = true) = CategoryDto(
-        id = entity.id!!,
-        parentCategory = entity.parentCategoryId,
-        title = entity.title,
-        imageUrl = entity.imageUrl,
-        products = if (withProducts) {
-            productMapper.toDto(entity.products)
-        } else {
-            emptyList()
-        },
-        span = entity.span,
-    )
+    fun toDto(entity: CategoryEntity): CategoryDto {
+        return CategoryDto(
+            id = entity.id!!,
+            parentCategory = entity.parent?.id,
+            title = entity.title,
+            imageUrl = entity.imageUrl,
+            products = productMapper.toDto(entity.products),
+            children = entity.children.map { toDto(it) },
+        )
+    }
 
     fun toDto(entities: List<CategoryEntity>) = entities.map {
-        toDto(it)
+        toShortDto(it)
     }
+
+    private fun toShortDto(entity: CategoryEntity) = CategoryDto(
+        id = entity.id!!,
+        parentCategory = entity.parent?.id,
+        title = entity.title,
+        imageUrl = entity.imageUrl,
+    )
 }

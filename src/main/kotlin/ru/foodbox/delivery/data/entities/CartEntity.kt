@@ -2,6 +2,7 @@ package ru.foodbox.delivery.data.entities
 
 import jakarta.persistence.*
 import ru.foodbox.delivery.data.DeliveryType
+import java.math.BigDecimal
 
 @Entity
 @Table(name = "cart")
@@ -13,6 +14,7 @@ class CartEntity(
     @JoinColumn(name = "department")
     var department: DepartmentEntity,
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "delivery_type", nullable = false)
     var deliveryType: DeliveryType,
 
@@ -24,19 +26,19 @@ class CartEntity(
     var deliveryAddress: AddressEntity?,
 
     @Column(name = "delivery_price")
-    var deliveryPrice: Double,
+    var deliveryPrice: BigDecimal,
 
     @Column(name = "free_delivery_price")
-    var freeDeliveryPrice: Double?,
+    var freeDeliveryPrice: BigDecimal?,
 
     @Column(name = "min_price_for_order")
-    var minPriceForOrder: Double = 0.0,
+    var minPriceForOrder: BigDecimal,
 
     @Column(name = "discount")
-    var discountPrice: Double = 0.0,
+    var discountPrice: BigDecimal,
 
     @Column(name = "total_price")
-    var totalPrice: Double = 0.0,
+    var totalPrice: BigDecimal,
 
     var comment: String?,
 ) : BaseEntity<Long>() {
@@ -55,15 +57,15 @@ class CartEntity(
     }
 
     fun updateTotalPrice() {
-        val itemsPrice = items.sumOf { it.product.price * it.quantity }
+        val itemsPrice = items.sumOf { it.product.price * BigDecimal(it.quantity) }
         val freeDeliveryPrice = freeDeliveryPrice
         val totalDeliveryPrice = if (freeDeliveryPrice != null && itemsPrice >= freeDeliveryPrice) {
-            0.0
+            BigDecimal.ZERO
         } else {
             deliveryPrice
         }
         totalPrice = if (items.isEmpty()) {
-            0.0
+            BigDecimal(0.0)
         } else {
             itemsPrice + totalDeliveryPrice
         }

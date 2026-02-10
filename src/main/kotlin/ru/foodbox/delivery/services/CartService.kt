@@ -16,6 +16,7 @@ import ru.foodbox.delivery.services.mapper.CartMapper
 import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.model.DeliveryInfo
 import ru.foodbox.delivery.utils.DeliveryPriceCalculator
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -38,8 +39,8 @@ class CartService(
         departmentId: Int,
         deliveryType: DeliveryType,
         deliveryAddress: AddressDto?,
-        deliveryPrice: Double,
-        freeDeliveryPrice: Double?,
+        deliveryPrice: BigDecimal,
+        freeDeliveryPrice: BigDecimal?,
     ): String? {
         val department = departmentRepository.findById(departmentId.toLong()).getOrNull() ?: return null
 
@@ -65,6 +66,9 @@ class CartService(
             deliveryAddress = address,
             deliveryPrice = deliveryPrice,
             freeDeliveryPrice = freeDeliveryPrice,
+            minPriceForOrder = BigDecimal.ZERO,
+            discountPrice = BigDecimal.ZERO,
+            totalPrice = BigDecimal.ZERO,
             comment = null,
         )
         val savedCart = cartRepository.save(newCart)
@@ -111,7 +115,7 @@ class CartService(
     fun removeAll(deviceId: String): CartDto? {
         val cart = cartRepository.findByDeviceId(deviceId) ?: return null
         cart.items.clear()
-        cart.totalPrice = 0.0
+        cart.totalPrice = BigDecimal.ZERO
         val savedCart = cartRepository.save(cart)
         return cartMapper.toDto(savedCart)
     }
@@ -130,13 +134,13 @@ class CartService(
         when (cartEntity.deliveryType) {
             DeliveryType.PICKUP -> {
                 cartEntity.deliveryAddress = null
-                cartEntity.deliveryPrice = 0.0
-                cartEntity.freeDeliveryPrice = 0.0
+                cartEntity.deliveryPrice = BigDecimal.ZERO
+                cartEntity.freeDeliveryPrice = BigDecimal.ZERO
             }
             DeliveryType.DELIVERY -> {
 
-                cartEntity.deliveryPrice = deliveryInfo?.deliveryPrice ?: 250.0
-                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice
+                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 250)
+                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let { BigDecimal(it) }
             }
         }
 
@@ -199,8 +203,10 @@ class CartService(
 
         cart.deliveryType = deliveryType
         cart.department = department
-        cart.deliveryPrice = deliveryInfo.deliveryPrice
-        cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice
+        cart.deliveryPrice = BigDecimal(deliveryInfo.deliveryPrice)
+        cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice?.let {
+            BigDecimal(it)
+        }
         cart.deliveryAddress = newAddress
         cart.comment = comment
         cart.updateTotalPrice()
