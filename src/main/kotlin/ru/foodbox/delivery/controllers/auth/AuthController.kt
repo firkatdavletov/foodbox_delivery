@@ -101,6 +101,28 @@ class AuthController(
         }
     }
 
+    @PostMapping("/loginByEmail")
+    fun loginByEmail(@RequestBody body: LoginByEmailRequestBody): ResponseEntity<TokenPairResponseBody> {
+        val dto = authService.loginByEmail(body.email, body.password)
+
+        return if (dto != null) {
+            ResponseEntity.ok(TokenPairResponseBody(dto))
+        } else {
+            ResponseEntity.ok(TokenPairResponseBody("Not authorized", 401))
+        }
+    }
+
+    @PostMapping("/register")
+    fun register(@RequestBody body: RegisterRequestBody): ResponseEntity<TokenPairResponseBody> {
+        val dto = authService.register(body.name, body.phone, body.email, body.password)
+
+        return if (dto != null) {
+            ResponseEntity.ok(TokenPairResponseBody(dto))
+        } else {
+            ResponseEntity.ok(TokenPairResponseBody("User registration failed", 409))
+        }
+    }
+
     @GetMapping("/authTypes")
     fun getAuthTypes(): ResponseEntity<AuthTypesResponseBody> {
         val authTypes =  authService.getAuthTypes()

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*
 import ru.foodbox.delivery.controllers.cart.body.GetCartResponseBody
 import ru.foodbox.delivery.controllers.cart.body.RemoveAllResponseBody
 import ru.foodbox.delivery.controllers.cart.body.UpdateCartAddressRequestBody
+import ru.foodbox.delivery.controllers.cart.body.UpdateOrderItemQuantityRequestBody
 import ru.foodbox.delivery.controllers.cart.body.UpdateQuantityRequestBody
 import ru.foodbox.delivery.services.CartService
 
@@ -31,6 +32,22 @@ class CartController(
         val cartDto =  cartService.updateItemQuantity(deviceId, request.productId, request.quantity)
         val response = GetCartResponseBody(cartDto)
         return ResponseEntity.ok(response)
+    }
+
+    @PutMapping("/updateOrderItemQuantity")
+    fun updateOrderItemQuantity(
+        @RequestBody request: UpdateOrderItemQuantityRequestBody,
+    ): ResponseEntity<GetCartResponseBody> {
+        val authentication = SecurityContextHolder.getContext().authentication
+        if (authentication.authorities.contains(SimpleGrantedAuthority("ROLE_ANONYMOUS"))) {
+            return ResponseEntity.ok(GetCartResponseBody("Нет доступа", 401))
+        }
+
+        val deviceId = (SecurityContextHolder.getContext().authentication.principal as? String)
+            ?: return ResponseEntity.ok(GetCartResponseBody("Нет токена", 401))
+
+        val cartDto = cartService.updateOrderItemQuantity(deviceId, request.cartItemId, request.quantity)
+        return ResponseEntity.ok(GetCartResponseBody(cartDto))
     }
 
     @DeleteMapping("/removeAll")

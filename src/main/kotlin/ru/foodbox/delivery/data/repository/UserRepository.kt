@@ -5,4 +5,5 @@ import ru.foodbox.delivery.data.entities.UserEntity
 
 interface UserRepository: JpaRepository<UserEntity, Long> {
     fun findByPhone(phone: String): UserEntity?
+    fun findByEmailIgnoreCase(email: String): UserEntity?
 }

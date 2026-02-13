@@ -14,6 +14,7 @@ import ru.foodbox.delivery.data.repository.UserRepository
 import ru.foodbox.delivery.data.sms_client.AuthByCallResponseEntity
 import ru.foodbox.delivery.data.sms_client.SmsClient
 import ru.foodbox.delivery.data.sms_client.SmsRuResponseEntity
+import ru.foodbox.delivery.security.HashEncoder
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.broadcast.AuthBroadcaster
 import ru.foodbox.delivery.services.dto.AuthTypeDto
@@ -34,6 +35,7 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val getAuthTypeRepository: AuthTypeRepository,
     private val authBroadcaster: AuthBroadcaster,
+    private val hashEncoder: HashEncoder,
 ) {
     private val logger = LoggerFactory.getLogger(AuthService::class.java)
     fun verifyPhoneNumber(phone: String, type: String): VerifyPhoneNumberResponseBody {
@@ -157,6 +159,40 @@ class AuthService(
         } else {
             null
         }
+    }
+
+    fun loginByEmail(email: String, password: String): TokenPairDto? {
+        if (email.isBlank() || password.isBlank()) return null
+
+        val user = userRepository.findByEmailIgnoreCase(email.trim()) ?: return null
+        if (user.role != UserRole.MANAGER && user.role != UserRole.ADMIN) return null
+        if (user.hashPassword.isBlank()) return null
+        if (!hashEncoder.matches(password, user.hashPassword)) return null
+
+        val userId = user.id ?: return null
+        return createTokenPair(userId)
+    }
+
+    fun register(name: String, phone: String, email: String, password: String): TokenPairDto? {
+        val normalizedPhone = phone.trim()
+        val normalizedEmail = email.trim().lowercase()
+        if (normalizedPhone.isBlank() || normalizedEmail.isBlank() || password.isBlank()) return null
+        if (userRepository.findByPhone(normalizedPhone) != null) return null
+        if (userRepository.findByEmailIgnoreCase(normalizedEmail) != null) return null
+
+        val newUser = UserEntity(
+            name = name,
+            phone = normalizedPhone,
+            email = normalizedEmail,
+            hashPassword = hashEncoder.encode(password),
+            role = UserRole.MANAGER
+        )
+        newUser.created = LocalDateTime.now()
+        newUser.modified = LocalDateTime.now()
+        val savedUser = userRepository.save(newUser)
+        val userId = savedUser.id ?: return null
+
+        return createTokenPair(userId)
     }
 
     private fun checkUserAndCreateTokenPair(phone: String): TokenPairDto {
