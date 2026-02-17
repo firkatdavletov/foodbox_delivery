@@ -30,6 +30,7 @@ import ru.foodbox.delivery.services.mapper.UserMapper
 import ru.foodbox.delivery.utils.AddressUtility
 import ru.foodbox.delivery.utils.OrderUtility
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -144,7 +145,8 @@ class OrderService(
             user = user,
             deliveryType = deliveryType,
             deliveryAddress = deliveryAddress?.let { AddressUtility.addressString(deliveryAddress) },
-            comment = comment
+            comment = comment,
+            deliveryTime = LocalDateTime.now() + Duration.ofMinutes(30),
         )
         val newOrderItems = orderItemMapper.toEntity(products, newOrder).toMutableSet()
         newOrder.setItems { newOrderItems }

@@ -10,5 +10,5 @@ data class OrderPreviewDto(
     val status: OrderStatus,
     val customerName: String,
     val companyName: String?,
-    val deliveryTime: LocalDateTime?,
+    val deliveryTime: LocalDateTime,
 )
