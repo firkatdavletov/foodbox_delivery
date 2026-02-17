@@ -11,7 +11,7 @@ class OrderPreviewDtoTest {
     fun `allows null delivery time`() {
         val dto = OrderPreviewDto(
             id = 1L,
-            totalAmount = BigDecimal("1499.99"),
+            totalAmount = 149999,
             status = OrderStatus.PENDING,
             customerName = "Test User",
             companyName = null,
