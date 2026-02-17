@@ -126,8 +126,8 @@ class OrderService(
         comment: String?,
         products: List<OrderItemDto>,
         departmentId: Long,
-        amount: BigDecimal,
-        deliveryPrice: BigDecimal,
+        amount: Long,
+        deliveryPrice: Long,
     ): CreateOrderResponse {
         val departmentEntity = departmentRepository.findById(departmentId).getOrNull()
             ?: return CreateOrderResponse("Ошибка определения ресторана", 500)
@@ -148,8 +148,10 @@ class OrderService(
         )
         val newOrderItems = orderItemMapper.toEntity(products, newOrder).toMutableSet()
         newOrder.setItems { newOrderItems }
-        newOrder.deliveryPrice = deliveryPrice
-        newOrder.totalAmount = amount
+        newOrder.deliveryPrice = BigDecimal(deliveryPrice)
+            .divide(BigDecimal(100))
+        newOrder.totalAmount = BigDecimal(amount)
+            .divide(BigDecimal(100))
         newOrder.created = LocalDateTime.now()
         newOrder.modified = LocalDateTime.now()
         val savedOrder = orderRepository.save(newOrder)

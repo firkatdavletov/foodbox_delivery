@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 
 data class OrderPreviewDto(
     val id: Long,
-    val totalAmount: BigDecimal,
+    val totalAmount: Long,
     val status: OrderStatus,
     val customerName: String,
     val companyName: String?,

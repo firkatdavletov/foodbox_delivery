@@ -11,6 +11,6 @@ class CreateOrderRequestBody(
     val comment: String?,
     val products: List<OrderItemDto>,
     val departmentId: Long,
-    val amount: BigDecimal,
-    val deliveryPrice: BigDecimal,
+    val amount: Long,
+    val deliveryPrice: Long,
 )
