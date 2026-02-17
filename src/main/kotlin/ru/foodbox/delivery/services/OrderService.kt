@@ -265,5 +265,17 @@ class OrderService(
         )
 
         return orderRepository.findOrderPreviews(pageable)
+            .map { order ->
+                OrderPreviewDto(
+                    id = order.id,
+                    totalAmount = order.totalAmount
+                        .multiply(BigDecimal(100))
+                        .longValueExact(),
+                    status = order.status,
+                    customerName = order.customerName,
+                    companyName = order.companyName,
+                    deliveryTime = order.deliveryTime
+                )
+            }
     }
 }
