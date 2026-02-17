@@ -27,7 +27,7 @@ interface OrderRepository: JpaRepository<OrderEntity, Long> {
                 o.id,
                 o.totalAmount,
                 o.status,
-                coalesce(c.name, ''),
+                c.name,
                 c.company,
                 o.deliveryTime
             )
