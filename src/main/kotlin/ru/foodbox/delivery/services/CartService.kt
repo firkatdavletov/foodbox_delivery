@@ -18,6 +18,7 @@ import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.model.DeliveryInfo
 import ru.foodbox.delivery.utils.DeliveryPriceCalculator
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -189,8 +190,12 @@ class CartService(
             }
             DeliveryType.DELIVERY -> {
 
-                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 250)
-                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let { BigDecimal(it) }
+                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 25000)
+                    .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
+                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let {
+                    BigDecimal(it)
+                        .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
+                }
             }
         }
 
@@ -254,8 +259,10 @@ class CartService(
         cart.deliveryType = deliveryType
         cart.department = department
         cart.deliveryPrice = BigDecimal(deliveryInfo.deliveryPrice)
+            .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
         cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice?.let {
             BigDecimal(it)
+                .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
         }
         cart.deliveryAddress = newAddress
         cart.comment = comment
