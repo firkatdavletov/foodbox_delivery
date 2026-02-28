@@ -7,4 +7,5 @@ data class CategoryDto(
     var imageUrl: String?,
     val products: List<ProductDto> = emptyList(),
     val children: List<CategoryDto> = emptyList(),
+    val sku: String? = null,
 )

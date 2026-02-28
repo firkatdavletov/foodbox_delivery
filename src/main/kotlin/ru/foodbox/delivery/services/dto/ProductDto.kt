@@ -12,4 +12,5 @@ data class ProductDto(
     val unit: UnitOfMeasure,
     val displayWeight: String?,
     val countStep: Int,
+    val sku: String? = null,
 )

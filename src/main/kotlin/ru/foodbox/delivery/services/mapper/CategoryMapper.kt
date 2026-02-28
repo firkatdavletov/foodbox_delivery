@@ -16,6 +16,7 @@ class CategoryMapper(
             imageUrl = entity.imageUrl,
             products = productMapper.toDto(entity.products),
             children = entity.children.map { toDto(it) },
+            sku = entity.sku,
         )
     }
 
@@ -23,10 +24,19 @@ class CategoryMapper(
         toShortDto(it)
     }
 
+    fun toEntity(model: CategoryDto): CategoryEntity {
+        return CategoryEntity(
+            title = model.title,
+            imageUrl = model.imageUrl,
+            sku = model.sku,
+        )
+    }
+
     private fun toShortDto(entity: CategoryEntity) = CategoryDto(
         id = entity.id!!,
         parentCategory = entity.parent?.id,
         title = entity.title,
         imageUrl = entity.imageUrl,
+        sku = entity.sku,
     )
 }

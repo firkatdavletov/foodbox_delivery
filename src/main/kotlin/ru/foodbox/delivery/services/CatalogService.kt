@@ -1,21 +1,19 @@
 package ru.foodbox.delivery.services
 
-import jakarta.transaction.Transactional
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
-import ru.foodbox.delivery.controllers.catalog.body.DeleteCategoryResponseBody
+import ru.foodbox.delivery.controllers.admin.body.SaveCategoryResponseBody
+import ru.foodbox.delivery.controllers.admin.body.SaveProductResponseBody
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.data.repository.CartItemRepository
 import ru.foodbox.delivery.data.repository.CategoryRepository
 import ru.foodbox.delivery.data.repository.ProductRepository
 import ru.foodbox.delivery.services.dto.CategoryDto
-import ru.foodbox.delivery.services.dto.ProductCsvDto
 import ru.foodbox.delivery.services.dto.ProductDto
 import ru.foodbox.delivery.services.mapper.CategoryMapper
 import ru.foodbox.delivery.services.mapper.ProductMapper
-import ru.foodbox.delivery.services.model.UnitOfMeasure
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
@@ -40,7 +38,7 @@ class CatalogService(
     }
 
     fun getProducts(categoryId: Long): List<ProductDto> {
-        val products = productRepository.findAllByCategoryId(categoryId)
+        val products = productRepository.findAllByCategoryIdAndIsActiveTrue(categoryId)
         return productMapper.toDto(products)
     }
 
@@ -58,54 +56,18 @@ class CatalogService(
         val categoryEntity = CategoryEntity(
             title = categoryDto.title,
             imageUrl = categoryDto.imageUrl,
-            products = mutableListOf()
+            products = mutableListOf(),
+            sku = categoryDto.sku,
         )
         val savedEntity = categoryRepository.save(categoryEntity)
         return categoryMapper.toDto(savedEntity)
-    }
-    @Transactional
-    fun insertCatalogFromCsv(csvs: List<ProductCsvDto>) {
-        // 1. Очистка
-        cartItemRepository.deleteAllInBatch()
-        productRepository.deleteAllInBatch()
-        categoryRepository.deleteAllInBatch()
-
-        // 2. Создание категорий
-        val categoryMap = csvs
-            .mapNotNull { it.category }
-            .distinct()
-            .associateWith { title ->
-                CategoryEntity(title = title)
-            }
-
-        categoryRepository.saveAll(categoryMap.values)
-
-        // 3. Создание продуктов
-        val products = csvs.map { csv ->
-            val category = categoryMap[csv.category]
-                ?: error("Category missing")
-
-            ProductEntity(
-                title = csv.name ?: "",
-                description = csv.description,
-                price = csv.price ?: BigDecimal(9999.0),
-                category = category,
-                unit = UnitOfMeasure.PIECE,
-                countStep = 1,
-                displayWeight = null,
-            ).apply {
-                created = LocalDateTime.now()
-                modified = LocalDateTime.now()
-            }
-        }
-
-        productRepository.saveAll(products)
     }
 
     fun updateCategory(categoryDto: CategoryDto): CategoryDto? {
         val foundCategory = categoryRepository.findById(categoryDto.id).getOrNull() ?: return null
         foundCategory.title = categoryDto.title
         foundCategory.imageUrl = categoryDto.imageUrl
+        foundCategory.sku = categoryDto.sku
 
         val savedEntity = categoryRepository.save(foundCategory)
         return categoryMapper.toDto(savedEntity)
@@ -123,6 +85,7 @@ class CatalogService(
             unit = productDto.unit,
             countStep = productDto.countStep,
             displayWeight = productDto.displayWeight,
+            sku = productDto.sku,
         )
         newProduct.created = LocalDateTime.now()
         newProduct.modified = LocalDateTime.now()
@@ -138,25 +101,51 @@ class CatalogService(
         foundProduct.category = category
         foundProduct.description = productDto.description
         foundProduct.price = BigDecimal(productDto.price / 100)
+        foundProduct.sku = productDto.sku
         foundProduct.modified = LocalDateTime.now()
         val savedProduct = productRepository.save(foundProduct)
         return productMapper.toDto(savedProduct)
     }
 
-    fun deleteCategory(categoryId: Long): DeleteCategoryResponseBody {
-        val products = productRepository.findAllByCategoryId(categoryId)
-        if (products.isNotEmpty()) {
-            return DeleteCategoryResponseBody(
-                error = "В категории есть продукты, сначала удалите все продукты",
-                100
-            )
-        }
-        categoryRepository.deleteById(categoryId)
-        return DeleteCategoryResponseBody()
+    fun deleteCategory(categoryId: Long): Boolean {
+        categoryRepository.makeCategoryAsInactive(categoryId)
+        return true
     }
 
     fun deleteProduct(id: Long): Boolean {
-        productRepository.deleteById(id)
+        productRepository.makeProductAsInactive(id)
         return true
+    }
+
+    fun saveCategory(categoryDto: CategoryDto): SaveCategoryResponseBody {
+        val categoryEntity = categoryRepository.findById(categoryDto.id).getOrNull()
+
+        val savedCategory = if (categoryEntity != null) {
+            categoryEntity.title = categoryDto.title
+            categoryEntity.imageUrl = categoryDto.imageUrl
+            categoryEntity.sku = categoryDto.sku
+            categoryRepository.save(categoryEntity)
+        } else {
+            categoryRepository.save(categoryMapper.toEntity(categoryDto))
+        }
+
+        return SaveCategoryResponseBody(categoryMapper.toDto(savedCategory))
+    }
+
+    fun saveProduct(productDto: ProductDto): SaveProductResponseBody {
+        val productEntity = productRepository.findById(productDto.id).getOrNull()
+        val category = categoryRepository.findById(productDto.categoryId).getOrNull()
+            ?: return SaveProductResponseBody("Категория не найдена", 404)
+
+        val savedProduct = if (productEntity != null) {
+            productEntity.title = productDto.title
+            productEntity.imageUrl = productDto.imageUrl
+            productEntity.sku = productDto.sku
+            productRepository.save(productEntity)
+        } else {
+            productRepository.save(productMapper.toEntity(productDto, category))
+        }
+
+        return SaveProductResponseBody(productMapper.toDto(savedProduct))
     }
 }

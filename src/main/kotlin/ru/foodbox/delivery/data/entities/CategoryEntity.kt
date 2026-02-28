@@ -1,13 +1,10 @@
 package ru.foodbox.delivery.data.entities
 
-import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
@@ -27,10 +24,13 @@ class CategoryEntity(
 
     var imageUrl: String? = null,
 
-    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "categories", fetch = FetchType.LAZY)
     val products: MutableList<ProductEntity> = mutableListOf(),
 
     @Column(name = "is_active")
     var isActive: Boolean = true,
+
+    @Column(unique = true)
+    var sku: String? = null,
 
 ) : BaseEntity<Long>()

@@ -49,51 +49,6 @@ class CatalogController(
         return ResponseEntity.ok(GetProductsResponseBody(products))
     }
 
-    @PostMapping("/product/new")
-    fun createProduct(@RequestBody body: CreateProductRequestBody): ResponseEntity<CreateProductResponseBody> {
-        val savedProduct = catalogService.insertProduct(body.product)
-        return ResponseEntity.ok(CreateProductResponseBody(savedProduct))
-    }
-
-    @PostMapping("/product/update")
-    fun updateProduct(@RequestBody body: CreateProductRequestBody): ResponseEntity<CreateProductResponseBody> {
-        val savedProduct = catalogService.updateProduct(body.product)
-        return if (savedProduct != null) {
-            ResponseEntity.ok(CreateProductResponseBody(savedProduct))
-        } else {
-            ResponseEntity.ok(CreateProductResponseBody("Ошибка создания номенклатуры", 200))
-        }
-    }
-
-    @DeleteMapping("/product")
-    fun deleteProduct(@RequestParam id: Long): DeleteProductResponseBody {
-        val result = catalogService.deleteProduct(id)
-        return DeleteProductResponseBody()
-    }
-
-    @PostMapping("/category/new")
-    fun createCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
-        val savedCategory = catalogService.insertCategory(body.category)
-        return ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
-    }
-
-    @PostMapping("/category/update")
-    fun updateCategory(@RequestBody body: CreateCategoryRequestBody): ResponseEntity<CreateCategoryResponseBody> {
-        val savedCategory = catalogService.updateCategory(body.category)
-
-        return if (savedCategory != null) {
-            ResponseEntity.ok(CreateCategoryResponseBody(savedCategory))
-        } else {
-            ResponseEntity.ok(CreateCategoryResponseBody("Категория не найдена", 404))
-        }
-    }
-
-    @DeleteMapping("category")
-    fun deleteCategory(@RequestParam categoryId: Long): ResponseEntity<DeleteCategoryResponseBody> {
-        val result = catalogService.deleteCategory(categoryId)
-        return ResponseEntity.ok(result)
-    }
-
     @GetMapping("category")
     fun getCategory(@RequestParam id: Long): ResponseEntity<GetCategoryResponseBody> {
         val result = catalogService.getCategory(id)
