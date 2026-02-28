@@ -41,7 +41,9 @@ class SecurityConfig(
                         "/orders/**",
                         "/departments/**",
                         "/payment/**",
-                        "/ws/callcheck/**"
+                        "/ws/callcheck/**",
+                        "/privacy-policy",
+                        "/privacy-policy/**"
                     )
                     .permitAll()
                     .dispatcherTypeMatchers(

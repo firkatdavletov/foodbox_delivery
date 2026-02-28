@@ -8,6 +8,7 @@ import ru.foodbox.delivery.data.DeliveryType
 import ru.foodbox.delivery.data.entities.AddressEntity
 import ru.foodbox.delivery.data.entities.CartEntity
 import ru.foodbox.delivery.data.entities.CartItemEntity
+import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.data.repository.*
 import ru.foodbox.delivery.security.JwtGenerator
 import ru.foodbox.delivery.services.dto.AddressDto
@@ -17,6 +18,7 @@ import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.model.DeliveryInfo
 import ru.foodbox.delivery.utils.DeliveryPriceCalculator
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -78,12 +80,12 @@ class CartService(
 
     @Transactional
     fun updateItemQuantity(deviceId: String, productId: Long, quantity: Int): CartDto {
+        if (quantity < 0) {
+            throw ResponseStatusException(HttpStatusCode.valueOf(400), "Количество не может быть отрицательным")
+        }
+
         val cart = cartRepository.findByDeviceId(deviceId)
             ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Cart not found")
-
-        val product = productRepository.findById(productId).orElseThrow {
-            ResponseStatusException(HttpStatusCode.valueOf(404), "Продукт не найден")
-        }
 
         val existingItem = cart.items.find { it.product.id == productId }
 
@@ -94,6 +96,13 @@ class CartService(
                 existingItem.quantity = quantity
             }
         } else {
+            if (quantity == 0) {
+                return cartMapper.toDto(cart)
+            }
+
+            val product = getProductForCart(productId)
+            validateQuantityStep(quantity, product.countStep)
+
             val newCartItem = CartItemEntity(
                 cart = cart,
                 product = product,
@@ -108,6 +117,48 @@ class CartService(
 
         val savedCart = cartRepository.save(cart)
 
+        return cartMapper.toDto(savedCart)
+    }
+
+    private fun getProductForCart(productId: Long): ProductEntity {
+        val product = productRepository.findById(productId).orElseThrow {
+            ResponseStatusException(HttpStatusCode.valueOf(404), "Продукт не найден")
+        }
+
+        if (!product.isActive) {
+            throw ResponseStatusException(HttpStatusCode.valueOf(400), "Продукт недоступен")
+        }
+
+        if (!product.category.isActive) {
+            throw ResponseStatusException(HttpStatusCode.valueOf(400), "Категория продукта недоступна")
+        }
+
+        return product
+    }
+
+    private fun validateQuantityStep(quantity: Int, countStep: Int) {
+        if (countStep <= 0 || quantity % countStep != 0) {
+            throw ResponseStatusException(HttpStatusCode.valueOf(400), "Некорректный шаг количества")
+        }
+    }
+
+    @Transactional
+    fun updateOrderItemQuantity(deviceId: String, cartItemId: Long, quantity: Int): CartDto {
+        val cart = cartRepository.findByDeviceId(deviceId)
+            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Cart not found")
+
+        val existingItem = cart.items.find { it.id == cartItemId }
+            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404), "Cart item not found")
+
+        if (quantity == 0) {
+            cart.removeItem { existingItem }
+        } else {
+            existingItem.quantity = quantity
+        }
+
+        cart.updateTotalPrice()
+
+        val savedCart = cartRepository.save(cart)
         return cartMapper.toDto(savedCart)
     }
 
@@ -139,8 +190,12 @@ class CartService(
             }
             DeliveryType.DELIVERY -> {
 
-                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 250)
-                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let { BigDecimal(it) }
+                cartEntity.deliveryPrice = BigDecimal(deliveryInfo?.deliveryPrice ?: 25000)
+                    .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
+                cartEntity.freeDeliveryPrice = deliveryInfo?.freeDeliveryPrice?.let {
+                    BigDecimal(it)
+                        .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
+                }
             }
         }
 
@@ -204,8 +259,10 @@ class CartService(
         cart.deliveryType = deliveryType
         cart.department = department
         cart.deliveryPrice = BigDecimal(deliveryInfo.deliveryPrice)
+            .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
         cart.freeDeliveryPrice = deliveryInfo.freeDeliveryPrice?.let {
             BigDecimal(it)
+                .divide(BigDecimal(100), 2, RoundingMode.HALF_UP)
         }
         cart.deliveryAddress = newAddress
         cart.comment = comment

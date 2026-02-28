@@ -1,12 +1,11 @@
-package ru.foodbox.delivery.services.dto
+package ru.foodbox.delivery.data.entities
 
-import ru.foodbox.delivery.data.entities.OrderStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-data class OrderPreviewDto(
+class OrderPreviewEntity(
     val id: Long,
-    val totalAmount: Long,
+    val totalAmount: BigDecimal,
     val status: OrderStatus,
     val customerName: String,
     val companyName: String?,

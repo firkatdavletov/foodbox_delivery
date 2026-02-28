@@ -30,6 +30,7 @@ import ru.foodbox.delivery.services.mapper.UserMapper
 import ru.foodbox.delivery.utils.AddressUtility
 import ru.foodbox.delivery.utils.OrderUtility
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 
@@ -126,8 +127,8 @@ class OrderService(
         comment: String?,
         products: List<OrderItemDto>,
         departmentId: Long,
-        amount: BigDecimal,
-        deliveryPrice: BigDecimal,
+        amount: Long,
+        deliveryPrice: Long,
     ): CreateOrderResponse {
         val departmentEntity = departmentRepository.findById(departmentId).getOrNull()
             ?: return CreateOrderResponse("Ошибка определения ресторана", 500)
@@ -144,12 +145,15 @@ class OrderService(
             user = user,
             deliveryType = deliveryType,
             deliveryAddress = deliveryAddress?.let { AddressUtility.addressString(deliveryAddress) },
-            comment = comment
+            comment = comment,
+            deliveryTime = LocalDateTime.now() + Duration.ofMinutes(30),
         )
         val newOrderItems = orderItemMapper.toEntity(products, newOrder).toMutableSet()
         newOrder.setItems { newOrderItems }
-        newOrder.deliveryPrice = deliveryPrice
-        newOrder.totalAmount = amount
+        newOrder.deliveryPrice = BigDecimal(deliveryPrice)
+            .divide(BigDecimal(100))
+        newOrder.totalAmount = BigDecimal(amount)
+            .divide(BigDecimal(100))
         newOrder.created = LocalDateTime.now()
         newOrder.modified = LocalDateTime.now()
         val savedOrder = orderRepository.save(newOrder)
@@ -261,5 +265,17 @@ class OrderService(
         )
 
         return orderRepository.findOrderPreviews(pageable)
+            .map { order ->
+                OrderPreviewDto(
+                    id = order.id,
+                    totalAmount = order.totalAmount
+                        .multiply(BigDecimal(100))
+                        .longValueExact(),
+                    status = order.status,
+                    customerName = order.customerName,
+                    companyName = order.companyName,
+                    deliveryTime = order.deliveryTime
+                )
+            }
     }
 }

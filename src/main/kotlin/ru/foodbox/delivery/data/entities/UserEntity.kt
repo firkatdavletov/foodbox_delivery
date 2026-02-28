@@ -9,11 +9,15 @@ class UserEntity(
     @Column(unique = true)
     val phone: String,
 
+    @Column(unique = true)
     var email: String = "",
 
     var name: String = "",
 
     var company: String = "",
+
+    @Column(name = "hash_password")
+    var hashPassword: String = "",
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

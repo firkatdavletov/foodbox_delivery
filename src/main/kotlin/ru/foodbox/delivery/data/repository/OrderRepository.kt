@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import ru.foodbox.delivery.data.entities.OrderEntity
+import ru.foodbox.delivery.data.entities.OrderPreviewEntity
 import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.data.entities.UserEntity
 import ru.foodbox.delivery.services.dto.OrderPreviewDto
@@ -23,7 +24,7 @@ interface OrderRepository: JpaRepository<OrderEntity, Long> {
 
     @Query(
         value = """
-            select new ru.foodbox.delivery.services.dto.OrderPreviewDto(
+            select new ru.foodbox.delivery.data.entities.OrderPreviewEntity(
                 o.id,
                 o.totalAmount,
                 o.status,
@@ -39,5 +40,5 @@ interface OrderRepository: JpaRepository<OrderEntity, Long> {
             from OrderEntity o
         """
     )
-    fun findOrderPreviews(pageable: Pageable): Page<OrderPreviewDto>
+    fun findOrderPreviews(pageable: Pageable): Page<OrderPreviewEntity>
 }

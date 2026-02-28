@@ -1,20 +1,14 @@
 package ru.foodbox.delivery.controllers.order
 
-import org.springframework.data.domain.Page
 import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import ru.foodbox.delivery.controllers.order.body.CreateOrderRequestBody
-import ru.foodbox.delivery.controllers.order.body.CreateOrderResponse
-import ru.foodbox.delivery.controllers.order.body.GetCurrentOrdersResponse
-import ru.foodbox.delivery.controllers.order.body.GetOrderResponse
-import ru.foodbox.delivery.controllers.order.body.GetOrdersResponse
+import ru.foodbox.delivery.controllers.order.body.*
 import ru.foodbox.delivery.services.CartService
 import ru.foodbox.delivery.services.OrderService
-import ru.foodbox.delivery.services.dto.OrderPreviewDto
 
 @RestController
 @RequestMapping("/orders")

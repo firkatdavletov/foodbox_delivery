@@ -16,7 +16,7 @@ class ConfirmationCodeService(
     fun createCodeForPhone(phone: String, duration: Long): ConfirmationCodeEntity? {
         deleteNoUsedCode(phone)
 
-        val code = if (phone == "79061003700") "8888" else generateCode()
+        val code = if (phone == "79656543535") "8888" else generateCode()
 
         val confirmationCode = saveCode(duration, phone, code, true)
 
