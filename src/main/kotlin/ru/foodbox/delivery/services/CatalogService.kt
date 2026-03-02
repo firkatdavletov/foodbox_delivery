@@ -141,6 +141,12 @@ class CatalogService(
             productEntity.title = productDto.title
             productEntity.imageUrl = productDto.imageUrl
             productEntity.sku = productDto.sku
+            productEntity.unit = productDto.unit
+            productEntity.countStep = productDto.countStep
+            productEntity.displayWeight = productDto.displayWeight
+            productEntity.sku = productDto.sku
+            productEntity.modified = LocalDateTime.now()
+            productEntity.category = category
             productRepository.save(productEntity)
         } else {
             productRepository.save(productMapper.toEntity(productDto, category))
