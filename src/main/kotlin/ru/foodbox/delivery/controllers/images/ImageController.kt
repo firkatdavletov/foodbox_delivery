@@ -45,7 +45,6 @@ class ImageController(
             "product" -> {
                 val product = productRepository.findById(id.toLong()).getOrNull()
                     ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-                product.imageUrl = imageUrl
                 productRepository.save(product)
             }
         }

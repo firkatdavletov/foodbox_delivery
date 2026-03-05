@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component
 import ru.foodbox.delivery.data.entities.CategoryEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.services.dto.ProductDto
+import ru.foodbox.delivery.services.model.UploadImageStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -17,7 +18,7 @@ class ProductMapper {
             .longValueExact(),
         title = entity.title,
         description = entity.description,
-        imageUrl = entity.imageUrl,
+        imageUrl = entity.images.firstOrNull { it.status == UploadImageStatus.READY }?.storageKey,
         unit = entity.unit,
         countStep = entity.countStep,
         displayWeight = entity.displayWeight,
@@ -32,7 +33,6 @@ class ProductMapper {
         title = model.title,
         description = model.description,
         price = model.price.toBigDecimal() / BigDecimal(100),
-        imageUrl = model.imageUrl,
         unit = model.unit,
         countStep = model.countStep,
         displayWeight = model.displayWeight,

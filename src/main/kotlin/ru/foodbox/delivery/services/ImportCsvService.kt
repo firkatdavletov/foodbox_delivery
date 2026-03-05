@@ -138,7 +138,6 @@ class ImportCsvService(
                 title = productDto.title
                 description = productDto.description
                 price = productDto.price.toBigDecimal() / BigDecimal(100)
-                imageUrl = productDto.imageUrl
                 unit = productDto.unit
                 countStep = productDto.countStep
                 displayWeight = productDto.displayWeight

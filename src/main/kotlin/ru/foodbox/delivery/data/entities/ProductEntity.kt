@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.JoinTable
 import jakarta.persistence.ManyToMany
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import jakarta.persistence.Transient
 import ru.foodbox.delivery.services.model.UnitOfMeasure
@@ -25,7 +26,16 @@ class ProductEntity(
     @Column(nullable = false, precision = 19, scale = 2)
     var price: BigDecimal,
 
+    @Column(name = "image_url")
     var imageUrl: String? = null,
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "images_products",
+        joinColumns = [JoinColumn(name = "product_id", nullable = false)],
+        inverseJoinColumns = [JoinColumn(name = "image_id", nullable = false)]
+    )
+    var images: MutableList<ImageEntity> = mutableListOf(),
 
     @Enumerated(EnumType.STRING)
     var unit: UnitOfMeasure = UnitOfMeasure.PIECE,
@@ -55,7 +65,6 @@ class ProductEntity(
         title: String,
         description: String? = null,
         price: BigDecimal,
-        imageUrl: String? = null,
         unit: UnitOfMeasure = UnitOfMeasure.PIECE,
         countStep: Int = 1,
         displayWeight: String?,
@@ -66,7 +75,7 @@ class ProductEntity(
         title = title,
         description = description,
         price = price,
-        imageUrl = imageUrl,
+        images = mutableListOf(),
         unit = unit,
         countStep = countStep,
         displayWeight = displayWeight,

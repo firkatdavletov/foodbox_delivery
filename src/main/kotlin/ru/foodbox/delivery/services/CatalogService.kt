@@ -80,7 +80,6 @@ class CatalogService(
             title = productDto.title,
             description = productDto.description,
             price = BigDecimal(productDto.price / 100),
-            imageUrl = productDto.imageUrl,
             category = category,
             unit = productDto.unit,
             countStep = productDto.countStep,
@@ -97,7 +96,6 @@ class CatalogService(
         val foundProduct = productRepository.findById(productDto.id).getOrNull() ?: return null
         val category = categoryRepository.findById(productDto.categoryId).getOrNull() ?: return null
         foundProduct.title = productDto.title
-        foundProduct.imageUrl = productDto.imageUrl
         foundProduct.category = category
         foundProduct.description = productDto.description
         foundProduct.price = BigDecimal(productDto.price / 100)
@@ -139,7 +137,6 @@ class CatalogService(
 
         val savedProduct = if (productEntity != null) {
             productEntity.title = productDto.title
-            productEntity.imageUrl = productDto.imageUrl
             productEntity.sku = productDto.sku
             productEntity.unit = productDto.unit
             productEntity.countStep = productDto.countStep
