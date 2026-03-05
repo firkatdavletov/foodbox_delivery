@@ -147,6 +147,7 @@ class CatalogService(
             productEntity.sku = productDto.sku
             productEntity.modified = LocalDateTime.now()
             productEntity.category = category
+            productEntity.description = productDto.description
             productRepository.save(productEntity)
         } else {
             productRepository.save(productMapper.toEntity(productDto, category))
