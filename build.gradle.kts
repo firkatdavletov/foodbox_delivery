@@ -47,6 +47,8 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("com.opencsv:opencsv:5.9")
+	implementation("software.amazon.awssdk:s3:2.25.0")
+	implementation("software.amazon.awssdk:auth:2.25.0")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
