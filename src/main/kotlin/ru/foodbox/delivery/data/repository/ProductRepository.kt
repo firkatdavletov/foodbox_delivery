@@ -17,6 +17,11 @@ interface ProductRepository : JpaRepository<ProductEntity, Long> {
         pageable: Pageable,
     ): List<ProductEntity>
 
+    fun findAllByIsActiveTrueAndTitleContainingIgnoreCaseOrderByTitleAsc(
+        title: String,
+        pageable: Pageable,
+    ): List<ProductEntity>
+
     @Transactional
     @Modifying
     @Query("update ProductEntity p set p.isActive = false")

@@ -54,6 +54,12 @@ class CatalogController(
         return ResponseEntity.ok(GetProductsResponseBody(products))
     }
 
+    @GetMapping("/products/search")
+    fun searchProducts(@RequestParam query: String): ResponseEntity<GetProductsResponseBody> {
+        val products = catalogService.searchProducts(query)
+        return ResponseEntity.ok(GetProductsResponseBody(products))
+    }
+
     @GetMapping("category")
     fun getCategory(@RequestParam id: Long): ResponseEntity<GetCategoryResponseBody> {
         val result = catalogService.getCategory(id)

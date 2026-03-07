@@ -30,6 +30,7 @@ class CatalogService(
     companion object {
         private const val NEW_PRODUCTS_LIMIT = 8
         private const val NEW_PRODUCTS_DAYS = 30L
+        private const val SEARCH_PRODUCTS_LIMIT = 8
     }
 
     fun getCategories(): List<CategoryDto> {
@@ -66,6 +67,20 @@ class CatalogService(
                 pageable = pageable,
             )
 
+        return productMapper.toDto(products)
+    }
+
+    fun searchProducts(query: String): List<ProductDto> {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isEmpty()) {
+            return emptyList()
+        }
+
+        val pageable = PageRequest.of(0, SEARCH_PRODUCTS_LIMIT)
+        val products = productRepository.findAllByIsActiveTrueAndTitleContainingIgnoreCaseOrderByTitleAsc(
+            title = normalizedQuery,
+            pageable = pageable,
+        )
         return productMapper.toDto(products)
     }
 
