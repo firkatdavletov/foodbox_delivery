@@ -3,11 +3,10 @@ package ru.foodbox.delivery.controllers.catalog
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import ru.foodbox.delivery.controllers.catalog.body.*
-import ru.foodbox.delivery.controllers.catalog.body.DeleteProductResponseBody
 import ru.foodbox.delivery.services.CatalogService
 
 @RestController
-@RequestMapping("/catalog")
+@RequestMapping(value = ["/catalog", "/api/catalog"])
 class CatalogController(
     private val catalogService: CatalogService
 ) {
@@ -46,6 +45,12 @@ class CatalogController(
     fun getAllProducts(): ResponseEntity<GetProductsResponseBody> {
         val products = catalogService.getAllProducts()
 
+        return ResponseEntity.ok(GetProductsResponseBody(products))
+    }
+
+    @GetMapping("/products/new")
+    fun getNewProducts(): ResponseEntity<GetProductsResponseBody> {
+        val products = catalogService.getNewProducts()
         return ResponseEntity.ok(GetProductsResponseBody(products))
     }
 

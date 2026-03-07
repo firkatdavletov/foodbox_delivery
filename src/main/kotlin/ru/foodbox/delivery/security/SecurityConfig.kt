@@ -36,6 +36,7 @@ class SecurityConfig(
                         "/auth/**",
                         "/cart/**",
                         "/catalog/**",
+                        "/api/catalog/**",
                         "/products/**",
                         "/categories/**",
                         "/images/**",

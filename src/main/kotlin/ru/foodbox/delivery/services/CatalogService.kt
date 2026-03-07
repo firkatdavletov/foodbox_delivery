@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.services
 
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -26,6 +27,10 @@ class CatalogService(
     private val categoryMapper: CategoryMapper,
     private val productMapper: ProductMapper,
 ) {
+    companion object {
+        private const val NEW_PRODUCTS_LIMIT = 8
+        private const val NEW_PRODUCTS_DAYS = 30L
+    }
 
     fun getCategories(): List<CategoryDto> {
         val entities = categoryRepository.findAll()
@@ -49,6 +54,18 @@ class CatalogService(
 
     fun getAllProducts(): List<ProductDto> {
         val products = productRepository.findAll()
+        return productMapper.toDto(products)
+    }
+
+    fun getNewProducts(): List<ProductDto> {
+        val createdFrom = LocalDateTime.now().minusDays(NEW_PRODUCTS_DAYS)
+        val pageable = PageRequest.of(0, NEW_PRODUCTS_LIMIT)
+        val products = productRepository
+            .findAllByIsActiveTrueAndShowInCollectionsTrueAndCreatedGreaterThanEqualOrderByCreatedDesc(
+                createdFrom = createdFrom,
+                pageable = pageable,
+            )
+
         return productMapper.toDto(products)
     }
 
