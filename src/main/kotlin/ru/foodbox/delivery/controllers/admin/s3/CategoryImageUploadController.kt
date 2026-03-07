@@ -11,20 +11,20 @@ import ru.foodbox.delivery.controllers.admin.s3.body.InitUploadRes
 import ru.foodbox.delivery.services.ImageUploadService
 
 @RestController
-class ProductImageUploadController(
+class CategoryImageUploadController(
     private val imageUploadService: ImageUploadService,
 ) {
 
-    @PostMapping("/admin/products/{productId}/images:init")
+    @PostMapping("/admin/categories/{categoryId}/images:init")
     fun init(
-        @PathVariable productId: Long,
-        @RequestBody req: InitUploadReq
+        @PathVariable categoryId: Long,
+        @RequestBody req: InitUploadReq,
     ): ResponseEntity<InitUploadRes> {
         require(req.sizeBytes in 1..1L * 1024 * 1024) { "Bad size" }
-        require(req.contentType in setOf("image/jpeg","image/png","image/webp")) { "Bad type" }
+        require(req.contentType in setOf("image/jpeg", "image/png", "image/webp")) { "Bad type" }
 
-        val body = imageUploadService.saveImage(
-            productId = productId,
+        val body = imageUploadService.saveCategoryImage(
+            categoryId = categoryId,
             variant = "original",
             width = -1,
             height = -1,
@@ -40,17 +40,12 @@ class ProductImageUploadController(
         }
     }
 
-    @PostMapping("/admin/products/{productId}/images/{imageId}:complete")
+    @PostMapping("/admin/categories/{categoryId}/images/{imageId}:complete")
     fun complete(
-        @PathVariable productId: Long,
+        @PathVariable categoryId: Long,
         @PathVariable imageId: Long,
-        @RequestParam objectKey: String
+        @RequestParam objectKey: String,
     ) {
-
-        // Сверь size/contentType с тем, что ожидал (из БД)
-        // head.contentLength(), head.contentType()
-
-        // В БД: status=READY, сохранить width/height (если считаешь), sort/isPrimary и т.п.
-        imageUploadService.completeUpload(productId, imageId, objectKey)
+        imageUploadService.completeCategoryUpload(categoryId, imageId, objectKey)
     }
 }

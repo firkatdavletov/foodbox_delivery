@@ -1,0 +1,2 @@
+ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS show_in_collections BOOLEAN NOT NULL DEFAULT FALSE;

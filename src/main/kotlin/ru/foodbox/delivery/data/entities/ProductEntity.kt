@@ -57,6 +57,12 @@ class ProductEntity(
     @Column(name = "is_active")
     var isActive: Boolean = true,
 
+    @Column(nullable = false)
+    var score: Long = 0L,
+
+    @Column(name = "show_in_collections", nullable = false)
+    var showInCollections: Boolean = false,
+
     @Column(unique = true)
     var sku: String? = null,
 ) : BaseAuditEntity<Long>() {
@@ -70,6 +76,7 @@ class ProductEntity(
         displayWeight: String?,
         category: CategoryEntity,
         isActive: Boolean = true,
+        showInCollections: Boolean = false,
         sku: String? = null,
     ) : this(
         title = title,
@@ -81,6 +88,7 @@ class ProductEntity(
         displayWeight = displayWeight,
         categories = mutableListOf(category),
         isActive = isActive,
+        showInCollections = showInCollections,
         sku = sku,
     )
 
