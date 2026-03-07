@@ -3,6 +3,7 @@ package ru.foodbox.delivery.services
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.controllers.admin.s3.body.InitUploadRes
 import ru.foodbox.delivery.data.entities.ImageEntity
 import ru.foodbox.delivery.data.entities.ProductEntity
@@ -15,6 +16,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Service
 class ImageUploadService(
@@ -40,9 +42,10 @@ class ImageUploadService(
             "image/png" -> "png"
             else -> "webp"
         }
+        val objectKey = "products/$productId/${UUID.randomUUID()}.$ext"
 
         val imageEntity = ImageEntity(
-            storageKey = "",
+            storageKey = objectKey,
             variant = variant,
             width = width,
             height = height,
@@ -55,8 +58,6 @@ class ImageUploadService(
             modified = LocalDateTime.now()
         }
         val savedImage = imageRepository.save(imageEntity)
-
-        val objectKey = "products/$productId/${savedImage.id}.$ext"
 
         val putObj = PutObjectRequest.builder()
             .bucket(bucket)
@@ -92,15 +93,28 @@ class ImageUploadService(
         imageId: Long,
         objectKey: String,
     ) {
-        val head = s3.headObject { it.bucket(bucket).key(objectKey) }
+        s3.headObject { it.bucket(bucket).key(objectKey) }
 
         val image = imageRepository.findByIdOrNull(imageId) ?: return
         val productEntity = productRepository.findByIdOrNull(productId) ?: return
+        if (image.storageKey.isBlank()) {
+            image.storageKey = objectKey
+        } else {
+            require(image.storageKey == objectKey) { "Image objectKey mismatch" }
+        }
 
-        image.storageKey = objectKey
         image.status = UploadImageStatus.READY
 
         val savedImage = imageRepository.save(image)
         bindImageToProduct(productEntity, savedImage)
+    }
+
+    @Transactional
+    fun failStaleUploads(): Int {
+        return imageRepository.markStaleUploadingAsFailed(
+            uploading = UploadImageStatus.UPLOADING,
+            failed = UploadImageStatus.FAILED,
+            createdBefore = LocalDateTime.now().minusHours(1)
+        )
     }
 }

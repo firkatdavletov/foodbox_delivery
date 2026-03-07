@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.controllers.admin.s3.body.InitUploadReq
 import ru.foodbox.delivery.controllers.admin.s3.body.InitUploadRes
 import ru.foodbox.delivery.services.ImageUploadService
-import java.util.UUID
 
 @RestController
 class ProductImageUploadController(
@@ -26,7 +25,7 @@ class ProductImageUploadController(
 
         val body = imageUploadService.saveImage(
             productId = productId,
-            variant = "origin",
+            variant = "original",
             width = -1,
             height = -1,
             sizeBytes = req.sizeBytes,
