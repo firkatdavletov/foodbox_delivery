@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.presigner.S3Presigner
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest
 import java.time.Duration
+import java.time.LocalDateTime
 
 @Service
 class ImageUploadService(
@@ -32,7 +33,7 @@ class ImageUploadService(
         contentType: String,
         isPrimary: Boolean,
     ): InitUploadRes? {
-        val product = productRepository.findByIdOrNull(productId) ?: return null
+        productRepository.findByIdOrNull(productId) ?: return null
 
         val ext = when (contentType) {
             "image/jpeg" -> "jpg"
@@ -49,7 +50,10 @@ class ImageUploadService(
             mime = contentType,
             isPrimary = isPrimary,
             status = UploadImageStatus.UPLOADING
-        )
+        ).apply {
+            created = LocalDateTime.now()
+            modified = LocalDateTime.now()
+        }
         val savedImage = imageRepository.save(imageEntity)
 
         val objectKey = "products/$productId/${savedImage.id}.$ext"
@@ -66,8 +70,6 @@ class ImageUploadService(
                 .putObjectRequest(putObj)
                 .build()
         )
-
-        bindImageToProduct(product, savedImage)
 
         val body = InitUploadRes(
             imageId = savedImage.id!!,
