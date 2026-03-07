@@ -12,7 +12,11 @@ class OrderMapper(
 ) {
     fun toDto(entity: OrderEntity) = OrderDto(
         id = entity.id!!,
-        user = userMapper.toDto(entity.user),
+        user = entity.user?.let { userMapper.toDto(it) },
+        customerType = entity.customerType,
+        customerName = entity.customerName,
+        customerPhone = entity.customerPhone,
+        customerEmail = entity.customerEmail,
         status = entity.status,
         deliveryType = entity.deliveryType,
         deliveryAddress = entity.deliveryAddress,

@@ -9,8 +9,8 @@ import java.time.LocalDateTime
 @Table(name = "orders")
 class OrderEntity(
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    val user: UserEntity,
+    @JoinColumn(name = "user_id")
+    val user: UserEntity?,
 
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItemEntity> = mutableListOf(),
@@ -18,6 +18,19 @@ class OrderEntity(
     @Enumerated(EnumType.STRING)
     @Column(name = "delivery_type", nullable = false)
     var deliveryType: DeliveryType,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "customer_type", nullable = false)
+    var customerType: OrderCustomerType = OrderCustomerType.AUTHORIZED,
+
+    @Column(name = "customer_name")
+    var customerName: String? = null,
+
+    @Column(name = "customer_phone")
+    var customerPhone: String? = null,
+
+    @Column(name = "customer_email")
+    var customerEmail: String? = null,
 
     var deliveryAddress: String?,
 

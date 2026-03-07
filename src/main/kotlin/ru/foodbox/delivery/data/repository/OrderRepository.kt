@@ -28,12 +28,12 @@ interface OrderRepository: JpaRepository<OrderEntity, Long> {
                 o.id,
                 o.totalAmount,
                 o.status,
-                c.name,
+                coalesce(o.customerName, c.name, 'Гость'),
                 c.company,
                 o.deliveryTime
             )
             from OrderEntity o
-            join o.user c
+            left join o.user c
         """,
         countQuery = """
             select count(o)
