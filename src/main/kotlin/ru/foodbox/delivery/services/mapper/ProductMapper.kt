@@ -20,6 +20,10 @@ class ProductMapper(
         price = entity.price
             .multiply(BigDecimal(100))
             .longValueExact(),
+        oldPrice = entity.oldPrice
+            ?.multiply(BigDecimal(100))
+            ?.longValueExact(),
+        discountLabel = entity.discountLabel,
         title = entity.title,
         description = entity.description,
         imageUrl = toPublicUrl(entity.images.firstOrNull { it.status == UploadImageStatus.READY }?.storageKey),
@@ -27,6 +31,7 @@ class ProductMapper(
         countStep = entity.countStep,
         displayWeight = entity.displayWeight,
         sku = entity.sku,
+        brandName = entity.brandName,
     )
 
     fun toDto(entities: List<ProductEntity>) = entities.map {
@@ -37,12 +42,15 @@ class ProductMapper(
         title = model.title,
         description = model.description,
         price = model.price.toBigDecimal() / BigDecimal(100),
+        oldPrice = model.oldPrice?.toBigDecimal()?.div(BigDecimal(100)),
+        discountLabel = model.discountLabel,
         unit = model.unit,
         countStep = model.countStep,
         displayWeight = model.displayWeight,
         category = categoryEntity,
         isActive = true,
         sku = model.sku,
+        brandName = model.brandName,
     ).apply {
         created = LocalDateTime.now()
         modified = LocalDateTime.now()

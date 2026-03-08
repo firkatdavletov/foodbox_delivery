@@ -26,6 +26,12 @@ class ProductEntity(
     @Column(nullable = false, precision = 19, scale = 2)
     var price: BigDecimal,
 
+    @Column(name = "old_price")
+    var oldPrice: BigDecimal? = null,
+
+    @Column(name = "discount_label")
+    var discountLabel: String? = null,
+
     @Column(name = "image_url")
     var imageUrl: String? = null,
 
@@ -65,12 +71,17 @@ class ProductEntity(
 
     @Column(unique = true)
     var sku: String? = null,
+
+    @Column(name = "brand_name")
+    var brandName: String? = null,
 ) : BaseAuditEntity<Long>() {
 
     constructor(
         title: String,
         description: String? = null,
         price: BigDecimal,
+        oldPrice: BigDecimal? = null,
+        discountLabel: String? = null,
         unit: UnitOfMeasure = UnitOfMeasure.PIECE,
         countStep: Int = 1,
         displayWeight: String?,
@@ -78,10 +89,13 @@ class ProductEntity(
         isActive: Boolean = true,
         showInCollections: Boolean = false,
         sku: String? = null,
+        brandName: String? = null,
     ) : this(
         title = title,
         description = description,
         price = price,
+        oldPrice = oldPrice,
+        discountLabel = discountLabel,
         images = mutableListOf(),
         unit = unit,
         countStep = countStep,

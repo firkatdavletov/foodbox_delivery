@@ -1,0 +1,3 @@
+ALTER TABLE products
+    ADD COLUMN IF NOT EXISTS old_price BIGINT,
+    ADD COLUMN IF NOT EXISTS discount_label VARCHAR(255);

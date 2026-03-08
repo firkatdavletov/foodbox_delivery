@@ -1,13 +1,9 @@
 package ru.foodbox.delivery.services
 
 import org.springframework.data.domain.PageRequest
-import org.springframework.http.HttpStatusCode
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.admin.body.SaveCategoryResponseBody
 import ru.foodbox.delivery.controllers.admin.body.SaveProductResponseBody
-import ru.foodbox.delivery.data.entities.CategoryEntity
-import ru.foodbox.delivery.data.entities.ProductEntity
 import ru.foodbox.delivery.data.repository.CartItemRepository
 import ru.foodbox.delivery.data.repository.CategoryRepository
 import ru.foodbox.delivery.data.repository.ProductRepository
@@ -84,59 +80,6 @@ class CatalogService(
         return productMapper.toDto(products)
     }
 
-    fun insertCategory(categoryDto: CategoryDto): CategoryDto {
-        val categoryEntity = CategoryEntity(
-            title = categoryDto.title,
-            imageUrl = categoryDto.imageUrl,
-            products = mutableListOf(),
-            sku = categoryDto.sku,
-        )
-        val savedEntity = categoryRepository.save(categoryEntity)
-        return categoryMapper.toDto(savedEntity)
-    }
-
-    fun updateCategory(categoryDto: CategoryDto): CategoryDto? {
-        val foundCategory = categoryRepository.findById(categoryDto.id).getOrNull() ?: return null
-        foundCategory.title = categoryDto.title
-        foundCategory.imageUrl = categoryDto.imageUrl
-        foundCategory.sku = categoryDto.sku
-
-        val savedEntity = categoryRepository.save(foundCategory)
-        return categoryMapper.toDto(savedEntity)
-    }
-
-    fun insertProduct(productDto: ProductDto): ProductDto {
-        val category = categoryRepository.findById(productDto.categoryId).getOrNull()
-            ?: throw ResponseStatusException(HttpStatusCode.valueOf(404))
-        val newProduct = ProductEntity(
-            title = productDto.title,
-            description = productDto.description,
-            price = BigDecimal(productDto.price / 100),
-            category = category,
-            unit = productDto.unit,
-            countStep = productDto.countStep,
-            displayWeight = productDto.displayWeight,
-            sku = productDto.sku,
-        )
-        newProduct.created = LocalDateTime.now()
-        newProduct.modified = LocalDateTime.now()
-        val savedProduct = productRepository.save(newProduct)
-        return productMapper.toDto(savedProduct)
-    }
-
-    fun updateProduct(productDto: ProductDto): ProductDto? {
-        val foundProduct = productRepository.findById(productDto.id).getOrNull() ?: return null
-        val category = categoryRepository.findById(productDto.categoryId).getOrNull() ?: return null
-        foundProduct.title = productDto.title
-        foundProduct.category = category
-        foundProduct.description = productDto.description
-        foundProduct.price = BigDecimal(productDto.price / 100)
-        foundProduct.sku = productDto.sku
-        foundProduct.modified = LocalDateTime.now()
-        val savedProduct = productRepository.save(foundProduct)
-        return productMapper.toDto(savedProduct)
-    }
-
     fun deleteCategory(categoryId: Long): Boolean {
         categoryRepository.makeCategoryAsInactive(categoryId)
         return true
@@ -177,6 +120,10 @@ class CatalogService(
             productEntity.modified = LocalDateTime.now()
             productEntity.category = category
             productEntity.description = productDto.description
+            productEntity.price = BigDecimal(productDto.price / 100)
+            productEntity.oldPrice = productDto.oldPrice?.let { BigDecimal(it / 100) }
+            productEntity.discountLabel = productDto.discountLabel
+            productEntity.brandName = productDto.brandName
             productRepository.save(productEntity)
         } else {
             productRepository.save(productMapper.toEntity(productDto, category))

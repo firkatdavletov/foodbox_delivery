@@ -127,6 +127,11 @@ class CsvParserService {
 
         val displayWeight = row[7].trim()
         val sku = row.getOrNull(8)?.trim()?.ifBlank { null }
+        val oldPrice = row.getOrNull(9)?.trim()?.ifBlank { null }?.toLongOrNull()
+            ?: row.getOrNull(9)?.trim()?.ifBlank { null }?.let {
+                throw IllegalArgumentException("Invalid oldPrice format: '$it' in $rowNumber")
+            }
+        val discountLabel = row.getOrNull(10)?.trim()?.ifBlank { null }
 
         return ProductDto(
             id = 0,
@@ -134,6 +139,8 @@ class CsvParserService {
             title = name,
             description = description,
             price = price,
+            oldPrice = oldPrice,
+            discountLabel = discountLabel,
             imageUrl = imageUrl,
             unit = unit,
             countStep = countOfSteps,

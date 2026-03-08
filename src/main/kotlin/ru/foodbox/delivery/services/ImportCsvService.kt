@@ -141,9 +141,12 @@ class ImportCsvService(
                 unit = productDto.unit
                 countStep = productDto.countStep
                 displayWeight = productDto.displayWeight
+                oldPrice = productDto.oldPrice?.toBigDecimal()?.div(BigDecimal(100))
+                discountLabel = productDto.discountLabel
                 this.category = category
                 isActive = true
                 this.sku = sku
+                brandName = productDto.brandName
             }
         }
 
