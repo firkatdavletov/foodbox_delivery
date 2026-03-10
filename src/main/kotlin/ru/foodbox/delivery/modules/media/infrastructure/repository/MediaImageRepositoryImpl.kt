@@ -1,0 +1,68 @@
+package ru.foodbox.delivery.modules.media.infrastructure.repository
+
+import org.springframework.stereotype.Repository
+import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
+import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
+
+@Repository
+class MediaImageRepositoryImpl(
+    private val jpaRepository: MediaImageJpaRepository,
+) : MediaImageRepository {
+
+    override fun findById(id: UUID): MediaImage? {
+        val entity = jpaRepository.findById(id).getOrNull() ?: return null
+        return toDomain(entity)
+    }
+
+    override fun save(mediaImage: MediaImage): MediaImage {
+        val existing = jpaRepository.findById(mediaImage.id).getOrNull()
+        val entity = existing ?: MediaImageEntity(
+            id = mediaImage.id,
+            targetType = mediaImage.targetType,
+            targetId = mediaImage.targetId,
+            bucket = mediaImage.bucket,
+            objectKey = mediaImage.objectKey,
+            originalFilename = mediaImage.originalFilename,
+            contentType = mediaImage.contentType,
+            fileSize = mediaImage.fileSize,
+            status = mediaImage.status,
+            publicUrl = mediaImage.publicUrl,
+            createdAt = mediaImage.createdAt,
+            updatedAt = mediaImage.updatedAt,
+        )
+
+        entity.targetType = mediaImage.targetType
+        entity.targetId = mediaImage.targetId
+        entity.bucket = mediaImage.bucket
+        entity.objectKey = mediaImage.objectKey
+        entity.originalFilename = mediaImage.originalFilename
+        entity.contentType = mediaImage.contentType
+        entity.fileSize = mediaImage.fileSize
+        entity.status = mediaImage.status
+        entity.publicUrl = mediaImage.publicUrl
+        entity.updatedAt = mediaImage.updatedAt
+
+        return toDomain(jpaRepository.save(entity))
+    }
+
+    private fun toDomain(entity: MediaImageEntity): MediaImage {
+        return MediaImage(
+            id = entity.id,
+            targetType = entity.targetType,
+            targetId = entity.targetId,
+            bucket = entity.bucket,
+            objectKey = entity.objectKey,
+            originalFilename = entity.originalFilename,
+            contentType = entity.contentType,
+            fileSize = entity.fileSize,
+            status = entity.status,
+            publicUrl = entity.publicUrl,
+            createdAt = entity.createdAt,
+            updatedAt = entity.updatedAt,
+        )
+    }
+}
