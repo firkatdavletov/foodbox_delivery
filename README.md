@@ -30,6 +30,8 @@
 | Переменная | Значение по умолчанию |
 | --- | --- |
 | `JWT_SECRET_BASE64` | `Zm9vZGJveC1kZWxpdmVyeS1qd3Qtc2VjcmV0LWtleS0zMi1ieXRlcw==` |
+| `ADMIN_BOOTSTRAP_LOGIN` | `admin` |
+| `ADMIN_BOOTSTRAP_PASSWORD` | `password` |
 | `DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/delivery` |
 | `DATASOURCE_LOGIN` | `postgres` |
 | `DATASOURCE_PASSWORD` | `postgres` |

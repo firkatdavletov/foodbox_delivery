@@ -33,6 +33,7 @@ class SecurityConfig(
                 it.requestMatchers(HttpMethod.POST, "/api/v1/orders/checkout").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                it.requestMatchers("/api/v1/admin/login").permitAll()
                 it.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
             }
