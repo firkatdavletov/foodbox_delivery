@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.modules.orders.application
 
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.common.error.ForbiddenException
@@ -9,6 +10,8 @@ import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutCommand
+import ru.foodbox.delivery.modules.orders.application.event.OrderCreatedEvent
+import ru.foodbox.delivery.modules.orders.application.event.OrderStatusChangedEvent
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliveryType
@@ -25,6 +28,7 @@ class OrderServiceImpl(
     private val cartService: CartService,
     private val productReadService: ProductReadService,
     private val userRepository: UserRepository,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) : OrderService {
 
     private val phoneRegex = Regex("^\\+?[1-9]\\d{9,14}$")
@@ -89,6 +93,7 @@ class OrderServiceImpl(
 
         val saved = orderRepository.save(order)
         cartService.markOrdered(cart.id)
+        applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
     }
 
@@ -143,7 +148,9 @@ class OrderServiceImpl(
             updatedAt = now,
         )
 
-        return orderRepository.save(order)
+        val saved = orderRepository.save(order)
+        applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
+        return saved
     }
 
     override fun getOrder(actor: CurrentActor, orderId: UUID): Order {
@@ -169,8 +176,18 @@ class OrderServiceImpl(
         val order = orderRepository.findById(orderId)
             ?: throw NotFoundException("Order not found")
 
+        val previousStatus = order.status
         order.updateStatus(status)
-        return orderRepository.save(order)
+        val saved = orderRepository.save(order)
+        if (previousStatus != status) {
+            applicationEventPublisher.publishEvent(
+                OrderStatusChangedEvent(
+                    order = saved,
+                    previousStatus = previousStatus,
+                )
+            )
+        }
+        return saved
     }
 
     private fun canAccessOrder(actor: CurrentActor, order: Order): Boolean {
