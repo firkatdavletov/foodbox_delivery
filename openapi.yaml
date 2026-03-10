@@ -8,6 +8,8 @@ info:
 tags:
   - name: Auth
     description: Authentication and session management
+  - name: Admin Auth
+    description: Admin authentication and session management
   - name: Cart
     description: Shopping cart operations
   - name: Catalog
@@ -246,6 +248,84 @@ paths:
           description: All user sessions revoked
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/login:
+    post:
+      tags: [Admin Auth]
+      operationId: loginAdmin
+      summary: Login as admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLoginRequest'
+      responses:
+        '200':
+          description: Admin session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/refresh:
+    post:
+      tags: [Admin Auth]
+      operationId: refreshAdminSession
+      summary: Refresh admin access and refresh tokens
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRefreshTokenRequest'
+      responses:
+        '200':
+          description: New admin session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/logout:
+    post:
+      tags: [Admin Auth]
+      operationId: logoutAdminSession
+      summary: Revoke one admin refresh session
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminLogoutRequest'
+      responses:
+        '204':
+          description: Session revoked or no matching session
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -860,6 +940,63 @@ components:
         isNewUser:
           type: boolean
         userId:
+          type: string
+          format: uuid
+
+    AdminLoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    AdminRefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    AdminLogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          nullable: true
+
+    AdminAuthTokensResponse:
+      type: object
+      required:
+        [
+          accessToken,
+          accessTokenExpiresAt,
+          refreshToken,
+          refreshTokenExpiresAt,
+          adminId,
+        ]
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+        adminId:
           type: string
           format: uuid
 
