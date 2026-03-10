@@ -5,8 +5,8 @@ import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.auth.domain.AuthChallenge
 import ru.foodbox.delivery.modules.auth.domain.repository.AuthChallengeRepository
 import ru.foodbox.delivery.modules.auth.infrastructure.mapper.AuthChallengeMapper
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthChallengeEntity
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.jpa.AuthChallengeJpaRepository
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthChallengeEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.jpa.AuthChallengeJpaRepository
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 
@@ -27,6 +27,13 @@ class AuthChallengeRepositoryImpl(
             createdAt = challenge.createdAt,
             completedAt = challenge.completedAt,
         )
+        entity.method = challenge.method
+        entity.target = challenge.target
+        entity.status = challenge.status
+        entity.codeHash = challenge.codeHash
+        entity.expiresAt = challenge.expiresAt
+        entity.attemptsLeft = challenge.attemptsLeft
+        entity.completedAt = challenge.completedAt
         val saved = jpaRepository.save(entity)
         return AuthChallengeMapper.toDto(saved)
     }

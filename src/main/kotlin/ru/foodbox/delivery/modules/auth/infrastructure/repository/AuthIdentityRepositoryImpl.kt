@@ -5,8 +5,8 @@ import ru.foodbox.delivery.modules.auth.domain.AuthIdentity
 import ru.foodbox.delivery.modules.auth.domain.IdentityType
 import ru.foodbox.delivery.modules.auth.domain.repository.AuthIdentityRepository
 import ru.foodbox.delivery.modules.auth.infrastructure.mapper.AuthIdentityMapper
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthIdentityEntity
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.jpa.AuthIdentityJpaRepository
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthIdentityEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.jpa.AuthIdentityJpaRepository
 import kotlin.jvm.optionals.getOrNull
 
 @Repository
@@ -41,6 +41,12 @@ class AuthIdentityRepositoryImpl(
             createdAt = identity.createdAt,
             lastUsedAt = identity.lastUsedAt,
         )
+        entity.userId = identity.userId
+        entity.type = identity.type
+        entity.externalId = identity.externalId
+        entity.normalizedLogin = identity.normalizedLogin
+        entity.isVerified = identity.isVerified
+        entity.lastUsedAt = identity.lastUsedAt
         val saved = jpaRepository.save(entity)
         return AuthIdentityMapper.toDto(saved)
     }

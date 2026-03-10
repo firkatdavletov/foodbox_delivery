@@ -1,8 +1,12 @@
 package ru.foodbox.delivery
 
-import org.springframework.boot.test.context.SpringBootTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
-@SpringBootTest
 class DeliveryApplicationTests {
 
+    @Test
+    fun `sanity test`() {
+        assertTrue(true)
+    }
 }

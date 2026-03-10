@@ -1,12 +1,13 @@
 package ru.foodbox.delivery.modules.auth.infrastructure.jwt
 
 import org.springframework.stereotype.Service
+import ru.foodbox.delivery.modules.auth.application.service.RefreshTokenService
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 
 @Service
-class RefreshTokenServiceImpl: RefreshTokenService {
+class RefreshTokenServiceImpl : RefreshTokenService {
 
     private val secureRandom = SecureRandom()
 

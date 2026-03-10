@@ -4,5 +4,5 @@ enum class CartStatus {
     ACTIVE,
     ORDERED,
     MERGED,
-    ABANDONED
+    ABANDONED,
 }

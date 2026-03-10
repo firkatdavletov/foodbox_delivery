@@ -2,10 +2,11 @@ package ru.foodbox.delivery.modules.auth.api.request
 
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import java.util.UUID
 
 data class ConfirmEmailCodeRequest(
     @field:NotNull
-    val challengeId: Long,
+    val challengeId: UUID,
 
     @field:NotBlank
     val code: String,

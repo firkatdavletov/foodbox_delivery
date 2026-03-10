@@ -14,6 +14,8 @@ import java.util.*
 class AuthFacadeImpl(
     private val startPhoneAuthHandler: StartPhoneAuthHandler,
     private val confirmPhoneCodeHandler: ConfirmPhoneCodeHandler,
+    private val startEmailAuthHandler: StartEmailAuthHandler,
+    private val confirmEmailCodeHandler: ConfirmEmailCodeHandler,
     private val completeTelegramAuthHandler: CompleteTelegramAuthHandler,
     private val completeMaxAuthHandler: CompleteMaxAuthHandler,
     private val refreshSessionHandler: RefreshSessionHandler,
@@ -44,14 +46,14 @@ class AuthFacadeImpl(
     }
 
     override fun startEmail(request: StartEmailAuthRequest): AuthChallengeResponse {
-        TODO()
+        return startEmailAuthHandler.handle(request)
     }
 
     override fun confirmEmail(
         request: ConfirmEmailCodeRequest,
         httpRequest: HttpServletRequest
     ): AuthTokensResponse {
-        TODO()
+        return confirmEmailCodeHandler.handle(request, httpRequest)
     }
 
     override fun completeTelegram(

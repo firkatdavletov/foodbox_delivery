@@ -1,7 +1,7 @@
 package ru.foodbox.delivery.modules.auth.infrastructure.mapper
 
 import ru.foodbox.delivery.modules.auth.domain.AuthChallenge
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthChallengeEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthChallengeEntity
 
 object AuthChallengeMapper {
     fun toDto(entity: AuthChallengeEntity): AuthChallenge {

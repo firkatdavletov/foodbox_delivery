@@ -4,8 +4,8 @@ import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.auth.domain.AuthSession
 import ru.foodbox.delivery.modules.auth.domain.repository.AuthSessionRepository
 import ru.foodbox.delivery.modules.auth.infrastructure.mapper.AuthSessionMapper
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthSessionEntity
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.jpa.AuthSessionJpaRepository
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthSessionEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.jpa.AuthSessionJpaRepository
 import java.time.Instant
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
@@ -28,6 +28,14 @@ class AuthSessionRepositoryImpl(
             createdAt = session.createdAt,
             lastUsedAt = session.lastUsedAt,
         )
+        entity.userId = session.userId
+        entity.deviceId = session.deviceId
+        entity.userAgent = session.userAgent
+        entity.ip = session.ip
+        entity.refreshTokenHash = session.refreshTokenHash
+        entity.expiresAt = session.expiresAt
+        entity.revokedAt = session.revokedAt
+        entity.lastUsedAt = session.lastUsedAt
         val saved = jpaRepository.save(entity)
         return AuthSessionMapper.toDto(saved)
     }

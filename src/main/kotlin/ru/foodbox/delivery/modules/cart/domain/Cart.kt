@@ -1,89 +1,72 @@
 package ru.foodbox.delivery.modules.cart.domain
 
-import ru.foodbox.delivery.data.DeliveryType
-import ru.foodbox.delivery.services.dto.AddressDto
-import ru.foodbox.delivery.services.dto.DepartmentDto
-import ru.foodbox.delivery.services.model.DeliveryInfo
-import ru.foodbox.delivery.services.model.UnitOfMeasure
-import java.math.BigDecimal
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.UUID
 
 data class Cart(
     val id: UUID,
     var owner: CartOwner,
     var status: CartStatus,
-    val items: MutableList<CartItem> = mutableListOf(),
-    var totalPrice: BigDecimal = BigDecimal(0),
-    val createdAt: LocalDateTime,
-    var updatedAt: LocalDateTime,
+    val items: MutableList<CartItem>,
+    var totalPriceMinor: Long,
+    val createdAt: Instant,
+    var updatedAt: Instant,
 ) {
-    fun addItem(
-        productId: Long,
-        title: String,
-        countStep: Int,
-        unit: UnitOfMeasure,
-        quantity: Int,
-        priceSnapshot: BigDecimal
-    ) {
-        require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
-        require(quantity > 0) { "Quantity must be greater than zero" }
 
-        val existing = items.firstOrNull { it.productId == productId }
-        if (existing != null) {
-            existing.increase(quantity)
+    fun addItem(item: CartItem) {
+        ensureActive()
+        val existing = items.firstOrNull { it.productId == item.productId }
+        if (existing == null) {
+            items += item
         } else {
-            items += CartItem(
-                productId = productId,
-                title = title,
-                quantity = quantity,
-                price = priceSnapshot,
-                unit = unit,
-                countStep = countStep
-            )
+            existing.increase(item.quantity)
         }
-        updatedAt = LocalDateTime.now()
-        updateTotalPrice()
+        touch()
     }
 
-    fun changeQuantity(productId: Long, quantity: Int) {
-        require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
-
+    fun changeQuantity(productId: UUID, quantity: Int) {
+        ensureActive()
         val item = items.firstOrNull { it.productId == productId }
-            ?: throw IllegalArgumentException("Product is not in cart")
+            ?: throw IllegalArgumentException("Product not found in cart")
 
         item.changeQuantity(quantity)
-        updatedAt = LocalDateTime.now()
-        updateTotalPrice()
+        touch()
     }
 
-    fun removeItem(productId: Long) {
-        require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
+    fun removeItem(productId: UUID) {
+        ensureActive()
         items.removeIf { it.productId == productId }
-        updatedAt = LocalDateTime.now()
-        updateTotalPrice()
+        touch()
     }
 
     fun clear() {
-        require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
+        ensureActive()
         items.clear()
-        updatedAt = LocalDateTime.now()
-        updateTotalPrice()
+        touch()
     }
 
     fun reassignOwner(newOwner: CartOwner) {
-        require(status == CartStatus.ACTIVE) { "Only active cart can be reassigned" }
+        ensureActive()
         owner = newOwner
-        updatedAt = LocalDateTime.now()
+        touch()
     }
 
     fun markMerged() {
         status = CartStatus.MERGED
-        updatedAt = LocalDateTime.now()
+        touch()
     }
 
-    private fun updateTotalPrice() {
-        totalPrice = items.sumOf { it.price }
+    fun markOrdered() {
+        status = CartStatus.ORDERED
+        touch()
+    }
+
+    private fun ensureActive() {
+        require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
+    }
+
+    private fun touch() {
+        updatedAt = Instant.now()
+        totalPriceMinor = items.sumOf { it.lineTotalMinor() }
     }
 }

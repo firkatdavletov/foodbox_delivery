@@ -12,7 +12,6 @@ import ru.foodbox.delivery.modules.auth.infrastructure.provider.telegram.Telegra
 import ru.foodbox.delivery.modules.user.domain.User
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.UUID
 
 @Service

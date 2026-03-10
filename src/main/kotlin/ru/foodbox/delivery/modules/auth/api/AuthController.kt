@@ -13,7 +13,7 @@ import ru.foodbox.delivery.modules.auth.api.response.AvailableAuthMethodsRespons
 import ru.foodbox.delivery.modules.auth.application.AuthFacade
 
 @RestController
-@RequestMapping("api/v1/auth")
+@RequestMapping("/api/v1/auth")
 class AuthController(
     private val authFacade: AuthFacade,
 ) {

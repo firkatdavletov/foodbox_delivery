@@ -4,10 +4,11 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
-import javax.naming.AuthenticationException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -40,6 +41,20 @@ class GlobalExceptionHandler {
             ApiError(
                 code = ErrorCode.VALIDATION_ERROR.name,
                 message = ex.message ?: "Constraint violation",
+                traceId = request.getHeader("X-Trace-Id")
+            )
+        )
+    }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(
+        ex: IllegalArgumentException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ApiError(
+                code = ErrorCode.VALIDATION_ERROR.name,
+                message = ex.message ?: "Invalid request",
                 traceId = request.getHeader("X-Trace-Id")
             )
         )

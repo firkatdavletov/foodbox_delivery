@@ -8,11 +8,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
-import ru.foodbox.delivery.modules.auth.infrastructure.jwt.JwtAccessTokenServiceImpl
+import ru.foodbox.delivery.modules.auth.infrastructure.jwt.JwtAccessTokenService
 
 @Component
 class JwtAuthFilter(
-    private val jwtTokenService: JwtAccessTokenServiceImpl,
+    private val jwtTokenService: JwtAccessTokenService,
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(

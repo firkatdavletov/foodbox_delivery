@@ -1,0 +1,38 @@
+package ru.foodbox.delivery.modules.orders.api
+
+import ru.foodbox.delivery.modules.orders.api.dto.OrderItemResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
+import ru.foodbox.delivery.modules.orders.domain.Order
+
+internal fun Order.toResponse(): OrderResponse {
+    return OrderResponse(
+        id = id,
+        orderNumber = orderNumber,
+        customerType = customerType,
+        userId = userId,
+        guestInstallId = guestInstallId,
+        customerName = customerName,
+        customerPhone = customerPhone,
+        customerEmail = customerEmail,
+        status = status,
+        deliveryType = deliveryType,
+        deliveryAddress = deliveryAddress,
+        comment = comment,
+        items = items.map {
+            OrderItemResponse(
+                id = it.id,
+                productId = it.productId,
+                title = it.title,
+                unit = it.unit,
+                quantity = it.quantity,
+                priceMinor = it.priceMinor,
+                totalMinor = it.totalMinor,
+            )
+        },
+        subtotalMinor = subtotalMinor,
+        deliveryFeeMinor = deliveryFeeMinor,
+        totalMinor = totalMinor,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+}

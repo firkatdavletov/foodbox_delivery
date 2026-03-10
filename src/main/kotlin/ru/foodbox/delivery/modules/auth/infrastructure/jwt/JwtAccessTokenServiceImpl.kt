@@ -22,7 +22,8 @@ class JwtAccessTokenServiceImpl(
         return Jwts.builder()
             .subject(userId.toString())
             .claim("sid", sessionId.toString())
-            .claim(USER_ROLE, roles)
+            .claim(ROLE_CLAIM, roles.map { it.name })
+            .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
             .issuedAt(Date.from(Instant.now()))
             .expiration(Date.from(expiresAt))
             .signWith(secretKey, Jwts.SIG.HS256)
@@ -40,7 +41,10 @@ class JwtAccessTokenServiceImpl(
             null
         } ?: return null
 
-        val roles = claims["roles"] as? List<*> ?: return null
+        val tokenType = claims[TOKEN_TYPE_CLAIM]?.toString()
+        if (tokenType != ACCESS_TOKEN_TYPE) return null
+
+        val roles = claims[ROLE_CLAIM] as? List<*> ?: return null
         val rawRoles = roles.filterIsInstance<String>()
 
         return UserPrincipal(
@@ -52,8 +56,7 @@ class JwtAccessTokenServiceImpl(
 
     companion object {
         private const val ACCESS_TOKEN_TYPE = "access"
-        private const val REFRESH_TOKEN_TYPE = "refresh"
-        private const val USER_ROLE = "role"
-        private const val TOKEN_TYPE = "token"
+        private const val ROLE_CLAIM = "roles"
+        private const val TOKEN_TYPE_CLAIM = "tokenType"
     }
 }

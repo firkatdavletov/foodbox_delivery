@@ -10,6 +10,7 @@ enum class AuthMethod {
                 PHONE_CALL.name -> PHONE_CALL
                 TELEGRAM.name -> TELEGRAM
                 MAX.name -> MAX
+                EMAIL.name -> EMAIL
                 else -> null
             }
         }

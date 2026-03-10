@@ -8,6 +8,7 @@ import ru.foodbox.delivery.modules.auth.api.request.ConfirmPhoneCodeRequest
 import ru.foodbox.delivery.modules.auth.api.response.AuthTokensResponse
 import ru.foodbox.delivery.modules.auth.application.service.AuthSessionIssuer
 import ru.foodbox.delivery.modules.auth.domain.AuthIdentity
+import ru.foodbox.delivery.modules.auth.domain.AuthMethod
 import ru.foodbox.delivery.modules.auth.domain.IdentityType
 import ru.foodbox.delivery.modules.auth.domain.repository.AuthChallengeRepository
 import ru.foodbox.delivery.modules.auth.domain.repository.AuthIdentityRepository
@@ -27,6 +28,10 @@ class ConfirmPhoneCodeHandler(
         val now = Instant.now()
         val challenge = authChallengeRepository.findById(request.challengeId)
             ?: throw NotFoundException("Challenge not found")
+
+        if (challenge.method != AuthMethod.PHONE_SMS && challenge.method != AuthMethod.PHONE_CALL) {
+            throw ForbiddenException("Challenge method is not phone based")
+        }
 
         challenge.ensurePending(now)
 

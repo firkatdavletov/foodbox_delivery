@@ -1,7 +1,7 @@
 package ru.foodbox.delivery.modules.auth.infrastructure.mapper
 
 import ru.foodbox.delivery.modules.auth.domain.AuthSession
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthSessionEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthSessionEntity
 
 object AuthSessionMapper {
     fun toDto(entity: AuthSessionEntity): AuthSession {
@@ -14,7 +14,6 @@ object AuthSessionMapper {
             refreshTokenHash = entity.refreshTokenHash,
             expiresAt = entity.expiresAt,
             revokedAt = entity.revokedAt,
-            replacedBySessionId = null,
             createdAt = entity.createdAt,
             lastUsedAt = entity.lastUsedAt,
         )

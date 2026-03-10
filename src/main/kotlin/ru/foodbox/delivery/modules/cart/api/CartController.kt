@@ -1,75 +1,77 @@
 package ru.foodbox.delivery.modules.cart.api
 
 import jakarta.validation.Valid
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
-import ru.foodbox.delivery.modules.cart.api.mapper.CartResponseMapper
-import ru.foodbox.delivery.modules.cart.api.request.AddCartItemRequest
-import ru.foodbox.delivery.modules.cart.api.request.ChangeCartItemQuantityRequest
-import ru.foodbox.delivery.modules.cart.api.response.CartResponse
-import ru.foodbox.delivery.modules.cart.application.CartServiceImpl
+import ru.foodbox.delivery.modules.cart.api.dto.AddCartItemRequest
+import ru.foodbox.delivery.modules.cart.api.dto.CartResponse
+import ru.foodbox.delivery.modules.cart.api.dto.ChangeCartItemQuantityRequest
+import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
+import java.util.UUID
 
 @RestController
-@RequestMapping("api/v1/cart")
+@RequestMapping("/api/v1/cart")
 class CartController(
-    private val cartService: CartServiceImpl,
-    private val cartResponseMapper: CartResponseMapper,
+    private val cartService: CartService,
 ) {
+
     @GetMapping
     fun getCart(
         @CurrentActorParam actor: CurrentActor,
     ): CartResponse {
-        val cartDto = cartService.getOrCreateActiveCart(actor)
-        return cartResponseMapper.toResponse(cartDto)
+        return cartService.getOrCreateActiveCart(actor).toResponse()
     }
 
     @PostMapping("/items")
     fun addItem(
         @CurrentActorParam actor: CurrentActor,
-        @Valid @RequestBody request: AddCartItemRequest
+        @Valid @RequestBody request: AddCartItemRequest,
     ): CartResponse {
-        val cart = cartService.addItem(
+        return cartService.addItem(
             actor = actor,
             command = AddCartItemCommand(
                 productId = request.productId,
-                quantity = request.quantity
-            )
-        )
-        return cartResponseMapper.toResponse(cart)
+                quantity = request.quantity,
+            ),
+        ).toResponse()
     }
 
     @PatchMapping("/items")
     fun changeQuantity(
         @CurrentActorParam actor: CurrentActor,
-        @Valid @RequestBody request: ChangeCartItemQuantityRequest
+        @Valid @RequestBody request: ChangeCartItemQuantityRequest,
     ): CartResponse {
-        val cart = cartService.changeQuantity(
+        return cartService.changeQuantity(
             actor = actor,
             command = ChangeCartItemQuantityCommand(
                 productId = request.productId,
-                quantity = request.quantity
-            )
-        )
-        return cartResponseMapper.toResponse(cart)
+                quantity = request.quantity,
+            ),
+        ).toResponse()
     }
 
     @DeleteMapping("/items/{productId}")
     fun removeItem(
         @CurrentActorParam actor: CurrentActor,
-        @PathVariable productId: Long
+        @PathVariable productId: UUID,
     ): CartResponse {
-        val cart = cartService.removeItem(actor, productId)
-        return cartResponseMapper.toResponse(cart)
+        return cartService.removeItem(actor = actor, productId = productId).toResponse()
     }
 
     @DeleteMapping
     fun clear(
-        @CurrentActorParam actor: CurrentActor
+        @CurrentActorParam actor: CurrentActor,
     ): CartResponse {
-        val cart = cartService.clear(actor)
-        return cartResponseMapper.toResponse(cart)
+        return cartService.clear(actor).toResponse()
     }
 }

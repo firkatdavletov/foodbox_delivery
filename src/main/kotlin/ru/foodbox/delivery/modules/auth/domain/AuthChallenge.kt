@@ -1,7 +1,6 @@
 package ru.foodbox.delivery.modules.auth.domain
 
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.UUID
 
 data class AuthChallenge(

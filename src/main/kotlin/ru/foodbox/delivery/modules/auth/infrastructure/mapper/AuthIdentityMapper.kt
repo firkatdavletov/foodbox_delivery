@@ -1,7 +1,7 @@
 package ru.foodbox.delivery.modules.auth.infrastructure.mapper
 
 import ru.foodbox.delivery.modules.auth.domain.AuthIdentity
-import ru.foodbox.delivery.modules.auth.infrastructure.persistance.entity.AuthIdentityEntity
+import ru.foodbox.delivery.modules.auth.infrastructure.persistence.entity.AuthIdentityEntity
 
 object AuthIdentityMapper {
     fun toDto(entity: AuthIdentityEntity): AuthIdentity {
