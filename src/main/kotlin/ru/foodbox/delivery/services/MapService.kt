@@ -6,9 +6,9 @@ import ru.foodbox.delivery.data.yandex_map_client.YandexMapClient
 import ru.foodbox.delivery.services.dto.DepartmentDto
 import ru.foodbox.delivery.services.dto.GeoAddressDto
 import ru.foodbox.delivery.services.mapper.GeoAddressMapper
-import ru.foodbox.delivery.utils.DeliveryPriceCalculator
-import ru.foodbox.delivery.utils.DistanceCalculator
-import ru.foodbox.delivery.utils.ResultModel
+import ru.foodbox.delivery.common.utils.DeliveryPriceCalculator
+import ru.foodbox.delivery.common.utils.DistanceCalculator
+import ru.foodbox.delivery.common.utils.ResultModel
 
 @Service
 class MapService(

@@ -32,10 +32,10 @@ import ru.foodbox.delivery.services.dto.DepartmentDto
 import ru.foodbox.delivery.services.mapper.DepartmentMapper
 import ru.foodbox.delivery.services.mapper.OrderItemMapper
 import ru.foodbox.delivery.services.mapper.OrderMapper
-import ru.foodbox.delivery.utils.AddressUtility
-import ru.foodbox.delivery.utils.DeliveryPriceCalculator
-import ru.foodbox.delivery.utils.DistanceCalculator
-import ru.foodbox.delivery.utils.OrderUtility
+import ru.foodbox.delivery.common.utils.AddressUtility
+import ru.foodbox.delivery.common.utils.DeliveryPriceCalculator
+import ru.foodbox.delivery.common.utils.DistanceCalculator
+import ru.foodbox.delivery.common.utils.OrderUtility
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime

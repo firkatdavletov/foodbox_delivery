@@ -7,14 +7,14 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.order.body.*
-import ru.foodbox.delivery.services.CartService
+import ru.foodbox.delivery.modules.cart.application.CartServiceImpl
 import ru.foodbox.delivery.services.OrderService
 
 @RestController
 @RequestMapping("/orders")
 class OrderController(
     private val orderService: OrderService,
-    private val cartService: CartService,
+    private val cartService: CartServiceImpl,
 ) {
     @GetMapping("/order")
     fun getOrder(@RequestParam("id") id: String): ResponseEntity<GetOrderResponse> {

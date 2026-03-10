@@ -4,7 +4,6 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import ru.foodbox.delivery.controllers.admin.body.SaveCategoryResponseBody
 import ru.foodbox.delivery.controllers.admin.body.SaveProductResponseBody
-import ru.foodbox.delivery.data.repository.CartItemRepository
 import ru.foodbox.delivery.data.repository.CategoryRepository
 import ru.foodbox.delivery.data.repository.ProductRepository
 import ru.foodbox.delivery.services.dto.CategoryDto
@@ -19,7 +18,6 @@ import kotlin.jvm.optionals.getOrNull
 class CatalogService(
     private val productRepository: ProductRepository,
     private val categoryRepository: CategoryRepository,
-    private val cartItemRepository: CartItemRepository,
     private val categoryMapper: CategoryMapper,
     private val productMapper: ProductMapper,
 ) {

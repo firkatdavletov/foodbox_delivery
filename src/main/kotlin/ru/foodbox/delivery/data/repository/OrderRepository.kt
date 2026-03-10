@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param
 import ru.foodbox.delivery.data.entities.OrderEntity
 import ru.foodbox.delivery.data.entities.OrderPreviewEntity
 import ru.foodbox.delivery.data.entities.OrderStatus
-import ru.foodbox.delivery.data.entities.UserEntity
+import ru.foodbox.delivery.modules.user.infrastructure.persistance.entity.UserEntity
 import ru.foodbox.delivery.services.dto.OrderPreviewDto
 
 interface OrderRepository: JpaRepository<OrderEntity, Long> {

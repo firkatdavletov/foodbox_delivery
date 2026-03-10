@@ -1,6 +1,6 @@
 package ru.foodbox.delivery.controllers.catalog.body
 
-import ru.foodbox.delivery.controllers.base.ResponseModel
+import ru.foodbox.delivery.common.utils.ResponseModel
 
 class DeleteCategoryResponseBody(
     override val success: Boolean,

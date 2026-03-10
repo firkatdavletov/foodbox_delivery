@@ -13,14 +13,13 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import ru.foodbox.delivery.GlobalValidationHandler
+import ru.foodbox.delivery.common.error.GlobalExceptionHandler
 import ru.foodbox.delivery.controllers.order.OrderController
 import ru.foodbox.delivery.data.entities.OrderStatus
-import ru.foodbox.delivery.security.JwtAuthFilter
-import ru.foodbox.delivery.security.JwtCartFilter
-import ru.foodbox.delivery.security.JwtGenerator
-import ru.foodbox.delivery.security.SecurityConfig
-import ru.foodbox.delivery.services.CartService
+import ru.foodbox.delivery.common.security.JwtAuthFilter
+import ru.foodbox.delivery.modules.auth.infrastructure.jwt.JwtAccessTokenServiceImpl
+import ru.foodbox.delivery.common.security.SecurityConfig
+import ru.foodbox.delivery.modules.cart.application.CartServiceImpl
 import ru.foodbox.delivery.services.OrderService
 import ru.foodbox.delivery.services.dto.GuestCheckoutCustomerInputDto
 import ru.foodbox.delivery.services.dto.GuestCheckoutDeliveryInputDto
@@ -29,7 +28,7 @@ import ru.foodbox.delivery.services.dto.GuestCheckoutResultDto
 import java.time.LocalDateTime
 
 @WebMvcTest(controllers = [WebCheckoutController::class, OrderController::class])
-@Import(SecurityConfig::class, GlobalValidationHandler::class, JwtAuthFilter::class, JwtCartFilter::class)
+@Import(SecurityConfig::class, GlobalExceptionHandler::class, JwtAuthFilter::class, JwtCartFilter::class)
 class WebCheckoutControllerTest {
 
     @Autowired
@@ -42,10 +41,10 @@ class WebCheckoutControllerTest {
     private lateinit var orderService: OrderService
 
     @MockBean
-    private lateinit var cartService: CartService
+    private lateinit var cartService: CartServiceImpl
 
     @MockBean
-    private lateinit var jwtGenerator: JwtGenerator
+    private lateinit var jwtTokenService: JwtAccessTokenServiceImpl
 
     @Test
     fun `guest checkout should be accessible without token`() {

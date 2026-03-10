@@ -1,7 +1,7 @@
 package ru.foodbox.delivery.controllers.user.body
 
-import ru.foodbox.delivery.services.dto.UserDto
+import ru.foodbox.delivery.modules.user.domain.User
 
 data class UpdateUserRequestBody(
-    val user: UserDto
+    val user: User
 )

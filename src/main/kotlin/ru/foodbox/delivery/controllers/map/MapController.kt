@@ -9,7 +9,7 @@ import ru.foodbox.delivery.controllers.map.body.GetAddressResponseBody
 import ru.foodbox.delivery.controllers.map.body.SearchAddressResponseBody
 import ru.foodbox.delivery.services.MapService
 import ru.foodbox.delivery.services.dto.GeoAddressDto
-import ru.foodbox.delivery.utils.ResultModel
+import ru.foodbox.delivery.common.utils.ResultModel
 
 @RestController
 @RequestMapping("/map")

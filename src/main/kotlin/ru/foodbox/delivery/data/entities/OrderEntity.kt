@@ -2,6 +2,7 @@ package ru.foodbox.delivery.data.entities
 
 import jakarta.persistence.*
 import ru.foodbox.delivery.data.DeliveryType
+import ru.foodbox.delivery.modules.user.infrastructure.persistance.entity.UserEntity
 import java.math.BigDecimal
 import java.time.LocalDateTime
 

@@ -1,6 +1,6 @@
 package ru.foodbox.delivery.controllers.user.body
 
-import ru.foodbox.delivery.controllers.base.ResponseModel
+import ru.foodbox.delivery.common.utils.ResponseModel
 
 class DeleteUserResponseBody(
     override val success: Boolean,

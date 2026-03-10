@@ -16,9 +16,7 @@ import ru.foodbox.delivery.controllers.user.body.GetUserResponseBody
 import ru.foodbox.delivery.controllers.user.body.LogoutResponseBody
 import ru.foodbox.delivery.controllers.user.body.UpdateUserRequestBody
 import ru.foodbox.delivery.controllers.user.body.UpdateUserResponseBody
-import ru.foodbox.delivery.services.AuthService
 import ru.foodbox.delivery.services.UserService
-import ru.foodbox.delivery.services.dto.UserDto
 import kotlin.collections.contains
 
 @RestController

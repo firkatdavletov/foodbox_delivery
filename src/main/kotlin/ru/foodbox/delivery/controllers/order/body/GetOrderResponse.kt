@@ -1,6 +1,6 @@
 package ru.foodbox.delivery.controllers.order.body
 
-import ru.foodbox.delivery.controllers.base.ResponseModel
+import ru.foodbox.delivery.common.utils.ResponseModel
 import ru.foodbox.delivery.services.dto.OrderDto
 
 data class GetOrderResponse(

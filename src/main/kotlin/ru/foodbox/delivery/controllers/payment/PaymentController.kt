@@ -9,16 +9,13 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import ru.foodbox.delivery.controllers.payment.body.GetBanksResponse
 import ru.foodbox.delivery.controllers.payment.body.GetPaymentTypesResponse
 import ru.foodbox.delivery.controllers.payment.body.PayOrderRequestBody
-import ru.foodbox.delivery.data.entities.OrderStatus
 import ru.foodbox.delivery.data.telegram.MessageService
 import ru.foodbox.delivery.services.BankService
-import ru.foodbox.delivery.services.CartService
 import ru.foodbox.delivery.services.OrderService
 import ru.foodbox.delivery.services.PaymentService
 import ru.foodbox.delivery.services.dto.PaymentDto
