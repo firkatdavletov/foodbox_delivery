@@ -703,6 +703,65 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/orders:
+    get:
+      tags: [Orders Admin]
+      operationId: getAdminOrders
+      summary: List admin queue orders
+      description: Returns orders with statuses `PENDING` and `CONFIRMED`, sorted by `createdAt` descending.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Orders in admin queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/orders/search:
+    get:
+      tags: [Orders Admin]
+      operationId: getAdminOrderByNumber
+      summary: Find order by number
+      description: Returns one order by exact `orderNumber` match.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderNumber
+          in: query
+          required: true
+          description: Order number from `OrderResponse.orderNumber`.
+          schema:
+            type: string
+            minLength: 1
+            example: ORD-1741610765123-4FA8B2
+      responses:
+        '200':
+          description: Order found by number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/orders/{orderId}/status:
     patch:
       tags: [Orders Admin]

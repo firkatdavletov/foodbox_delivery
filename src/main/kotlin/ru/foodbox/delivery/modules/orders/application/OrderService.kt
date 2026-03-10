@@ -12,5 +12,7 @@ interface OrderService {
     fun guestCheckout(command: GuestCheckoutCommand, installId: String?): Order
     fun getOrder(actor: CurrentActor, orderId: UUID): Order
     fun getMyOrders(actor: CurrentActor): List<Order>
+    fun getAdminOrders(): List<Order>
+    fun getAdminOrderByNumber(orderNumber: String): Order
     fun updateStatus(orderId: UUID, status: OrderStatus): Order
 }

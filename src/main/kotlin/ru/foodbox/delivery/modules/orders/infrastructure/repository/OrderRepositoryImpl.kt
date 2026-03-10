@@ -3,6 +3,7 @@ package ru.foodbox.delivery.modules.orders.infrastructure.repository
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
+import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemEntity
@@ -74,6 +75,14 @@ class OrderRepositoryImpl(
     override fun findById(orderId: UUID): Order? {
         val entity = jpaRepository.findById(orderId).getOrNull() ?: return null
         return toDomain(entity)
+    }
+
+    override fun findAllByStatuses(statuses: Set<OrderStatus>): List<Order> {
+        return jpaRepository.findAllByStatusInOrderByCreatedAtDesc(statuses).map(::toDomain)
+    }
+
+    override fun findByOrderNumber(orderNumber: String): Order? {
+        return jpaRepository.findByOrderNumber(orderNumber)?.let(::toDomain)
     }
 
     override fun findByUserId(userId: UUID): List<Order> {

@@ -171,6 +171,20 @@ class OrderServiceImpl(
         }
     }
 
+    override fun getAdminOrders(): List<Order> {
+        return orderRepository.findAllByStatuses(
+            statuses = setOf(OrderStatus.PENDING, OrderStatus.CONFIRMED),
+        )
+    }
+
+    override fun getAdminOrderByNumber(orderNumber: String): Order {
+        val normalizedOrderNumber = orderNumber.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("orderNumber must not be blank")
+
+        return orderRepository.findByOrderNumber(normalizedOrderNumber)
+            ?: throw NotFoundException("Order not found")
+    }
+
     @Transactional
     override fun updateStatus(orderId: UUID, status: OrderStatus): Order {
         val order = orderRepository.findById(orderId)
