@@ -1,0 +1,1466 @@
+openapi: 3.0.3
+info:
+  title: Delivery Service API
+  version: 1.0.0
+  description: |
+    OpenAPI specification generated from existing Spring Boot controllers and DTOs.
+    Includes only routes found in code under `src/main/kotlin`.
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: Cart
+    description: Shopping cart operations
+  - name: Catalog
+    description: Public product and category catalog
+  - name: Catalog Admin
+    description: Admin catalog management
+  - name: Orders
+    description: Order placement and retrieval
+  - name: Orders Admin
+    description: Admin order operations
+  - name: Media Admin
+    description: Admin media upload session operations
+paths:
+  /api/v1/auth/methods:
+    get:
+      tags: [Auth]
+      operationId: getAvailableAuthMethods
+      summary: List available authentication methods
+      responses:
+        '200':
+          description: Available authentication methods
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailableAuthMethodsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/phone/start:
+    post:
+      tags: [Auth]
+      operationId: startPhoneAuth
+      summary: Start phone authentication challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartPhoneAuthRequest'
+      responses:
+        '200':
+          description: Phone auth challenge created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChallengeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/phone/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmPhoneAuthCode
+      summary: Confirm phone auth challenge with code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPhoneCodeRequest'
+      responses:
+        '200':
+          description: Session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/email/start:
+    post:
+      tags: [Auth]
+      operationId: startEmailAuth
+      summary: Start email authentication challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartEmailAuthRequest'
+      responses:
+        '200':
+          description: Email auth challenge created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthChallengeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/email/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmEmailAuthCode
+      summary: Confirm email auth challenge with code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmEmailCodeRequest'
+      responses:
+        '200':
+          description: Session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/telegram/complete:
+    post:
+      tags: [Auth]
+      operationId: completeTelegramAuth
+      summary: Complete Telegram authentication
+      # TODO: authPayload format is provider-specific; code does not define a stable external schema.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramCompleteAuthRequest'
+      responses:
+        '200':
+          description: Session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/max/complete:
+    post:
+      tags: [Auth]
+      operationId: completeMaxAuth
+      summary: Complete MAX authentication
+      # TODO: authPayload format is provider-specific; code does not define a stable external schema.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaxCompleteAuthRequest'
+      responses:
+        '200':
+          description: Session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshAuthSession
+      summary: Refresh access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New session tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutCurrentSession
+      summary: Revoke one refresh session for current user
+      # TODO: SecurityConfig permits /api/v1/auth/**, but controller requires @AuthenticationPrincipal.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Session revoked or no matching session
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/auth/logout-all:
+    post:
+      tags: [Auth]
+      operationId: logoutAllSessions
+      summary: Revoke all sessions for current user
+      # TODO: SecurityConfig permits /api/v1/auth/**, but controller requires @AuthenticationPrincipal.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: All user sessions revoked
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/cart:
+    get:
+      tags: [Cart]
+      operationId: getCart
+      summary: Get or create active cart for current actor
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      responses:
+        '200':
+          description: Active cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Cart]
+      operationId: clearCart
+      summary: Remove all items from active cart
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      responses:
+        '200':
+          description: Cleared cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/cart/items:
+    post:
+      tags: [Cart]
+      operationId: addCartItem
+      summary: Add product to active cart
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [Cart]
+      operationId: changeCartItemQuantity
+      summary: Change quantity of a cart item
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeCartItemQuantityRequest'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/cart/items/{productId}:
+    delete:
+      tags: [Cart]
+      operationId: removeCartItem
+      summary: Remove product from active cart
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/catalog/categories:
+    get:
+      tags: [Catalog]
+      operationId: getCategories
+      summary: List catalog categories
+      description: Returns categories sorted by name ascending.
+      parameters:
+        - name: activeOnly
+          in: query
+          required: false
+          description: When true (default), returns only active categories.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/catalog/products:
+    get:
+      tags: [Catalog]
+      operationId: getProducts
+      summary: List catalog products
+      description: |
+        Returns active products sorted by `createdAt` descending.
+        Supports filters by `categoryId` and case-insensitive title `query`.
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/catalog/products/{productId}:
+    get:
+      tags: [Catalog]
+      operationId: getProductById
+      summary: Get one active product by id
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog/categories:
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertCategory
+      summary: Create or update category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCategoryRequest'
+      responses:
+        '200':
+          description: Saved category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog/products:
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertProduct
+      summary: Create or update product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProductRequest'
+      responses:
+        '200':
+          description: Saved product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/orders/checkout:
+    post:
+      tags: [Orders]
+      operationId: checkout
+      summary: Checkout current actor cart
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/orders/guest/checkout:
+    post:
+      tags: [Orders]
+      operationId: guestCheckout
+      summary: Create guest order from provided items
+      parameters:
+        - name: X-Install-Id
+          in: header
+          required: false
+          description: Optional guest installation id saved into order (`guestInstallId`).
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestCheckoutRequest'
+      responses:
+        '200':
+          description: Created guest order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/orders/{orderId}:
+    get:
+      tags: [Orders]
+      operationId: getOrderById
+      summary: Get one order visible to current actor
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/orders/my:
+    get:
+      tags: [Orders]
+      operationId: getMyOrders
+      summary: List orders of current actor
+      description: Returns orders sorted by `createdAt` descending.
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      responses:
+        '200':
+          description: Actor orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/orders/{orderId}/status:
+    patch:
+      tags: [Orders Admin]
+      operationId: updateOrderStatus
+      summary: Update order status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/media/uploads:
+    post:
+      tags: [Media Admin]
+      operationId: createMediaUploadSession
+      summary: Create direct upload session for media image
+      description: |
+        Returns pre-signed upload URL and required headers.
+        Actual binary upload happens directly to object storage URL, not via this backend.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUploadSessionRequest'
+      responses:
+        '200':
+          description: Upload session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUploadSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/media/uploads/{uploadId}/complete:
+    post:
+      tags: [Media Admin]
+      operationId: completeMediaUpload
+      summary: Complete upload session and bind image to target entity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UploadIdPathParam'
+      responses:
+        '200':
+          description: Media image metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaImageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT access token in `Authorization: Bearer <token>`"
+    installIdHeader:
+      type: apiKey
+      in: header
+      name: X-Install-Id
+      description: Guest actor identifier used by `CurrentActorArgumentResolver`
+
+  parameters:
+    ProductIdPathParam:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderIdPathParam:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UploadIdPathParam:
+      name: uploadId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequestError:
+      description: Request validation failed or business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnauthorizedError:
+      description: Authentication required or invalid token/header
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ForbiddenError:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
+        message:
+          type: string
+        traceId:
+          type: string
+          nullable: true
+          description: Request trace id (`X-Trace-Id`) when available.
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          # TODO: concrete map shape varies by exception type; only stable contract is object map.
+
+    AvailableAuthMethodsResponse:
+      type: object
+      required: [methods]
+      properties:
+        methods:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AuthMethod'
+
+    AuthChallengeResponse:
+      type: object
+      required: [challengeId, method, expiresAt, nextStep]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/AuthMethod'
+        expiresAt:
+          type: string
+          format: date-time
+        resendAvailableAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextStep:
+          type: string
+          description: Current implementation returns `CONFIRM_CODE`.
+
+    AuthTokensResponse:
+      type: object
+      required:
+        [
+          accessToken,
+          accessTokenExpiresAt,
+          refreshToken,
+          refreshTokenExpiresAt,
+          isNewUser,
+          userId,
+        ]
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+        isNewUser:
+          type: boolean
+        userId:
+          type: string
+          format: uuid
+
+    StartPhoneAuthRequest:
+      type: object
+      required: [phone, method]
+      properties:
+        phone:
+          type: string
+        method:
+          $ref: '#/components/schemas/AuthMethodStartPhone'
+      # TODO: `@NotBlank` exists on phone but controller lacks `@Valid`; strict blank-string validation may not run.
+
+    ConfirmPhoneCodeRequest:
+      type: object
+      required: [challengeId, code]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    StartEmailAuthRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+
+    ConfirmEmailCodeRequest:
+      type: object
+      required: [challengeId, code]
+      properties:
+        challengeId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    TelegramCompleteAuthRequest:
+      type: object
+      required: [authPayload]
+      properties:
+        authPayload:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    MaxCompleteAuthRequest:
+      type: object
+      required: [authPayload]
+      properties:
+        authPayload:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          nullable: true
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          nullable: true
+
+    AddCartItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+
+    ChangeCartItemQuantityRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+
+    CartResponse:
+      type: object
+      required: [id, status, items, totalPriceMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/CartStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemResponse'
+        totalPriceMinor:
+          type: integer
+          format: int64
+
+    CartItemResponse:
+      type: object
+      required:
+        [productId, title, unit, countStep, quantity, priceMinor, lineTotalMinor]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        countStep:
+          type: integer
+          format: int32
+        quantity:
+          type: integer
+          format: int32
+        priceMinor:
+          type: integer
+          format: int64
+        lineTotalMinor:
+          type: integer
+          format: int64
+
+    CategoryResponse:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+
+    ProductResponse:
+      type: object
+      required: [id, categoryId, title, slug, priceMinor, unit, countStep]
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+        oldPriceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        countStep:
+          type: integer
+          format: int32
+
+    UpsertCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+          default: true
+
+    UpsertProductRequest:
+      type: object
+      required: [categoryId, title, priceMinor, unit, countStep]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        oldPriceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        countStep:
+          type: integer
+          format: int32
+          minimum: 1
+        isActive:
+          type: boolean
+          default: true
+
+    CheckoutRequest:
+      type: object
+      required: [deliveryType]
+      properties:
+        customerName:
+          type: string
+          nullable: true
+        customerPhone:
+          type: string
+          nullable: true
+        customerEmail:
+          type: string
+          nullable: true
+        deliveryType:
+          $ref: '#/components/schemas/OrderDeliveryType'
+        deliveryAddress:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+
+    GuestCheckoutRequest:
+      type: object
+      required: [items, customerName, customerPhone, deliveryType]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/GuestCheckoutItemRequest'
+        customerName:
+          type: string
+          minLength: 1
+        customerPhone:
+          type: string
+          minLength: 1
+        customerEmail:
+          type: string
+          nullable: true
+        deliveryType:
+          $ref: '#/components/schemas/OrderDeliveryType'
+        deliveryAddress:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+
+    GuestCheckoutItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+
+    UpdateOrderStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+
+    OrderResponse:
+      type: object
+      required:
+        [
+          id,
+          orderNumber,
+          customerType,
+          status,
+          deliveryType,
+          items,
+          subtotalMinor,
+          deliveryFeeMinor,
+          totalMinor,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+        customerType:
+          $ref: '#/components/schemas/OrderCustomerType'
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        guestInstallId:
+          type: string
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        customerPhone:
+          type: string
+          nullable: true
+        customerEmail:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        deliveryType:
+          $ref: '#/components/schemas/OrderDeliveryType'
+        deliveryAddress:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        subtotalMinor:
+          type: integer
+          format: int64
+        deliveryFeeMinor:
+          type: integer
+          format: int64
+        totalMinor:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderItemResponse:
+      type: object
+      required: [id, productId, title, unit, quantity, priceMinor, totalMinor]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        quantity:
+          type: integer
+          format: int32
+        priceMinor:
+          type: integer
+          format: int64
+        totalMinor:
+          type: integer
+          format: int64
+
+    CreateUploadSessionRequest:
+      type: object
+      required: [targetType, targetId, originalFilename, contentType, fileSize]
+      properties:
+        targetType:
+          $ref: '#/components/schemas/MediaTargetType'
+        targetId:
+          type: string
+          format: uuid
+        originalFilename:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: |
+            MIME type. Allowed values come from runtime config `media.upload.allowed-content-types`
+            (default: `image/jpeg`, `image/png`, `image/webp`).
+        fileSize:
+          type: integer
+          format: int64
+          minimum: 1
+
+    CreateUploadSessionResponse:
+      type: object
+      required:
+        [
+          id,
+          targetType,
+          targetId,
+          bucket,
+          objectKey,
+          originalFilename,
+          contentType,
+          fileSize,
+          status,
+          uploadUrl,
+          uploadMethod,
+          requiredHeaders,
+          expiresAt,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetType:
+          $ref: '#/components/schemas/MediaTargetType'
+        targetId:
+          type: string
+          format: uuid
+        bucket:
+          type: string
+        objectKey:
+          type: string
+        originalFilename:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/MediaImageStatus'
+        uploadUrl:
+          type: string
+        uploadMethod:
+          type: string
+          description: Current implementation returns `PUT`.
+        requiredHeaders:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MediaImageResponse:
+      type: object
+      required:
+        [
+          id,
+          targetType,
+          targetId,
+          bucket,
+          objectKey,
+          originalFilename,
+          contentType,
+          fileSize,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetType:
+          $ref: '#/components/schemas/MediaTargetType'
+        targetId:
+          type: string
+          format: uuid
+        bucket:
+          type: string
+        objectKey:
+          type: string
+        originalFilename:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/MediaImageStatus'
+        publicUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AuthMethod:
+      type: string
+      enum: [PHONE_SMS, PHONE_CALL, TELEGRAM, MAX, EMAIL]
+
+    AuthMethodStartPhone:
+      type: string
+      enum: [PHONE_SMS, PHONE_CALL]
+
+    ProductUnit:
+      type: string
+      enum: [PIECE, KILOGRAM, GRAM, LITER, MILLILITER]
+
+    CartStatus:
+      type: string
+      enum: [ACTIVE, ORDERED, MERGED, ABANDONED]
+
+    OrderCustomerType:
+      type: string
+      enum: [USER, GUEST]
+
+    OrderDeliveryType:
+      type: string
+      enum: [PICKUP, DELIVERY]
+
+    OrderStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+
+    MediaTargetType:
+      type: string
+      enum: [PRODUCT, CATEGORY]
+
+    MediaImageStatus:
+      type: string
+      enum: [PENDING, READY]
