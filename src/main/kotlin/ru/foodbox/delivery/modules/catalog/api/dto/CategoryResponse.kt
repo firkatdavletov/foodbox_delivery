@@ -7,4 +7,5 @@ data class CategoryResponse(
     val name: String,
     val slug: String,
     val imageUrl: String?,
+    val isActive: Boolean,
 )
