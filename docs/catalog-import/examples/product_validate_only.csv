@@ -1,0 +1,6 @@
+external_id,sku,name,slug,description,category_external_id,price,old_price,brand,is_active,image_url,sort_order
+prd-apple-1,SKU-APPLE-1,Яблоко Голден,apple-golden,Свежее яблоко,cat-fruits,129.90,149.90,Fruit Farm,true,https://cdn.example.com/apple.jpg,10
+prd-missing-sku,,Банан,banana,Без sku,cat-fruits,99.50,,Tropic,true,,20
+prd-bad-price,SKU-BAD-PRICE,Манго,mango,Неверная цена,cat-fruits,12.345,,Tropic,true,,30
+prd-bad-bool,SKU-BAD-BOOL,Апельсин,orange,Неверный bool,cat-fruits,109.00,,Citrus,enabled,,40
+prd-no-category,SKU-NO-CAT,Авокадо,avocado,Нет категории,cat-unknown,179.00,,Green,true,,50

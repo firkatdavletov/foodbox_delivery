@@ -61,3 +61,14 @@ export S3_BUCKET=your_bucket
 
 ./gradlew bootRun
 ```
+
+## Примеры CSV для импорта каталога
+
+Примеры файлов для endpoint `POST /api/v1/admin/catalog-import` лежат в папке `docs/catalog-import/examples`.
+
+- `category_validate_only.csv` — проверка валидации категорий (с ошибочными строками).
+- `category_create_only.csv` — создание новых категорий.
+- `category_upsert.csv` — смешанный сценарий обновления и создания категорий.
+- `product_validate_only.csv` — проверка валидации товаров (с ошибочными строками).
+- `product_create_only.csv` — создание новых товаров.
+- `product_upsert.csv` — смешанный сценарий обновления и создания товаров.

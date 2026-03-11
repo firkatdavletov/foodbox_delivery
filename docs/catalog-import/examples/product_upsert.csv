@@ -1,0 +1,5 @@
+external_id,sku,name,slug,description,category_external_id,price,old_price,brand,is_active,image_url,sort_order
+prd-apple-1,SKU-APPLE-1,Яблоко Голден Премиум,apple-golden-premium,Обновленная карточка,cat-fruits,139.90,159.90,Fruit Farm,true,https://cdn.example.com/apple-v2.jpg,5
+prd-cola-1,SKU-COLA-1,Кола 1л,cola-1l,Обновленная цена,cat-drinks,149.00,179.00,DrinkCo,true,https://cdn.example.com/cola.jpg,30
+prd-water-1,SKU-WATER-1,Минеральная вода 0.5л,water-05,Новая позиция,cat-drinks,59.00,,WaterLine,true,https://cdn.example.com/water.jpg,40
+prd-seasonal-1,SKU-SEASON-1,Сезонный набор,seasonal-pack,Товар отключен,cat-seasonal,999.00,1299.00,Season,false,https://cdn.example.com/seasonal.jpg,100

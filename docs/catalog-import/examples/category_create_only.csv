@@ -1,0 +1,5 @@
+external_id,name,slug,parent_external_id,description,is_active,sort_order
+cat-root,Каталог,cat-root,,Корневая категория,true,10
+cat-fruits,Фрукты,fruits,cat-root,Свежие фрукты,true,20
+cat-vegetables,Овощи,vegetables,cat-root,Свежие овощи,true,30
+cat-drinks,Напитки,drinks,cat-root,,true,40
