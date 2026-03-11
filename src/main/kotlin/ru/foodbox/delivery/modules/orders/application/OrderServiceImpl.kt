@@ -233,6 +233,6 @@ class OrderServiceImpl(
     }
 
     private fun generateOrderNumber(): String {
-        return "ORD-${Instant.now().toEpochMilli()}-${UUID.randomUUID().toString().take(6).uppercase()}"
+        return UUID.randomUUID().toString().take(6).uppercase()
     }
 }
