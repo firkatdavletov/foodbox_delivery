@@ -11,4 +11,8 @@ data class CatalogCategory(
     val isActive: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val externalId: String? = null,
+    val parentId: UUID? = null,
+    val description: String? = null,
+    val sortOrder: Int = 0,
 )

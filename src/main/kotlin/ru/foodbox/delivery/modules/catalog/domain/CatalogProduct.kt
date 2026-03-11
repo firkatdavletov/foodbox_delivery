@@ -18,4 +18,7 @@ data class CatalogProduct(
     val isActive: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val externalId: String? = null,
+    val brand: String? = null,
+    val sortOrder: Int = 0,
 )

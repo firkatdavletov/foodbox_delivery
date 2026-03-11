@@ -17,6 +17,9 @@ class CatalogProductEntity(
     @Column(nullable = false)
     var id: UUID,
 
+    @Column(name = "external_id", unique = true, length = 128)
+    var externalId: String? = null,
+
     @Column(name = "category_id", nullable = false)
     var categoryId: UUID,
 
@@ -38,8 +41,14 @@ class CatalogProductEntity(
     @Column(unique = true, length = 128)
     var sku: String? = null,
 
+    @Column(length = 255)
+    var brand: String? = null,
+
     @Column(name = "image_url")
     var imageUrl: String? = null,
+
+    @Column(name = "sort_order", nullable = false)
+    var sortOrder: Int = 0,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

@@ -17,5 +17,9 @@ interface CatalogProductJpaRepository : JpaRepository<CatalogProductEntity, UUID
         title: String,
     ): List<CatalogProductEntity>
 
+    fun findByExternalId(externalId: String): CatalogProductEntity?
+    fun findBySku(sku: String): CatalogProductEntity?
     fun findBySlug(slug: String): CatalogProductEntity?
+    fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogProductEntity>
+    fun findAllBySkuIn(skus: Collection<String>): List<CatalogProductEntity>
 }

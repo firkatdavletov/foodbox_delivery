@@ -7,5 +7,9 @@ interface CatalogCategoryRepository {
     fun findAll(activeOnly: Boolean): List<CatalogCategory>
     fun findAllByIsActive(isActive: Boolean): List<CatalogCategory>
     fun findById(id: UUID): CatalogCategory?
+    fun findByExternalId(externalId: String): CatalogCategory?
+    fun findBySlug(slug: String): CatalogCategory?
+    fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogCategory>
+    fun findAllBySlugIn(slugs: Collection<String>): List<CatalogCategory>
     fun save(category: CatalogCategory): CatalogCategory
 }

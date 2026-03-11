@@ -7,5 +7,9 @@ interface CatalogProductRepository {
     fun findAllActive(categoryId: UUID? = null, query: String? = null): List<CatalogProduct>
     fun findAllByIsActive(isActive: Boolean): List<CatalogProduct>
     fun findById(id: UUID): CatalogProduct?
+    fun findByExternalId(externalId: String): CatalogProduct?
+    fun findBySku(sku: String): CatalogProduct?
+    fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogProduct>
+    fun findAllBySkuIn(skus: Collection<String>): List<CatalogProduct>
     fun save(product: CatalogProduct): CatalogProduct
 }

@@ -32,21 +32,53 @@ class CatalogCategoryRepositoryImpl(
         return toDomain(entity)
     }
 
+    override fun findByExternalId(externalId: String): CatalogCategory? {
+        val entity = jpaRepository.findByExternalId(externalId) ?: return null
+        return toDomain(entity)
+    }
+
+    override fun findBySlug(slug: String): CatalogCategory? {
+        val entity = jpaRepository.findBySlug(slug) ?: return null
+        return toDomain(entity)
+    }
+
+    override fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogCategory> {
+        if (externalIds.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllByExternalIdIn(externalIds).map(::toDomain)
+    }
+
+    override fun findAllBySlugIn(slugs: Collection<String>): List<CatalogCategory> {
+        if (slugs.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllBySlugIn(slugs).map(::toDomain)
+    }
+
     override fun save(category: CatalogCategory): CatalogCategory {
         val existing = jpaRepository.findById(category.id).getOrNull()
         val entity = existing ?: CatalogCategoryEntity(
             id = category.id,
+            externalId = category.externalId,
             name = category.name,
             slug = category.slug,
+            parentId = category.parentId,
+            description = category.description,
             imageUrl = category.imageUrl,
+            sortOrder = category.sortOrder,
             isActive = category.isActive,
             createdAt = category.createdAt,
             updatedAt = category.updatedAt,
         )
 
+        entity.externalId = category.externalId
         entity.name = category.name
         entity.slug = category.slug
+        entity.parentId = category.parentId
+        entity.description = category.description
         entity.imageUrl = category.imageUrl
+        entity.sortOrder = category.sortOrder
         entity.isActive = category.isActive
         entity.updatedAt = category.updatedAt
 
@@ -63,6 +95,10 @@ class CatalogCategoryRepositoryImpl(
             isActive = entity.isActive,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
+            externalId = entity.externalId,
+            parentId = entity.parentId,
+            description = entity.description,
+            sortOrder = entity.sortOrder,
         )
     }
 }
