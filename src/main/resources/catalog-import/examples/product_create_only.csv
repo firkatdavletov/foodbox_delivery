@@ -1,0 +1,4 @@
+external_id,sku,name,slug,description,category_external_id,price,old_price,brand,is_active,image_url,sort_order
+prd-apple-1,SKU-APPLE-1,Яблоко Голден,apple-golden,Свежее яблоко,cat-fruits,129.90,149.90,Fruit Farm,true,https://cdn.example.com/apple.jpg,10
+prd-banana-1,SKU-BANANA-1,Банан,banana,Сладкий банан,cat-fruits,99.50,,Tropic,true,https://cdn.example.com/banana.jpg,20
+prd-cola-1,SKU-COLA-1,Кола 1л,cola-1l,Газированный напиток,cat-drinks,159.00,199.00,DrinkCo,true,https://cdn.example.com/cola.jpg,30

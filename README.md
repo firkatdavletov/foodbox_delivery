@@ -65,6 +65,10 @@ export S3_BUCKET=your_bucket
 ## Примеры CSV для импорта каталога
 
 Примеры файлов для endpoint `POST /api/v1/admin/catalog-import` лежат в папке `docs/catalog-import/examples`.
+Также доступны API endpoint'ы для скачивания:
+
+- `GET /api/v1/admin/catalog-import/examples` — список доступных примеров.
+- `GET /api/v1/admin/catalog-import/examples/{importType}/{importMode}` — скачать конкретный CSV.
 
 - `category_validate_only.csv` — проверка валидации категорий (с ошибочными строками).
 - `category_create_only.csv` — создание новых категорий.

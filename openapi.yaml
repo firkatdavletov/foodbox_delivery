@@ -652,6 +652,103 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/catalog-import:
+    post:
+      tags: [Catalog Admin]
+      operationId: importCatalog
+      summary: Import catalog entities from CSV
+      description: |
+        Accepts CSV file as `multipart/form-data` and processes import in one of the supported modes.
+        Alias route is also available at `/api/admin/catalog-import`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CatalogImportMultipartRequest'
+      responses:
+        '200':
+          description: Import report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog-import/examples:
+    get:
+      tags: [Catalog Admin]
+      operationId: listCatalogImportExamples
+      summary: List available CSV import examples
+      description: Alias route is also available at `/api/admin/catalog-import/examples`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Available example files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogImportExampleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog-import/examples/{importType}/{importMode}:
+    get:
+      tags: [Catalog Admin]
+      operationId: downloadCatalogImportExample
+      summary: Download CSV import example by type and mode
+      description: Alias route is also available at `/api/admin/catalog-import/examples/{importType}/{importMode}`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: importType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogImportType'
+        - name: importMode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogImportMode'
+      responses:
+        '200':
+          description: CSV file content
+          headers:
+            Content-Disposition:
+              description: Suggested attachment filename.
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/orders/checkout:
     post:
       tags: [Orders]
@@ -1391,6 +1488,89 @@ components:
           type: boolean
           default: true
 
+    CatalogImportMultipartRequest:
+      type: object
+      required: [file, importType, importMode]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: CSV file encoded in UTF-8 with comma delimiter.
+        importType:
+          $ref: '#/components/schemas/CatalogImportType'
+        importMode:
+          $ref: '#/components/schemas/CatalogImportMode'
+
+    CatalogImportResponse:
+      type: object
+      required:
+        [
+          importType,
+          importMode,
+          totalRows,
+          successCount,
+          createdCount,
+          updatedCount,
+          skippedCount,
+          errorCount,
+          rowErrors,
+        ]
+      properties:
+        importType:
+          $ref: '#/components/schemas/CatalogImportType'
+        importMode:
+          $ref: '#/components/schemas/CatalogImportMode'
+        totalRows:
+          type: integer
+          format: int32
+        successCount:
+          type: integer
+          format: int32
+        createdCount:
+          type: integer
+          format: int32
+        updatedCount:
+          type: integer
+          format: int32
+        skippedCount:
+          type: integer
+          format: int32
+        errorCount:
+          type: integer
+          format: int32
+        rowErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogImportRowErrorResponse'
+
+    CatalogImportRowErrorResponse:
+      type: object
+      required: [rowNumber, errorCode, message]
+      properties:
+        rowNumber:
+          type: integer
+          format: int32
+        rowKey:
+          type: string
+          nullable: true
+        errorCode:
+          $ref: '#/components/schemas/CatalogImportErrorCode'
+        message:
+          type: string
+
+    CatalogImportExampleResponse:
+      type: object
+      required: [importType, importMode, fileName, downloadUrl]
+      properties:
+        importType:
+          $ref: '#/components/schemas/CatalogImportType'
+        importMode:
+          $ref: '#/components/schemas/CatalogImportMode'
+        fileName:
+          type: string
+        downloadUrl:
+          type: string
+
     CheckoutRequest:
       type: object
       required: [deliveryType]
@@ -1694,6 +1874,29 @@ components:
     AuthMethodStartPhone:
       type: string
       enum: [PHONE_SMS, PHONE_CALL]
+
+    CatalogImportType:
+      type: string
+      enum: [CATEGORY, PRODUCT]
+
+    CatalogImportMode:
+      type: string
+      enum: [VALIDATE_ONLY, CREATE_ONLY, UPSERT]
+
+    CatalogImportErrorCode:
+      type: string
+      enum:
+        [
+          MISSING_REQUIRED_FIELD,
+          INVALID_BOOLEAN,
+          INVALID_NUMBER,
+          DUPLICATE_KEY_IN_FILE,
+          CATEGORY_NOT_FOUND,
+          PARENT_CATEGORY_NOT_FOUND,
+          AMBIGUOUS_MATCH,
+          INVALID_RELATION,
+          PERSISTENCE_ERROR,
+        ]
 
     ProductUnit:
       type: string

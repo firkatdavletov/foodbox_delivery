@@ -1,0 +1,5 @@
+external_id,name,slug,parent_external_id,description,is_active,sort_order
+cat-root,Каталог товаров,catalog,,Обновленное название,true,5
+cat-fruits,Фрукты и ягоды,fruits,cat-root,Обновленное описание,true,20
+cat-drinks,Напитки,drinks,cat-root,Новая категория,true,40
+cat-seasonal,Сезонные,seasonal,cat-root,,false,90
