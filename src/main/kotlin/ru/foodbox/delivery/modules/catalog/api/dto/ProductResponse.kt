@@ -15,4 +15,5 @@ data class ProductResponse(
     val imageUrl: String?,
     val unit: ProductUnit,
     val countStep: Int,
+    val isActive: Boolean,
 )

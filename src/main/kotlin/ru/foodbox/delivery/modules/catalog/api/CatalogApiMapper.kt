@@ -27,5 +27,6 @@ internal fun CatalogProduct.toResponse(): ProductResponse {
         imageUrl = imageUrl,
         unit = unit,
         countStep = countStep,
+        isActive = isActive,
     )
 }
