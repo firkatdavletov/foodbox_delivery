@@ -11,6 +11,7 @@ internal fun CatalogCategory.toResponse(): CategoryResponse {
         name = name,
         slug = slug,
         imageUrl = imageUrl,
+        isActive = isActive,
     )
 }
 
