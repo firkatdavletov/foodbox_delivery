@@ -23,6 +23,10 @@ class CatalogCategoryRepositoryImpl(
         return entities.map(::toDomain)
     }
 
+    override fun findAllByIsActive(isActive: Boolean): List<CatalogCategory> {
+        return jpaRepository.findAllByIsActiveOrderByNameAsc(isActive).map(::toDomain)
+    }
+
     override fun findById(id: UUID): CatalogCategory? {
         val entity = jpaRepository.findById(id).getOrNull() ?: return null
         return toDomain(entity)

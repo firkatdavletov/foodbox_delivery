@@ -6,6 +6,7 @@ import java.util.UUID
 
 interface CatalogProductJpaRepository : JpaRepository<CatalogProductEntity, UUID> {
     fun findAllByIsActiveTrueOrderByCreatedAtDesc(): List<CatalogProductEntity>
+    fun findAllByIsActiveOrderByCreatedAtDesc(isActive: Boolean): List<CatalogProductEntity>
 
     fun findAllByIsActiveTrueAndCategoryIdOrderByCreatedAtDesc(categoryId: UUID): List<CatalogProductEntity>
 

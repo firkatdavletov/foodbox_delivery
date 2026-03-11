@@ -30,6 +30,14 @@ class CatalogServiceImpl(
         )
     }
 
+    override fun getAdminCategories(isActive: Boolean): List<CatalogCategory> {
+        return categoryRepository.findAllByIsActive(isActive)
+    }
+
+    override fun getAdminProducts(isActive: Boolean): List<CatalogProduct> {
+        return productRepository.findAllByIsActive(isActive)
+    }
+
     override fun getProduct(productId: UUID): CatalogProduct? {
         val product = productRepository.findById(productId) ?: return null
         return if (product.isActive) product else null

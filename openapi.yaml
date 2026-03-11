@@ -533,6 +533,36 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /api/v1/admin/catalog/categories:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminCategories
+      summary: List categories by activity flag
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: true
+          description: Returns only categories with the provided activity status.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Filtered category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Catalog Admin]
       operationId: upsertCategory
@@ -562,6 +592,36 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /api/v1/admin/catalog/products:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminProducts
+      summary: List products by activity flag
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: true
+          description: Returns only products with the provided activity status.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Filtered product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [Catalog Admin]
       operationId: upsertProduct
@@ -1229,7 +1289,7 @@ components:
 
     ProductResponse:
       type: object
-      required: [id, categoryId, title, slug, priceMinor, unit, countStep]
+      required: [id, categoryId, title, slug, priceMinor, unit, countStep, isActive]
       properties:
         id:
           type: string
@@ -1262,6 +1322,8 @@ components:
         countStep:
           type: integer
           format: int32
+        isActive:
+          type: boolean
 
     UpsertCategoryRequest:
       type: object

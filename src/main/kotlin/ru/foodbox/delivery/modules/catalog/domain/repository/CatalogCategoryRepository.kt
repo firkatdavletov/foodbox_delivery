@@ -5,6 +5,7 @@ import java.util.UUID
 
 interface CatalogCategoryRepository {
     fun findAll(activeOnly: Boolean): List<CatalogCategory>
+    fun findAllByIsActive(isActive: Boolean): List<CatalogCategory>
     fun findById(id: UUID): CatalogCategory?
     fun save(category: CatalogCategory): CatalogCategory
 }

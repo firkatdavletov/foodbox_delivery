@@ -29,6 +29,10 @@ class CatalogProductRepositoryImpl(
         return entities.map(::toDomain)
     }
 
+    override fun findAllByIsActive(isActive: Boolean): List<CatalogProduct> {
+        return jpaRepository.findAllByIsActiveOrderByCreatedAtDesc(isActive).map(::toDomain)
+    }
+
     override fun findById(id: UUID): CatalogProduct? {
         val entity = jpaRepository.findById(id).getOrNull() ?: return null
         return toDomain(entity)

@@ -6,5 +6,6 @@ import java.util.UUID
 
 interface CatalogCategoryJpaRepository : JpaRepository<CatalogCategoryEntity, UUID> {
     fun findAllByIsActiveTrueOrderByNameAsc(): List<CatalogCategoryEntity>
+    fun findAllByIsActiveOrderByNameAsc(isActive: Boolean): List<CatalogCategoryEntity>
     fun findBySlug(slug: String): CatalogCategoryEntity?
 }
