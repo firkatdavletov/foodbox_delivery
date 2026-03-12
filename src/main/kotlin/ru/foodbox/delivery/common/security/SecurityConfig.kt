@@ -13,10 +13,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import java.time.Duration
 
 @Configuration
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter,
+    private val corsProps: CorsProps,
 ) {
 
     @Bean
@@ -48,18 +50,58 @@ class SecurityConfig(
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
-        val configuration = CorsConfiguration().apply {
-            allowedOrigins = listOf(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-            )
-            allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            allowedHeaders = listOf("*")
-            allowCredentials = true
-        }
+        val source = UrlBasedCorsConfigurationSource()
+        // Публичный сайт
+        source.registerCorsConfiguration(
+            "/api/v1/auth/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/cart/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/catalog/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/orders/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/public/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
 
-        return UrlBasedCorsConfigurationSource().apply {
-            registerCorsConfiguration("/**", configuration)
+        // Админка
+        source.registerCorsConfiguration(
+            "/api/v1/admin/**",
+            buildCorsConfiguration(corsProps.adminAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/admin/**",
+            buildCorsConfiguration(corsProps.adminAllowedOrigins)
+        )
+
+        // Фолбэк
+        source.registerCorsConfiguration(
+            "/**",
+            buildCorsConfiguration(
+                corsProps.siteAllowedOrigins + corsProps.adminAllowedOrigins
+            )
+        )
+
+        return source
+    }
+
+    private fun buildCorsConfiguration(origins: List<String>): CorsConfiguration {
+        return CorsConfiguration().apply {
+            allowedOrigins = origins
+            allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            allowedHeaders = listOf("Authorization", "Content-Type", "Accept", "Origin")
+            exposedHeaders = listOf("Location")
+            allowCredentials = false
+            maxAge = Duration.ofHours(1).seconds
         }
     }
 }
