@@ -30,6 +30,7 @@ class SecurityConfig(
             .cors(Customizer.withDefaults())
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
+                it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.requestMatchers("/api/v1/auth/**").permitAll()
                 it.requestMatchers("/api/v1/cart/**").permitAll()
                 it.requestMatchers("/api/v1/catalog/**").permitAll()
@@ -100,7 +101,7 @@ class SecurityConfig(
         return CorsConfiguration().apply {
             allowedOrigins = origins
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            allowedHeaders = listOf("Authorization", "Content-Type", "Accept", "Origin")
+            allowedHeaders = listOf("*")
             exposedHeaders = listOf("Location")
             allowCredentials = false
             maxAge = Duration.ofHours(1).seconds
