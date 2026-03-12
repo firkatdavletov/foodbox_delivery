@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.common.security
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -16,6 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import java.time.Duration
 
 @Configuration
+@EnableConfigurationProperties(CorsProps::class)
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter,
     private val corsProps: CorsProps,
