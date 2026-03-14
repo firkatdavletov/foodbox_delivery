@@ -2,6 +2,13 @@ package ru.foodbox.delivery.modules.catalogimport.application.processor
 
 import org.springframework.dao.DataAccessException
 import org.springframework.stereotype.Component
+import ru.foodbox.delivery.modules.catalog.application.CatalogService
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionGroupCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionValueCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
+import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
@@ -9,7 +16,6 @@ import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepos
 import ru.foodbox.delivery.modules.catalogimport.application.mapping.ProductCsvRowMapper
 import ru.foodbox.delivery.modules.catalogimport.application.report.CatalogImportReportBuilder
 import ru.foodbox.delivery.modules.catalogimport.application.report.ImportProcessingStats
-import ru.foodbox.delivery.modules.catalogimport.application.support.SlugNormalizer
 import ru.foodbox.delivery.modules.catalogimport.application.validation.ProductImportRowValidator
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportErrorCode
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportMode
@@ -18,16 +24,14 @@ import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportRowError
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportType
 import ru.foodbox.delivery.modules.catalogimport.domain.CsvRow
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportRow
-import java.time.Instant
-import java.util.UUID
 
 @Component
 class ProductImportProcessor(
     private val categoryRepository: CatalogCategoryRepository,
     private val productRepository: CatalogProductRepository,
+    private val catalogService: CatalogService,
     private val rowMapper: ProductCsvRowMapper,
     private val rowValidator: ProductImportRowValidator,
-    private val slugNormalizer: SlugNormalizer,
     private val reportBuilder: CatalogImportReportBuilder,
 ) : CatalogImportProcessor {
 
@@ -43,30 +47,51 @@ class ProductImportProcessor(
         }
 
         val blockedRows = stats.rowErrors.map { it.rowNumber }.toMutableSet()
+
         val duplicateErrors = rowValidator.validateDuplicates(mappedRows)
         stats.rowErrors += duplicateErrors
         blockedRows += duplicateErrors.map { it.rowNumber }
 
         val candidates = mappedRows.filterNot { blockedRows.contains(it.rowNumber) }
-        val categoriesByExternalId = categoryRepository.findAllByExternalIdIn(candidates.map { it.categoryExternalId }.toSet())
+
+        val categoriesByExternalId = categoryRepository
+            .findAllByExternalIdIn(candidates.mapNotNull { it.categoryExternalId }.toSet())
             .mapNotNull { category -> category.externalId?.let { it to category } }
             .toMap()
-        val categoryErrors = rowValidator.validateCategoryReferences(candidates, categoriesByExternalId.keys)
+
+        val categoryIdsToFind = candidates.mapNotNull { it.categoryId }.toSet()
+        val categoriesById = categoryIdsToFind.mapNotNull { categoryId ->
+            categoryRepository.findById(categoryId)?.let { categoryId to it }
+        }.toMap()
+
+        val categoryErrors = rowValidator.validateCategoryReferences(
+            rows = candidates,
+            existingCategoryExternalIds = categoriesByExternalId.keys,
+            existingCategoryIds = categoriesById.keys,
+        )
         stats.rowErrors += categoryErrors
         blockedRows += categoryErrors.map { it.rowNumber }
 
         val rowsToProcess = candidates.filterNot { blockedRows.contains(it.rowNumber) }
-        val existingByExternalId = productRepository.findAllByExternalIdIn(rowsToProcess.map { it.externalId }.toSet())
+        val productGroups = rowsToProcess
+            .groupBy(ProductImportRow::productKey)
+            .values
+            .sortedBy { group -> group.minOf { it.rowNumber } }
+
+        val existingByExternalId = productRepository
+            .findAllByExternalIdIn(productGroups.mapNotNull { group -> group.firstNotNullOfOrNull { it.productExternalId } }.toSet())
             .mapNotNull { product -> product.externalId?.let { it to product } }
             .toMap()
             .toMutableMap()
-        val existingBySku = productRepository.findAllBySkuIn(rowsToProcess.map { it.sku }.toSet())
-            .mapNotNull { product -> product.sku?.let { it to product } }
-            .toMap()
+
+        val existingBySlug = productRepository
+            .findAllBySlugIn(productGroups.map { it.first().productSlug }.toSet())
+            .associateBy { it.slug }
             .toMutableMap()
 
-        rowsToProcess.forEach { row ->
-            val resolution = resolveExisting(row, existingByExternalId, existingBySku)
+        productGroups.forEach { groupRows ->
+            val representative = groupRows.minByOrNull { it.rowNumber } ?: return@forEach
+            val resolution = resolveExisting(groupRows, existingByExternalId, existingBySlug)
             if (resolution.error != null) {
                 stats.rowErrors += resolution.error
                 return@forEach
@@ -74,90 +99,88 @@ class ProductImportProcessor(
 
             val existing = resolution.existing
             if (mode == CatalogImportMode.VALIDATE_ONLY) {
-                stats.successCount += 1
+                stats.successCount += groupRows.size
                 return@forEach
             }
 
             if (mode == CatalogImportMode.CREATE_ONLY && existing != null) {
-                stats.successCount += 1
-                stats.skippedCount += 1
+                stats.successCount += groupRows.size
+                stats.skippedCount += groupRows.size
                 return@forEach
             }
 
-            val categoryId = categoriesByExternalId[row.categoryExternalId]?.id
-            if (categoryId == null) {
+            val aggregate = aggregateProduct(groupRows)
+            val category = resolveCategory(
+                categoryExternalId = aggregate.categoryExternalId,
+                categoryId = aggregate.categoryId,
+                categoriesByExternalId = categoriesByExternalId,
+                categoriesById = categoriesById,
+            )
+
+            if (category == null) {
                 stats.rowErrors += CatalogImportRowError(
-                    rowNumber = row.rowNumber,
-                    rowKey = row.externalId,
+                    rowNumber = representative.rowNumber,
+                    rowKey = representative.rowKey,
                     errorCode = CatalogImportErrorCode.CATEGORY_NOT_FOUND,
-                    message = "Category with external_id '${row.categoryExternalId}' not found",
+                    message = "Category reference is not resolved for product '${representative.productKey}'",
                 )
                 return@forEach
             }
 
-            val now = Instant.now()
-            val product = if (existing != null) {
-                existing.copy(
-                    externalId = row.externalId,
-                    categoryId = categoryId,
-                    title = row.name,
-                    slug = slugNormalizer.normalize(row.slug, row.name),
-                    description = row.description,
-                    priceMinor = row.priceMinor,
-                    oldPriceMinor = row.oldPriceMinor,
-                    sku = row.sku,
-                    brand = row.brand,
-                    imageUrl = row.imageUrl,
-                    sortOrder = row.sortOrder,
-                    isActive = row.isActive,
-                    updatedAt = now,
+            val basePriceMinor = aggregate.productPriceMinor ?: aggregate.variants.firstNotNullOfOrNull { it.priceMinor }
+            if (basePriceMinor == null) {
+                stats.rowErrors += CatalogImportRowError(
+                    rowNumber = representative.rowNumber,
+                    rowKey = representative.rowKey,
+                    errorCode = CatalogImportErrorCode.MISSING_REQUIRED_FIELD,
+                    message = "Field 'product_price_minor' is required when product has no variant price fallback",
                 )
-            } else {
-                CatalogProduct(
-                    id = UUID.randomUUID(),
-                    categoryId = categoryId,
-                    title = row.name,
-                    slug = slugNormalizer.normalize(row.slug, row.name),
-                    description = row.description,
-                    priceMinor = row.priceMinor,
-                    oldPriceMinor = row.oldPriceMinor,
-                    sku = row.sku,
-                    imageUrl = row.imageUrl,
-                    unit = ProductUnit.PIECE,
-                    countStep = 1,
-                    isActive = row.isActive,
-                    createdAt = now,
-                    updatedAt = now,
-                    externalId = row.externalId,
-                    brand = row.brand,
-                    sortOrder = row.sortOrder,
-                )
+                return@forEach
             }
+
+            val command = UpsertProductCommand(
+                id = existing?.id,
+                externalId = aggregate.productExternalId,
+                categoryId = category.id,
+                title = aggregate.productTitle,
+                slug = aggregate.productSlug,
+                description = aggregate.productDescription,
+                priceMinor = basePriceMinor,
+                oldPriceMinor = aggregate.productOldPriceMinor,
+                sku = if (aggregate.variants.isEmpty()) aggregate.productSku else null,
+                imageUrl = aggregate.productImageUrl,
+                unit = aggregate.productUnit,
+                countStep = aggregate.productCountStep,
+                isActive = aggregate.productIsActive,
+                brand = aggregate.productBrand,
+                sortOrder = aggregate.productSortOrder,
+                optionGroups = aggregate.optionGroups,
+                variants = aggregate.variants,
+            )
 
             try {
-                val saved = productRepository.save(product)
-                stats.successCount += 1
+                val saved = catalogService.upsertProduct(command)
+                stats.successCount += groupRows.size
                 if (existing == null) {
-                    stats.createdCount += 1
+                    stats.createdCount += groupRows.size
                 } else {
-                    stats.updatedCount += 1
+                    stats.updatedCount += groupRows.size
                     existing.externalId?.let { previousExternalId ->
                         if (saved.externalId != previousExternalId) {
                             existingByExternalId.remove(previousExternalId)
                         }
                     }
-                    existing.sku?.let { previousSku ->
-                        if (saved.sku != previousSku) {
-                            existingBySku.remove(previousSku)
-                        }
+                    if (saved.slug != existing.slug) {
+                        existingBySlug.remove(existing.slug)
                     }
                 }
+
                 saved.externalId?.let { existingByExternalId[it] = saved }
-                saved.sku?.let { existingBySku[it] = saved }
+                existingBySlug[saved.slug] = saved
             } catch (ex: DataAccessException) {
-                stats.rowErrors += persistenceError(row, ex)
+                stats.rowErrors += persistenceError(representative, ex)
             } catch (ex: RuntimeException) {
-                stats.rowErrors += persistenceError(row, ex)
+                stats.rowErrors += persistenceError(representative, ex)
             }
         }
 
@@ -170,30 +193,135 @@ class ProductImportProcessor(
     }
 
     private fun resolveExisting(
-        row: ProductImportRow,
+        rows: List<ProductImportRow>,
         byExternalId: Map<String, CatalogProduct>,
-        bySku: Map<String, CatalogProduct>,
+        bySlug: Map<String, CatalogProduct>,
     ): ProductMatchResolution {
-        val byExternal = byExternalId[row.externalId]
-        val bySkuKey = bySku[row.sku]
-        if (byExternal != null && bySkuKey != null && byExternal.id != bySkuKey.id) {
+        val productExternalId = rows.firstNotNullOfOrNull { it.productExternalId }
+        val productSlug = rows.first().productSlug
+
+        val byExternal = productExternalId?.let(byExternalId::get)
+        val bySlugKey = bySlug[productSlug]
+        if (byExternal != null && bySlugKey != null && byExternal.id != bySlugKey.id) {
             return ProductMatchResolution(
                 existing = null,
                 error = CatalogImportRowError(
-                    rowNumber = row.rowNumber,
-                    rowKey = row.externalId,
+                    rowNumber = rows.minOf { it.rowNumber },
+                    rowKey = rows.first().rowKey,
                     errorCode = CatalogImportErrorCode.AMBIGUOUS_MATCH,
-                    message = "external_id '${row.externalId}' and sku '${row.sku}' point to different products",
+                    message = "product_external_id '$productExternalId' and slug '$productSlug' point to different products",
                 ),
             )
         }
-        return ProductMatchResolution(existing = byExternal ?: bySkuKey)
+
+        return ProductMatchResolution(existing = byExternal ?: bySlugKey)
+    }
+
+    private fun resolveCategory(
+        categoryExternalId: String?,
+        categoryId: java.util.UUID?,
+        categoriesByExternalId: Map<String, CatalogCategory>,
+        categoriesById: Map<java.util.UUID, CatalogCategory>,
+    ): CatalogCategory? {
+        if (categoryExternalId != null) {
+            return categoriesByExternalId[categoryExternalId]
+        }
+
+        if (categoryId != null) {
+            return categoriesById[categoryId]
+        }
+
+        return null
+    }
+
+    private fun aggregateProduct(rows: List<ProductImportRow>): AggregatedProduct {
+        val orderedRows = rows.sortedBy { it.rowNumber }
+        val firstRow = orderedRows.first()
+        val hasVariants = orderedRows.any(ProductImportRow::hasVariantData)
+
+        val optionGroupsByCode = linkedMapOf<String, MutableOptionGroup>()
+        val variants = mutableListOf<ReplaceProductVariantCommand>()
+
+        if (hasVariants) {
+            orderedRows.forEach { row ->
+                row.options.sortedBy { it.position }.forEach { option ->
+                    val optionGroup = optionGroupsByCode.getOrPut(option.optionGroupCode) {
+                        MutableOptionGroup(
+                            code = option.optionGroupCode,
+                            title = option.optionGroupTitle,
+                            sortOrder = option.position,
+                        )
+                    }
+
+                    optionGroup.values.putIfAbsent(
+                        option.optionValueCode,
+                        MutableOptionValue(
+                            code = option.optionValueCode,
+                            title = option.optionValueTitle,
+                            sortOrder = optionGroup.values.size,
+                        ),
+                    )
+                }
+
+                variants += ReplaceProductVariantCommand(
+                    externalId = row.variantExternalId,
+                    sku = row.variantSku ?: "",
+                    title = row.variantTitle,
+                    priceMinor = row.variantPriceMinor ?: row.productPriceMinor,
+                    oldPriceMinor = row.variantOldPriceMinor ?: row.productOldPriceMinor,
+                    imageUrl = row.variantImageUrl ?: row.productImageUrl,
+                    sortOrder = row.variantSortOrder,
+                    isActive = row.variantIsActive,
+                    options = row.options.map { option ->
+                        ReplaceProductVariantOptionCommand(
+                            optionGroupCode = option.optionGroupCode,
+                            optionValueCode = option.optionValueCode,
+                        )
+                    },
+                )
+            }
+        }
+
+        val optionGroups = optionGroupsByCode.values.map { group ->
+            ReplaceProductOptionGroupCommand(
+                code = group.code,
+                title = group.title,
+                sortOrder = group.sortOrder,
+                values = group.values.values.map { value ->
+                    ReplaceProductOptionValueCommand(
+                        code = value.code,
+                        title = value.title,
+                        sortOrder = value.sortOrder,
+                    )
+                },
+            )
+        }
+
+        return AggregatedProduct(
+            productExternalId = orderedRows.firstNotNullOfOrNull { it.productExternalId },
+            productSlug = firstRow.productSlug,
+            productTitle = firstRow.productTitle,
+            categoryExternalId = orderedRows.firstNotNullOfOrNull { it.categoryExternalId },
+            categoryId = orderedRows.firstNotNullOfOrNull { it.categoryId },
+            productDescription = orderedRows.firstNotNullOfOrNull { it.productDescription },
+            productBrand = orderedRows.firstNotNullOfOrNull { it.productBrand },
+            productImageUrl = orderedRows.firstNotNullOfOrNull { it.productImageUrl },
+            productPriceMinor = orderedRows.firstNotNullOfOrNull { it.productPriceMinor },
+            productOldPriceMinor = orderedRows.firstNotNullOfOrNull { it.productOldPriceMinor },
+            productSku = orderedRows.firstNotNullOfOrNull { it.productSku },
+            productUnit = orderedRows.firstNotNullOfOrNull { it.productUnit } ?: ProductUnit.PIECE,
+            productCountStep = orderedRows.firstOrNull()?.productCountStep ?: 1,
+            productIsActive = orderedRows.firstOrNull()?.productIsActive ?: true,
+            productSortOrder = orderedRows.firstOrNull()?.productSortOrder,
+            optionGroups = optionGroups,
+            variants = variants,
+        )
     }
 
     private fun persistenceError(row: ProductImportRow, ex: Exception): CatalogImportRowError {
         return CatalogImportRowError(
             rowNumber = row.rowNumber,
-            rowKey = row.externalId,
+            rowKey = row.rowKey,
             errorCode = CatalogImportErrorCode.PERSISTENCE_ERROR,
             message = ex.message ?: "Failed to persist product",
         )
@@ -202,5 +330,38 @@ class ProductImportProcessor(
     private data class ProductMatchResolution(
         val existing: CatalogProduct?,
         val error: CatalogImportRowError? = null,
+    )
+
+    private data class AggregatedProduct(
+        val productExternalId: String?,
+        val productSlug: String,
+        val productTitle: String,
+        val categoryExternalId: String?,
+        val categoryId: java.util.UUID?,
+        val productDescription: String?,
+        val productBrand: String?,
+        val productImageUrl: String?,
+        val productPriceMinor: Long?,
+        val productOldPriceMinor: Long?,
+        val productSku: String?,
+        val productUnit: ProductUnit,
+        val productCountStep: Int,
+        val productIsActive: Boolean,
+        val productSortOrder: Int?,
+        val optionGroups: List<ReplaceProductOptionGroupCommand>,
+        val variants: List<ReplaceProductVariantCommand>,
+    )
+
+    private data class MutableOptionGroup(
+        val code: String,
+        val title: String,
+        val sortOrder: Int,
+        val values: LinkedHashMap<String, MutableOptionValue> = linkedMapOf(),
+    )
+
+    private data class MutableOptionValue(
+        val code: String,
+        val title: String,
+        val sortOrder: Int,
     )
 }

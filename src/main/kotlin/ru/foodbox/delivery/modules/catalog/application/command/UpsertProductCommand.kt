@@ -16,4 +16,9 @@ data class UpsertProductCommand(
     val unit: ProductUnit,
     val countStep: Int,
     val isActive: Boolean,
+    val externalId: String? = null,
+    val brand: String? = null,
+    val sortOrder: Int? = null,
+    val optionGroups: List<ReplaceProductOptionGroupCommand> = emptyList(),
+    val variants: List<ReplaceProductVariantCommand> = emptyList(),
 )

@@ -55,6 +55,13 @@ class CatalogProductRepositoryImpl(
         return jpaRepository.findAllByExternalIdIn(externalIds).map(::toDomain)
     }
 
+    override fun findAllBySlugIn(slugs: Collection<String>): List<CatalogProduct> {
+        if (slugs.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllBySlugIn(slugs).map(::toDomain)
+    }
+
     override fun findAllBySkuIn(skus: Collection<String>): List<CatalogProduct> {
         if (skus.isEmpty()) {
             return emptyList()

@@ -4,32 +4,92 @@ import org.springframework.stereotype.Component
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportErrorCode
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportRowError
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportRow
+import java.util.UUID
 
 @Component
 class ProductImportRowValidator {
 
     fun validateDuplicates(rows: List<ProductImportRow>): List<CatalogImportRowError> {
         val errors = mutableListOf<CatalogImportRowError>()
-        val firstByExternalId = mutableMapOf<String, Int>()
-        val firstBySku = mutableMapOf<String, Int>()
+        val firstVariantSkuRow = mutableMapOf<String, Int>()
+        val firstProductSkuRow = mutableMapOf<String, Int>()
 
-        rows.forEach { row ->
-            firstByExternalId.putIfAbsent(row.externalId, row.rowNumber)?.let { firstRowNumber ->
-                errors += CatalogImportRowError(
-                    rowNumber = row.rowNumber,
-                    rowKey = row.externalId,
-                    errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
-                    message = "Duplicate external_id '${row.externalId}' in rows $firstRowNumber and ${row.rowNumber}",
-                )
-            }
+        rows.groupBy { it.productKey }.forEach { (_, groupedRows) ->
+            val hasVariants = groupedRows.any(ProductImportRow::hasVariantData)
 
-            firstBySku.putIfAbsent(row.sku, row.rowNumber)?.let { firstRowNumber ->
-                errors += CatalogImportRowError(
-                    rowNumber = row.rowNumber,
-                    rowKey = row.externalId,
-                    errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
-                    message = "Duplicate sku '${row.sku}' in rows $firstRowNumber and ${row.rowNumber}",
-                )
+            if (hasVariants) {
+                val firstByVariantKey = mutableMapOf<String, Int>()
+                groupedRows.forEach { row ->
+                    if (!row.hasVariantData()) {
+                        errors += CatalogImportRowError(
+                            rowNumber = row.rowNumber,
+                            rowKey = row.rowKey,
+                            errorCode = CatalogImportErrorCode.INVALID_RELATION,
+                            message = "Mixed simple and variant rows for product '${row.productKey}'",
+                        )
+                        return@forEach
+                    }
+
+                    val variantSku = row.variantSku
+                    if (variantSku.isNullOrBlank()) {
+                        errors += CatalogImportRowError(
+                            rowNumber = row.rowNumber,
+                            rowKey = row.rowKey,
+                            errorCode = CatalogImportErrorCode.MISSING_REQUIRED_FIELD,
+                            message = "Field 'variant_sku' is required for variant rows",
+                        )
+                    } else {
+                        firstVariantSkuRow.putIfAbsent(variantSku, row.rowNumber)?.let { firstRowNumber ->
+                            errors += CatalogImportRowError(
+                                rowNumber = row.rowNumber,
+                                rowKey = row.rowKey,
+                                errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
+                                message = "Duplicate variant_sku '$variantSku' in rows $firstRowNumber and ${row.rowNumber}",
+                            )
+                        }
+                    }
+
+                    val variantKey = row.variantExternalId ?: row.variantSku
+                    if (variantKey.isNullOrBlank()) {
+                        errors += CatalogImportRowError(
+                            rowNumber = row.rowNumber,
+                            rowKey = row.rowKey,
+                            errorCode = CatalogImportErrorCode.MISSING_REQUIRED_FIELD,
+                            message = "Either 'variant_external_id' or 'variant_sku' is required for variant rows",
+                        )
+                    } else {
+                        firstByVariantKey.putIfAbsent(variantKey, row.rowNumber)?.let { firstRowNumber ->
+                            errors += CatalogImportRowError(
+                                rowNumber = row.rowNumber,
+                                rowKey = row.rowKey,
+                                errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
+                                message = "Duplicate variant key '$variantKey' in rows $firstRowNumber and ${row.rowNumber}",
+                            )
+                        }
+                    }
+                }
+            } else {
+                if (groupedRows.size > 1) {
+                    groupedRows.drop(1).forEach { row ->
+                        errors += CatalogImportRowError(
+                            rowNumber = row.rowNumber,
+                            rowKey = row.rowKey,
+                            errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
+                            message = "Duplicate simple product row for key '${row.productKey}'",
+                        )
+                    }
+                }
+
+                groupedRows.firstOrNull()?.productSku?.let { productSku ->
+                    firstProductSkuRow.putIfAbsent(productSku, groupedRows.first().rowNumber)?.let { firstRowNumber ->
+                        errors += CatalogImportRowError(
+                            rowNumber = groupedRows.first().rowNumber,
+                            rowKey = groupedRows.first().rowKey,
+                            errorCode = CatalogImportErrorCode.DUPLICATE_KEY_IN_FILE,
+                            message = "Duplicate product sku '$productSku' in rows $firstRowNumber and ${groupedRows.first().rowNumber}",
+                        )
+                    }
+                }
             }
         }
 
@@ -39,17 +99,22 @@ class ProductImportRowValidator {
     fun validateCategoryReferences(
         rows: List<ProductImportRow>,
         existingCategoryExternalIds: Set<String>,
+        existingCategoryIds: Set<UUID>,
     ): List<CatalogImportRowError> {
         return rows.mapNotNull { row ->
-            if (existingCategoryExternalIds.contains(row.categoryExternalId)) {
+            val hasExternal = row.categoryExternalId?.let(existingCategoryExternalIds::contains) ?: false
+            val hasId = row.categoryId?.let(existingCategoryIds::contains) ?: false
+
+            if (hasExternal || hasId) {
                 return@mapNotNull null
             }
 
+            val missingRef = row.categoryExternalId ?: row.categoryId?.toString()
             CatalogImportRowError(
                 rowNumber = row.rowNumber,
-                rowKey = row.externalId,
+                rowKey = row.rowKey,
                 errorCode = CatalogImportErrorCode.CATEGORY_NOT_FOUND,
-                message = "Category with external_id '${row.categoryExternalId}' not found",
+                message = "Category reference '$missingRef' not found",
             )
         }
     }

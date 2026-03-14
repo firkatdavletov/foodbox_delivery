@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.ProductDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
 import ru.foodbox.delivery.modules.catalog.application.CatalogService
 import java.util.UUID
@@ -36,10 +37,10 @@ class CatalogController(
     @GetMapping("/products/{productId}")
     fun getProduct(
         @PathVariable productId: UUID,
-    ): ProductResponse {
-        val product = catalogService.getProduct(productId)
+    ): ProductDetailsResponse {
+        val product = catalogService.getProductDetails(productId)
             ?: throw NotFoundException("Product not found")
 
-        return product.toResponse()
+        return product.toDetailsResponse()
     }
 }

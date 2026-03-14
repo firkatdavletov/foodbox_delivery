@@ -10,6 +10,7 @@ interface CatalogProductRepository {
     fun findByExternalId(externalId: String): CatalogProduct?
     fun findBySku(sku: String): CatalogProduct?
     fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogProduct>
+    fun findAllBySlugIn(slugs: Collection<String>): List<CatalogProduct>
     fun findAllBySkuIn(skus: Collection<String>): List<CatalogProduct>
     fun save(product: CatalogProduct): CatalogProduct
 }

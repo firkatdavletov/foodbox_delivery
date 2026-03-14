@@ -11,7 +11,12 @@ import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertCategoryRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductRequest
+import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductVariantOptionRequest
 import ru.foodbox.delivery.modules.catalog.application.CatalogService
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionGroupCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionValueCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 
@@ -70,9 +75,43 @@ class CatalogAdminController(
                 unit = request.unit,
                 countStep = request.countStep,
                 isActive = request.isActive,
+                optionGroups = request.optionGroups.map { optionGroup ->
+                    ReplaceProductOptionGroupCommand(
+                        code = optionGroup.code,
+                        title = optionGroup.title,
+                        sortOrder = optionGroup.sortOrder,
+                        values = optionGroup.values.map { value ->
+                            ReplaceProductOptionValueCommand(
+                                code = value.code,
+                                title = value.title,
+                                sortOrder = value.sortOrder,
+                            )
+                        },
+                    )
+                },
+                variants = request.variants.map { variant ->
+                    ReplaceProductVariantCommand(
+                        externalId = variant.externalId,
+                        sku = variant.sku,
+                        title = variant.title,
+                        priceMinor = variant.priceMinor,
+                        oldPriceMinor = variant.oldPriceMinor,
+                        imageUrl = variant.imageUrl,
+                        sortOrder = variant.sortOrder,
+                        isActive = variant.isActive,
+                        options = variant.options.map(UpsertProductVariantOptionRequest::toCommand),
+                    )
+                },
             )
         )
 
         return product.toResponse()
     }
+}
+
+private fun UpsertProductVariantOptionRequest.toCommand(): ReplaceProductVariantOptionCommand {
+    return ReplaceProductVariantOptionCommand(
+        optionGroupCode = optionGroupCode,
+        optionValueCode = optionValueCode,
+    )
 }

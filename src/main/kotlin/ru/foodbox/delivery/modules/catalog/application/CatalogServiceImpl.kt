@@ -1,10 +1,13 @@
 package ru.foodbox.delivery.modules.catalog.application
 
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.common.error.NotFoundException
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantsCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
 import ru.foodbox.delivery.modules.catalog.domain.ProductSnapshot
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
@@ -17,6 +20,7 @@ import java.util.UUID
 class CatalogServiceImpl(
     private val categoryRepository: CatalogCategoryRepository,
     private val productRepository: CatalogProductRepository,
+    private val productVariantsService: CatalogProductVariantsService,
 ) : CatalogService, ProductReadService {
 
     override fun getCategories(activeOnly: Boolean): List<CatalogCategory> {
@@ -38,9 +42,18 @@ class CatalogServiceImpl(
         return productRepository.findAllByIsActive(isActive)
     }
 
-    override fun getProduct(productId: UUID): CatalogProduct? {
+    override fun getProductDetails(productId: UUID): CatalogProductDetails? {
         val product = productRepository.findById(productId) ?: return null
-        return if (product.isActive) product else null
+        if (!product.isActive) {
+            return null
+        }
+
+        return buildProductDetails(product.id)
+    }
+
+    override fun getAdminProductDetails(productId: UUID): CatalogProductDetails? {
+        val product = productRepository.findById(productId) ?: return null
+        return buildProductDetails(product.id)
     }
 
     override fun getActiveProductSnapshot(productId: UUID): ProductSnapshot? {
@@ -81,6 +94,19 @@ class CatalogServiceImpl(
         return categoryRepository.save(category)
     }
 
+    private fun buildProductDetails(productId: UUID): CatalogProductDetails {
+        val product = productRepository.findById(productId)
+            ?: throw NotFoundException("Product not found")
+        val variantDetails = productVariantsService.getDetails(product.id)
+        return CatalogProductDetails(
+            product = product,
+            optionGroups = variantDetails.optionGroups,
+            defaultVariantId = variantDetails.defaultVariantId,
+            variants = variantDetails.variants,
+        )
+    }
+
+    @Transactional
     override fun upsertProduct(command: UpsertProductCommand): CatalogProduct {
         val category = categoryRepository.findById(command.categoryId)
             ?: throw NotFoundException("Category not found")
@@ -101,6 +127,7 @@ class CatalogServiceImpl(
         val existing = command.id?.let(productRepository::findById)
 
         val product = existing?.copy(
+            externalId = command.externalId?.trim()?.takeIf { it.isNotBlank() } ?: existing.externalId,
             categoryId = command.categoryId,
             title = command.title.trim(),
             slug = normalizeSlug(command.slug, command.title),
@@ -108,13 +135,16 @@ class CatalogServiceImpl(
             priceMinor = command.priceMinor,
             oldPriceMinor = command.oldPriceMinor,
             sku = command.sku?.trim()?.takeIf { it.isNotBlank() },
+            brand = command.brand?.trim()?.takeIf { it.isNotBlank() } ?: existing.brand,
             imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            sortOrder = command.sortOrder ?: existing.sortOrder,
             unit = command.unit,
             countStep = command.countStep,
             isActive = command.isActive,
             updatedAt = now,
         ) ?: CatalogProduct(
             id = command.id ?: UUID.randomUUID(),
+            externalId = command.externalId?.trim()?.takeIf { it.isNotBlank() },
             categoryId = command.categoryId,
             title = command.title.trim(),
             slug = normalizeSlug(command.slug, command.title),
@@ -122,7 +152,9 @@ class CatalogServiceImpl(
             priceMinor = command.priceMinor,
             oldPriceMinor = command.oldPriceMinor,
             sku = command.sku?.trim()?.takeIf { it.isNotBlank() },
+            brand = command.brand?.trim()?.takeIf { it.isNotBlank() },
             imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            sortOrder = command.sortOrder ?: 0,
             unit = command.unit,
             countStep = command.countStep,
             isActive = command.isActive,
@@ -130,7 +162,16 @@ class CatalogServiceImpl(
             updatedAt = now,
         )
 
-        return productRepository.save(product)
+        val saved = productRepository.save(product)
+        productVariantsService.replaceAll(
+            productId = saved.id,
+            command = ReplaceProductVariantsCommand(
+                optionGroups = command.optionGroups,
+                variants = command.variants,
+            ),
+            now = now,
+        )
+        return saved
     }
 
     private fun normalizeSlug(rawSlug: String?, fallback: String): String {
