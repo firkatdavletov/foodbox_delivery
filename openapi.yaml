@@ -20,6 +20,8 @@ tags:
     description: Order placement and retrieval
   - name: Orders Admin
     description: Admin order operations
+  - name: Notifications Admin
+    description: Admin notification operations
   - name: Media Admin
     description: Admin media upload session operations
 paths:
@@ -524,7 +526,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductResponse'
+                $ref: '#/components/schemas/ProductDetailsResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '404':
@@ -641,6 +643,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminProductById
+      summary: Get one product by id (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailsResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -949,6 +978,35 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/telegram/test-message:
+    post:
+      tags: [Notifications Admin]
+      operationId: sendTelegramTestMessage
+      summary: Send Telegram test message to configured recipients
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTelegramTestMessageRequest'
+      responses:
+        '200':
+          description: Test message delivery report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTelegramTestMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1371,7 +1429,7 @@ components:
 
     CategoryResponse:
       type: object
-      required: [id, name, slug]
+      required: [id, name, slug, isActive]
       properties:
         id:
           type: string
@@ -1383,6 +1441,8 @@ components:
         imageUrl:
           type: string
           nullable: true
+        isActive:
+          type: boolean
 
     ProductResponse:
       type: object
@@ -1421,6 +1481,139 @@ components:
           format: int32
         isActive:
           type: boolean
+
+    ProductDetailsResponse:
+      type: object
+      required:
+        [
+          id,
+          categoryId,
+          title,
+          slug,
+          priceMinor,
+          unit,
+          countStep,
+          isActive,
+          optionGroups,
+          variants,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+        oldPriceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        countStep:
+          type: integer
+          format: int32
+        isActive:
+          type: boolean
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductOptionGroupResponse'
+        defaultVariantId:
+          type: string
+          format: uuid
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantResponse'
+
+    ProductOptionGroupResponse:
+      type: object
+      required: [id, code, title, sortOrder, values]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        title:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductOptionValueResponse'
+
+    ProductOptionValueResponse:
+      type: object
+      required: [id, code, title, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        title:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+
+    ProductVariantResponse:
+      type: object
+      required: [id, sku, sortOrder, isActive, optionValueIds]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          nullable: true
+        sku:
+          type: string
+        title:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        oldPriceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
+        isActive:
+          type: boolean
+        optionValueIds:
+          type: array
+          items:
+            type: string
+            format: uuid
 
     UpsertCategoryRequest:
       type: object
@@ -1487,6 +1680,97 @@ components:
         isActive:
           type: boolean
           default: true
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductOptionGroupRequest'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductVariantRequest'
+
+    UpsertProductOptionGroupRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductOptionValueRequest'
+
+    UpsertProductOptionValueRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+
+    UpsertProductVariantRequest:
+      type: object
+      required: [sku]
+      properties:
+        externalId:
+          type: string
+          nullable: true
+        sku:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        oldPriceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        isActive:
+          type: boolean
+          default: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductVariantOptionRequest'
+
+    UpsertProductVariantOptionRequest:
+      type: object
+      required: [optionGroupCode, optionValueCode]
+      properties:
+        optionGroupCode:
+          type: string
+          minLength: 1
+        optionValueCode:
+          type: string
+          minLength: 1
 
     CatalogImportMultipartRequest:
       type: object
@@ -1866,6 +2150,44 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    SendTelegramTestMessageRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+        chatIds:
+          type: array
+          nullable: true
+          items:
+            type: string
+
+    SendTelegramTestMessageResponse:
+      type: object
+      required:
+        [
+          attemptedRecipients,
+          sentRecipients,
+          failedRecipients,
+          skipped,
+        ]
+      properties:
+        attemptedRecipients:
+          type: integer
+          format: int32
+        sentRecipients:
+          type: integer
+          format: int32
+        failedRecipients:
+          type: integer
+          format: int32
+        skipped:
+          type: boolean
+        skipReason:
+          type: string
+          nullable: true
 
     AuthMethod:
       type: string

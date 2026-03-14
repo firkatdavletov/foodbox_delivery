@@ -26,6 +26,7 @@ class CatalogProductVariantOptionValueRepositoryImpl(
         }
 
         jpaRepository.deleteAllByVariantIdIn(variantIds)
+        jpaRepository.flush()
     }
 
     override fun saveAll(links: List<CatalogProductVariantOptionValue>): List<CatalogProductVariantOptionValue> {

@@ -232,6 +232,88 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `update product with same option group code and extra variant succeeds`() {
+        val categoryId = createCategory(externalId = "cat-repeat-group-code", slug = "repeat-group-code")
+
+        val initialRequest = mapOf(
+            "categoryId" to categoryId,
+            "title" to "Брюки",
+            "priceMinor" to 5000,
+            "unit" to "PIECE",
+            "countStep" to 1,
+            "isActive" to true,
+            "optionGroups" to listOf(
+                mapOf(
+                    "code" to "size",
+                    "title" to "Размер",
+                    "values" to listOf(
+                        mapOf("code" to "m", "title" to "M"),
+                    ),
+                )
+            ),
+            "variants" to listOf(
+                mapOf(
+                    "sku" to "PANTS-M",
+                    "title" to "M",
+                    "isActive" to true,
+                    "options" to listOf(
+                        mapOf("optionGroupCode" to "size", "optionValueCode" to "m"),
+                    ),
+                )
+            ),
+        )
+
+        val created = upsertProductAsAdmin(initialRequest)
+        val productId = UUID.fromString(created.get("id").asText())
+
+        val updateRequest = mapOf(
+            "id" to productId,
+            "categoryId" to categoryId,
+            "title" to "Брюки",
+            "priceMinor" to 5100,
+            "unit" to "PIECE",
+            "countStep" to 1,
+            "isActive" to true,
+            "optionGroups" to listOf(
+                mapOf(
+                    "code" to "size",
+                    "title" to "Размер",
+                    "values" to listOf(
+                        mapOf("code" to "m", "title" to "M"),
+                        mapOf("code" to "l", "title" to "L"),
+                    ),
+                )
+            ),
+            "variants" to listOf(
+                mapOf(
+                    "sku" to "PANTS-M",
+                    "title" to "M",
+                    "isActive" to true,
+                    "options" to listOf(
+                        mapOf("optionGroupCode" to "size", "optionValueCode" to "m"),
+                    ),
+                ),
+                mapOf(
+                    "sku" to "PANTS-L",
+                    "title" to "L",
+                    "isActive" to true,
+                    "options" to listOf(
+                        mapOf("optionGroupCode" to "size", "optionValueCode" to "l"),
+                    ),
+                ),
+            ),
+        )
+
+        upsertProductAsAdmin(updateRequest)
+
+        val details = getProductDetails(productId)
+        assertEquals(1, details.get("optionGroups").size())
+        assertEquals("size", details.get("optionGroups")[0].get("code").asText())
+        assertEquals(2, details.get("variants").size())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `details api returns empty options for simple product`() {
         val categoryId = createCategory(externalId = "cat-simple", slug = "simple")
 
@@ -513,6 +595,39 @@ class CatalogVariantsIntegrationTest {
 
         val errorBody = upsertProductAsAdminExpectBadRequest(request)
         assertTrue(errorBody.contains("unknown option value"))
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `duplicate product slug returns bad request with validation error`() {
+        val categoryId = createCategory(externalId = "cat-dup-product-slug", slug = "dup-product-slug")
+
+        upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Товар 1",
+                "slug" to "same-product-slug",
+                "priceMinor" to 1000,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+            )
+        )
+
+        val errorBody = upsertProductAsAdminExpectBadRequest(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Товар 2",
+                "slug" to "same-product-slug",
+                "priceMinor" to 1200,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+            )
+        )
+
+        assertTrue(errorBody.contains("\"code\":\"VALIDATION_ERROR\""))
+        assertTrue(errorBody.contains("unique constraint"))
     }
 
     @Test

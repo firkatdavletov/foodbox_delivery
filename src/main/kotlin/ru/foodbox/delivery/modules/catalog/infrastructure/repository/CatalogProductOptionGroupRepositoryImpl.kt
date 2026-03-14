@@ -18,6 +18,7 @@ class CatalogProductOptionGroupRepositoryImpl(
 
     override fun deleteAllByProductId(productId: UUID) {
         jpaRepository.deleteAllByProductId(productId)
+        jpaRepository.flush()
     }
 
     override fun saveAll(optionGroups: List<CatalogProductOptionGroup>): List<CatalogProductOptionGroup> {

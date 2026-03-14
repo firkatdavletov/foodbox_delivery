@@ -2,6 +2,7 @@ package ru.foodbox.delivery.common.error
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.ConstraintViolationException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.AccessDeniedException
@@ -55,6 +56,32 @@ class GlobalExceptionHandler {
             ApiError(
                 code = ErrorCode.VALIDATION_ERROR.name,
                 message = ex.message ?: "Invalid request",
+                traceId = request.getHeader("X-Trace-Id")
+            )
+        )
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    fun handleDataIntegrityViolation(
+        ex: DataIntegrityViolationException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        val lowerMessage = (ex.mostSpecificCause.message ?: ex.message ?: "").lowercase()
+        val isUniqueViolation = lowerMessage.contains("duplicate key")
+            || lowerMessage.contains("unique constraint")
+            || lowerMessage.contains("unique index")
+            || lowerMessage.contains("23505")
+
+        val message = if (isUniqueViolation) {
+            "Duplicate value violates unique constraint"
+        } else {
+            "Data integrity violation"
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+            ApiError(
+                code = ErrorCode.VALIDATION_ERROR.name,
+                message = message,
                 traceId = request.getHeader("X-Trace-Id")
             )
         )

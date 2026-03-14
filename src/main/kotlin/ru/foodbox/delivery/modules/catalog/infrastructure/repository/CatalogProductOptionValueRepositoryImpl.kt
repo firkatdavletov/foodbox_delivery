@@ -26,6 +26,7 @@ class CatalogProductOptionValueRepositoryImpl(
         }
 
         jpaRepository.deleteAllByOptionGroupIdIn(optionGroupIds)
+        jpaRepository.flush()
     }
 
     override fun saveAll(optionValues: List<CatalogProductOptionValue>): List<CatalogProductOptionValue> {

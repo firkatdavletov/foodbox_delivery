@@ -25,6 +25,7 @@ class CatalogProductVariantRepositoryImpl(
 
     override fun deleteAllByProductId(productId: UUID) {
         jpaRepository.deleteAllByProductId(productId)
+        jpaRepository.flush()
     }
 
     override fun saveAll(variants: List<CatalogProductVariant>): List<CatalogProductVariant> {
