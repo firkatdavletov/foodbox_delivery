@@ -1,6 +1,6 @@
-external_id,name,slug,parent_external_id,description,is_active,sort_order
+Внешний ID категории в каталоге (обязательное),Название категории (обязательное),Слаг категории (обязательное),Внешний ID родительской категории (необязательное),Описание категории (необязательное),Категория активна (необязательное),Порядок сортировки категории (необязательное)
 cat-root,Каталог,cat-root,,Корневая категория,true,10
 cat-fruits,Фрукты,fruits,cat-root,Раздел фруктов,true,20
-cat-broken,,broken,,Пропущено обязательное name,true,30
+cat-broken,,broken,,Пропущено обязательное название,true,30
 cat-bad-bool,Напитки,drinks,cat-root,Неверный bool,maybe,40
 cat-bad-sort,Снеки,snacks,cat-root,Неверный sort,true,abc
