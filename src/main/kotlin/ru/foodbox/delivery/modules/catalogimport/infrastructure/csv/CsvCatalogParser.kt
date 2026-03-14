@@ -12,34 +12,57 @@ import java.nio.charset.StandardCharsets
 class CsvCatalogParser {
 
     fun parse(csvBytes: ByteArray): List<CsvRow> {
+        try {
+            val commaParsed = parseWithDelimiter(csvBytes, ',')
+            if (!shouldRetryWithSemicolon(commaParsed.originalHeaders)) {
+                return commaParsed.rows
+            }
+
+            return runCatching { parseWithDelimiter(csvBytes, ';').rows }
+                .getOrElse { commaParsed.rows }
+        } catch (ex: Exception) {
+            throw IllegalArgumentException("Invalid CSV format: ${ex.message}", ex)
+        }
+    }
+
+    private fun parseWithDelimiter(csvBytes: ByteArray, delimiter: Char): ParsedCsv {
         val format = CSVFormat.Builder.create(CSVFormat.DEFAULT)
-            .setDelimiter(',')
+            .setDelimiter(delimiter)
             .setHeader()
             .setSkipHeaderRecord(true)
             .setIgnoreHeaderCase(true)
             .setTrim(true)
             .build()
 
-        try {
-            InputStreamReader(ByteArrayInputStream(csvBytes), StandardCharsets.UTF_8).use { reader ->
-                CSVParser(reader, format).use { parser ->
-                    val normalizedHeaders = parser.headerMap.keys.associateWith(::normalizeHeader)
-                    return parser.records.map { record ->
-                        val values = linkedMapOf<String, String>()
-                        normalizedHeaders.forEach { (originalHeader, normalizedHeader) ->
-                            val rawValue = if (record.isSet(originalHeader)) record.get(originalHeader) else ""
-                            values[normalizedHeader] = rawValue.trim()
-                        }
-                        CsvRow(
-                            rowNumber = record.recordNumber.toInt() + 1,
-                            values = values,
-                        )
+        InputStreamReader(ByteArrayInputStream(csvBytes), StandardCharsets.UTF_8).use { reader ->
+            CSVParser(reader, format).use { parser ->
+                val originalHeaders = parser.headerMap.keys.toList()
+                val normalizedHeaders = originalHeaders.associateWith(::normalizeHeader)
+                val rows = parser.records.map { record ->
+                    val values = linkedMapOf<String, String>()
+                    normalizedHeaders.forEach { (originalHeader, normalizedHeader) ->
+                        val rawValue = if (record.isSet(originalHeader)) record.get(originalHeader) else ""
+                        values[normalizedHeader] = rawValue.trim()
                     }
+                    CsvRow(
+                        rowNumber = record.recordNumber.toInt() + 1,
+                        values = values,
+                    )
                 }
+
+                return ParsedCsv(
+                    originalHeaders = originalHeaders,
+                    rows = rows,
+                )
             }
-        } catch (ex: Exception) {
-            throw IllegalArgumentException("Invalid CSV format: ${ex.message}", ex)
         }
+    }
+
+    private fun shouldRetryWithSemicolon(originalHeaders: List<String>): Boolean {
+        if (originalHeaders.size != 1) {
+            return false
+        }
+        return originalHeaders.first().contains(';')
     }
 
     private fun normalizeHeader(headerName: String): String {
@@ -111,4 +134,9 @@ class CsvCatalogParser {
             "порядок сортировки категории" to "sort_order",
         )
     }
+
+    private data class ParsedCsv(
+        val originalHeaders: List<String>,
+        val rows: List<CsvRow>,
+    )
 }

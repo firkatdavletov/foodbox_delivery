@@ -445,6 +445,28 @@ class CatalogVariantsIntegrationTest {
     }
 
     @Test
+    fun `import category with russian headers`() {
+        val csv = """
+            Внешний ID категории в каталоге (обязательное),Название категории (обязательное),Слаг категории (обязательное),Внешний ID родительской категории (необязательное),Описание категории (необязательное),Категория активна (необязательное),Порядок сортировки категории (необязательное)
+            cat-root,Каталог,catalog,,Корневая категория,true,10
+            cat-fruits,Фрукты,fruits,cat-root,Раздел фруктов,true,20
+        """.trimIndent()
+
+        val report = catalogImportService.execute(
+            ExecuteCatalogImportCommand(
+                importType = CatalogImportType.CATEGORY,
+                importMode = CatalogImportMode.CREATE_ONLY,
+                csvBytes = csv.toByteArray(),
+            )
+        )
+
+        assertEquals(0, report.errorCount)
+        assertEquals(2, report.successCount)
+        assertNotNull(categoryRepository.findByExternalId("cat-root"))
+        assertNotNull(categoryRepository.findByExternalId("cat-fruits"))
+    }
+
+    @Test
     fun `import product with variants`() {
         createCategory(externalId = "cat-import-var", slug = "import-var")
 

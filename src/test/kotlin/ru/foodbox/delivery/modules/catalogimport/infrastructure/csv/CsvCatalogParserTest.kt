@@ -58,4 +58,19 @@ class CsvCatalogParserTest {
         assertEquals("true", row.get("is_active"))
         assertEquals("20", row.get("sort_order"))
     }
+
+    @Test
+    fun `parses semicolon delimited csv with russian headers`() {
+        val csv = """
+            Внешний ID категории в каталоге (обязательное);Название категории (обязательное);Слаг категории (обязательное);Категория активна (необязательное)
+            cat-fruits;Фрукты;fruits;true
+        """.trimIndent()
+
+        val row = parser.parse(csv.toByteArray()).single()
+
+        assertEquals("cat-fruits", row.get("external_id"))
+        assertEquals("Фрукты", row.get("name"))
+        assertEquals("fruits", row.get("slug"))
+        assertEquals("true", row.get("is_active"))
+    }
 }

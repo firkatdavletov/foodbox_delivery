@@ -16,9 +16,15 @@ class CategoryCsvRowMapper(
 
     fun map(csvRow: CsvRow): RowMappingResult<CategoryImportRow> {
         val rowNumber = csvRow.rowNumber
-        val externalId = csvRow.get("external_id").clean()
-        val name = csvRow.get("name").clean()
-        val slugRaw = csvRow.get("slug").clean()
+        val externalId = readAny(
+            csvRow,
+            "external_id",
+            "category_external_id",
+            "внешний id категории",
+            "внешний id категории в каталоге",
+        )
+        val name = readAny(csvRow, "name", "название категории")
+        val slugRaw = readAny(csvRow, "slug", "слаг категории")
         val rowKey = externalId ?: slugRaw
         val errors = mutableListOf<CatalogImportRowError>()
 
@@ -33,7 +39,7 @@ class CategoryCsvRowMapper(
         }
 
         val isActive = importValueParser.parseBoolean(
-            raw = csvRow.get("is_active"),
+            raw = readRawAny(csvRow, "is_active", "категория активна"),
             rowNumber = rowNumber,
             rowKey = rowKey,
             fieldName = "is_active",
@@ -42,7 +48,7 @@ class CategoryCsvRowMapper(
         )
 
         val sortOrder = importValueParser.parseInt(
-            raw = csvRow.get("sort_order"),
+            raw = readRawAny(csvRow, "sort_order", "порядок сортировки категории"),
             rowNumber = rowNumber,
             rowKey = rowKey,
             fieldName = "sort_order",
@@ -60,8 +66,8 @@ class CategoryCsvRowMapper(
                 externalId = externalId!!,
                 name = name!!,
                 slug = slugNormalizer.normalize(slugRaw, name),
-                parentExternalId = csvRow.get("parent_external_id").clean(),
-                description = csvRow.get("description").clean(),
+                parentExternalId = readAny(csvRow, "parent_external_id", "внешний id родительской категории"),
+                description = readAny(csvRow, "description", "описание категории"),
                 isActive = isActive,
                 sortOrder = sortOrder,
             ),
@@ -76,6 +82,18 @@ class CategoryCsvRowMapper(
             errorCode = CatalogImportErrorCode.MISSING_REQUIRED_FIELD,
             message = "Field '$fieldName' is required",
         )
+    }
+
+    private fun readAny(csvRow: CsvRow, vararg headers: String): String? {
+        return headers.asSequence()
+            .mapNotNull { header -> csvRow.get(header).clean() }
+            .firstOrNull()
+    }
+
+    private fun readRawAny(csvRow: CsvRow, vararg headers: String): String? {
+        return headers.asSequence()
+            .mapNotNull { header -> csvRow.get(header) }
+            .firstOrNull()
     }
 
     private fun String?.clean(): String? = this?.trim()?.takeIf { it.isNotBlank() }
