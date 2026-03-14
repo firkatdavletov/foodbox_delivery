@@ -27,6 +27,7 @@ internal fun CatalogProduct.toResponse(): ProductResponse {
         title = title,
         slug = slug,
         description = description,
+        brand = brand,
         priceMinor = priceMinor,
         oldPriceMinor = oldPriceMinor,
         sku = sku,

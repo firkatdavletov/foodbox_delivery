@@ -9,6 +9,7 @@ data class ProductResponse(
     val title: String,
     val slug: String,
     val description: String?,
+    val brand: String?,
     val priceMinor: Long,
     val oldPriceMinor: Long?,
     val sku: String?,
