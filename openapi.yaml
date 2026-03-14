@@ -374,7 +374,7 @@ paths:
     post:
       tags: [Cart]
       operationId: addCartItem
-      summary: Add product to active cart
+      summary: Add product (or product variant) to active cart
       security:
         - bearerAuth: []
         - installIdHeader: []
@@ -431,12 +431,19 @@ paths:
     delete:
       tags: [Cart]
       operationId: removeCartItem
-      summary: Remove product from active cart
+      summary: Remove product (or specific product variant) from active cart
       security:
         - bearerAuth: []
         - installIdHeader: []
       parameters:
         - $ref: '#/components/parameters/ProductIdPathParam'
+        - name: variantId
+          in: query
+          required: false
+          description: Variant id to remove. When omitted, removes all cart items for the product.
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: Updated cart
@@ -1368,6 +1375,10 @@ components:
         productId:
           type: string
           format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
         quantity:
           type: integer
           format: int32
@@ -1380,6 +1391,10 @@ components:
         productId:
           type: string
           format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
         quantity:
           type: integer
           format: int32
@@ -1410,6 +1425,10 @@ components:
         productId:
           type: string
           format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
         title:
           type: string
         unit:
@@ -1914,6 +1933,10 @@ components:
         productId:
           type: string
           format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
         quantity:
           type: integer
           format: int32
@@ -2006,6 +2029,10 @@ components:
         productId:
           type: string
           format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
         title:
           type: string
         unit:

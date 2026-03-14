@@ -6,6 +6,7 @@ import java.util.UUID
 data class OrderItem(
     val id: UUID,
     val productId: UUID,
+    val variantId: UUID?,
     val title: String,
     val unit: ProductUnit,
     val quantity: Int,

@@ -15,7 +15,7 @@ data class Cart(
 
     fun addItem(item: CartItem) {
         ensureActive()
-        val existing = items.firstOrNull { it.productId == item.productId }
+        val existing = items.firstOrNull { it.productId == item.productId && it.variantId == item.variantId }
         if (existing == null) {
             items += item
         } else {
@@ -24,18 +24,34 @@ data class Cart(
         touch()
     }
 
-    fun changeQuantity(productId: UUID, quantity: Int) {
+    fun changeQuantity(productId: UUID, variantId: UUID?, quantity: Int) {
         ensureActive()
-        val item = items.firstOrNull { it.productId == productId }
-            ?: throw IllegalArgumentException("Product not found in cart")
+        val matchingItems = if (variantId == null) {
+            items.filter { it.productId == productId }
+        } else {
+            items.filter { it.productId == productId && it.variantId == variantId }
+        }
+
+        if (matchingItems.isEmpty()) {
+            throw IllegalArgumentException("Product not found in cart")
+        }
+        if (variantId == null && matchingItems.size > 1) {
+            throw IllegalArgumentException("Multiple product variants found in cart. Specify variantId")
+        }
+
+        val item = matchingItems.first()
 
         item.changeQuantity(quantity)
         touch()
     }
 
-    fun removeItem(productId: UUID) {
+    fun removeItem(productId: UUID, variantId: UUID?) {
         ensureActive()
-        items.removeIf { it.productId == productId }
+        if (variantId == null) {
+            items.removeIf { it.productId == productId }
+        } else {
+            items.removeIf { it.productId == productId && it.variantId == variantId }
+        }
         touch()
     }
 

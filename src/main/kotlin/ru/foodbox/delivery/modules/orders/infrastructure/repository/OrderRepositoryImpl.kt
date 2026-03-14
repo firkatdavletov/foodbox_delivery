@@ -60,6 +60,7 @@ class OrderRepositoryImpl(
                     id = item.id,
                     order = entity,
                     productId = item.productId,
+                    variantId = item.variantId,
                     title = item.title,
                     unit = item.unit,
                     quantity = item.quantity,
@@ -111,6 +112,7 @@ class OrderRepositoryImpl(
                 OrderItem(
                     id = item.id,
                     productId = item.productId,
+                    variantId = item.variantId,
                     title = item.title,
                     unit = item.unit,
                     quantity = item.quantity,

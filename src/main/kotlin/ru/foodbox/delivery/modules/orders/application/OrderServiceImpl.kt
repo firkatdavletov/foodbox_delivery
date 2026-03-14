@@ -59,6 +59,7 @@ class OrderServiceImpl(
             OrderItem(
                 id = UUID.randomUUID(),
                 productId = it.productId,
+                variantId = it.variantId,
                 title = it.title,
                 unit = it.unit,
                 quantity = it.quantity,
@@ -107,7 +108,10 @@ class OrderServiceImpl(
         val now = Instant.now()
 
         val orderItems = command.items.map { item ->
-            val product = productReadService.getActiveProductSnapshot(item.productId)
+            val product = productReadService.getActiveProductSnapshot(
+                productId = item.productId,
+                variantId = item.variantId,
+            )
                 ?: throw NotFoundException("Product not found")
 
             require(item.quantity > 0) { "quantity must be greater than zero" }
@@ -116,6 +120,7 @@ class OrderServiceImpl(
             OrderItem(
                 id = UUID.randomUUID(),
                 productId = product.id,
+                variantId = product.variantId,
                 title = product.title,
                 unit = product.unit,
                 quantity = item.quantity,

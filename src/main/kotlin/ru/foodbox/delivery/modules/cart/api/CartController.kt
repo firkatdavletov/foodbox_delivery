@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
@@ -41,6 +42,7 @@ class CartController(
             actor = actor,
             command = AddCartItemCommand(
                 productId = request.productId,
+                variantId = request.variantId,
                 quantity = request.quantity,
             ),
         ).toResponse()
@@ -55,6 +57,7 @@ class CartController(
             actor = actor,
             command = ChangeCartItemQuantityCommand(
                 productId = request.productId,
+                variantId = request.variantId,
                 quantity = request.quantity,
             ),
         ).toResponse()
@@ -64,8 +67,9 @@ class CartController(
     fun removeItem(
         @CurrentActorParam actor: CurrentActor,
         @PathVariable productId: UUID,
+        @RequestParam(required = false) variantId: UUID?,
     ): CartResponse {
-        return cartService.removeItem(actor = actor, productId = productId).toResponse()
+        return cartService.removeItem(actor = actor, productId = productId, variantId = variantId).toResponse()
     }
 
     @DeleteMapping

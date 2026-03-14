@@ -58,6 +58,7 @@ class CartRepositoryImpl(
                     id = UUID.randomUUID(),
                     cart = entity,
                     productId = item.productId,
+                    variantId = item.variantId,
                     title = item.title,
                     unit = item.unit,
                     countStep = item.countStep,
@@ -83,6 +84,7 @@ class CartRepositoryImpl(
             items = entity.items.map { item ->
                 CartItem(
                     productId = item.productId,
+                    variantId = item.variantId,
                     title = item.title,
                     unit = item.unit,
                     countStep = item.countStep,

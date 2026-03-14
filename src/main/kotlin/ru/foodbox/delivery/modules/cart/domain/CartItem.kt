@@ -5,6 +5,7 @@ import java.util.UUID
 
 data class CartItem(
     val productId: UUID,
+    val variantId: UUID?,
     val title: String,
     val unit: ProductUnit,
     val countStep: Int,

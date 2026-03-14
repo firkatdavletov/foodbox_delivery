@@ -32,6 +32,8 @@ data class GuestCheckoutItemRequest(
     @field:NotNull
     val productId: UUID,
 
+    val variantId: UUID? = null,
+
     @field:Min(1)
     val quantity: Int,
 )

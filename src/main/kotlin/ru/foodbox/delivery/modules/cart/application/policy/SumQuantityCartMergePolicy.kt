@@ -7,7 +7,9 @@ import ru.foodbox.delivery.modules.cart.domain.Cart
 class SumQuantityCartMergePolicy : CartMergePolicy {
     override fun merge(source: Cart, target: Cart): Cart {
         source.items.forEach { sourceItem ->
-            val existing = target.items.firstOrNull { it.productId == sourceItem.productId }
+            val existing = target.items.firstOrNull {
+                it.productId == sourceItem.productId && it.variantId == sourceItem.variantId
+            }
             if (existing == null) {
                 target.items += sourceItem.copy()
             } else {

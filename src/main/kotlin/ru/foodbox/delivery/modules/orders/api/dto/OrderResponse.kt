@@ -31,6 +31,7 @@ data class OrderResponse(
 data class OrderItemResponse(
     val id: UUID,
     val productId: UUID,
+    val variantId: UUID?,
     val title: String,
     val unit: ProductUnit,
     val quantity: Int,

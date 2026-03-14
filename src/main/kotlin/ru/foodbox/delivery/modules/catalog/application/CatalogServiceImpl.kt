@@ -56,18 +56,40 @@ class CatalogServiceImpl(
         return buildProductDetails(product.id)
     }
 
-    override fun getActiveProductSnapshot(productId: UUID): ProductSnapshot? {
+    override fun getActiveProductSnapshot(productId: UUID, variantId: UUID?): ProductSnapshot? {
         val product = productRepository.findById(productId) ?: return null
         if (!product.isActive) {
             return null
         }
 
+        val variantDetails = productVariantsService.getDetails(product.id).variants
+        val resolvedVariant = when {
+            variantDetails.isEmpty() -> null
+            else -> {
+                val activeVariants = variantDetails.filter { it.isActive }
+                if (activeVariants.isEmpty()) {
+                    return null
+                }
+
+                if (variantId == null) {
+                    activeVariants.first()
+                } else {
+                    activeVariants.firstOrNull { it.id == variantId } ?: return null
+                }
+            }
+        }
+
+        val resolvedTitle = resolvedVariant?.title?.takeIf { it.isNotBlank() }?.let {
+            "${product.title} ($it)"
+        } ?: product.title
+
         return ProductSnapshot(
             id = product.id,
-            title = product.title,
+            variantId = resolvedVariant?.id,
+            title = resolvedTitle,
             unit = product.unit,
             countStep = product.countStep,
-            priceMinor = product.priceMinor,
+            priceMinor = resolvedVariant?.priceMinor ?: product.priceMinor,
         )
     }
 

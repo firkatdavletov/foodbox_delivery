@@ -50,7 +50,7 @@ class OrderController(
     ): OrderResponse {
         return orderService.guestCheckout(
             command = GuestCheckoutCommand(
-                items = request.items.map { GuestCheckoutItemCommand(it.productId, it.quantity) },
+                items = request.items.map { GuestCheckoutItemCommand(it.productId, it.variantId, it.quantity) },
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,

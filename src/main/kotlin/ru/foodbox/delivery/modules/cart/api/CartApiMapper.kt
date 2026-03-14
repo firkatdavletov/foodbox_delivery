@@ -12,6 +12,7 @@ internal fun Cart.toResponse(): CartResponse {
         items = items.map {
             CartItemResponse(
                 productId = it.productId,
+                variantId = it.variantId,
                 title = it.title,
                 unit = it.unit,
                 countStep = it.countStep,

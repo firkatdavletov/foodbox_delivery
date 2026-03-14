@@ -14,5 +14,6 @@ data class GuestCheckoutCommand(
 
 data class GuestCheckoutItemCommand(
     val productId: java.util.UUID,
+    val variantId: java.util.UUID?,
     val quantity: Int,
 )

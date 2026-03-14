@@ -31,13 +31,16 @@ class CartServiceImpl(
 
     @Transactional
     override fun addItem(actor: CurrentActor, command: AddCartItemCommand): Cart {
-        val product = productReadService.getActiveProductSnapshot(command.productId)
-            ?: throw NotFoundException("Product not found")
+        val product = productReadService.getActiveProductSnapshot(
+            productId = command.productId,
+            variantId = command.variantId,
+        ) ?: throw NotFoundException("Product not found")
 
         val cart = getOrCreateActiveCart(actor)
         cart.addItem(
             CartItem(
                 productId = product.id,
+                variantId = product.variantId,
                 title = product.title,
                 unit = product.unit,
                 countStep = product.countStep,
@@ -51,14 +54,14 @@ class CartServiceImpl(
     @Transactional
     override fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart {
         val cart = getOrCreateActiveCart(actor)
-        cart.changeQuantity(command.productId, command.quantity)
+        cart.changeQuantity(command.productId, command.variantId, command.quantity)
         return cartRepository.save(cart)
     }
 
     @Transactional
-    override fun removeItem(actor: CurrentActor, productId: UUID): Cart {
+    override fun removeItem(actor: CurrentActor, productId: UUID, variantId: UUID?): Cart {
         val cart = getOrCreateActiveCart(actor)
-        cart.removeItem(productId)
+        cart.removeItem(productId, variantId)
         return cartRepository.save(cart)
     }
 

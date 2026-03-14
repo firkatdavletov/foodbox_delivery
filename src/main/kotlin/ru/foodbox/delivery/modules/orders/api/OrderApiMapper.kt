@@ -22,6 +22,7 @@ internal fun Order.toResponse(): OrderResponse {
             OrderItemResponse(
                 id = it.id,
                 productId = it.productId,
+                variantId = it.variantId,
                 title = it.title,
                 unit = it.unit,
                 quantity = it.quantity,

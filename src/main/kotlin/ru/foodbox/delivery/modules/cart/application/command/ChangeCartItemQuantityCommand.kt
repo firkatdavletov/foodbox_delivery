@@ -4,5 +4,6 @@ import java.util.UUID
 
 data class ChangeCartItemQuantityCommand(
     val productId: UUID,
+    val variantId: UUID?,
     val quantity: Int,
 )
