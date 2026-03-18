@@ -4,6 +4,7 @@ import ru.foodbox.delivery.modules.catalog.domain.CatalogProductVariant
 import java.util.UUID
 
 interface CatalogProductVariantRepository {
+    fun findById(id: UUID): CatalogProductVariant?
     fun findAllByProductId(productId: UUID): List<CatalogProductVariant>
     fun findAllBySkuIn(skus: Collection<String>): List<CatalogProductVariant>
     fun deleteAllByProductId(productId: UUID)

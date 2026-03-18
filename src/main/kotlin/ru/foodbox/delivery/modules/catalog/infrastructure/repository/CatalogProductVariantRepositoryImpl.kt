@@ -6,11 +6,17 @@ import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductVaria
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.entity.CatalogProductVariantEntity
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductVariantJpaRepository
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 @Repository
 class CatalogProductVariantRepositoryImpl(
     private val jpaRepository: CatalogProductVariantJpaRepository,
 ) : CatalogProductVariantRepository {
+
+    override fun findById(id: UUID): CatalogProductVariant? {
+        val entity = jpaRepository.findById(id).getOrNull() ?: return null
+        return toDomain(entity)
+    }
 
     override fun findAllByProductId(productId: UUID): List<CatalogProductVariant> {
         return jpaRepository.findAllByProductIdOrderBySortOrderAscCreatedAtAsc(productId).map(::toDomain)

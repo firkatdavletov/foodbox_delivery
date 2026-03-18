@@ -18,3 +18,9 @@ spring:
 
 telegram:
   enabled: false
+
+virtual-try-on:
+  fashn:
+    api-key: test-api-key
+    webhook-base-url: http://localhost:8080
+    webhook-secret: test-webhook-secret

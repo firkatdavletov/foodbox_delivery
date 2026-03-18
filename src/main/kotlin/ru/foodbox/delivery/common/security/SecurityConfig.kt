@@ -34,10 +34,12 @@ class SecurityConfig(
                 it.requestMatchers("/api/v1/auth/**").permitAll()
                 it.requestMatchers("/api/v1/cart/**").permitAll()
                 it.requestMatchers("/api/v1/catalog/**").permitAll()
+                it.requestMatchers("/api/v1/virtual-try-on/**").permitAll()
                 it.requestMatchers("/api/v1/orders/guest/**").permitAll()
                 it.requestMatchers(HttpMethod.POST, "/api/v1/orders/checkout").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                it.requestMatchers("/ws/virtual-try-on/**").permitAll()
                 it.requestMatchers("/api/v1/admin/login").permitAll()
                 it.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 it.requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -74,6 +76,14 @@ class SecurityConfig(
         source.registerCorsConfiguration(
             "/api/v1/public/**",
             buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/virtual-try-on/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/ws/virtual-try-on/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins + corsProps.adminAllowedOrigins)
         )
 
         // Админка

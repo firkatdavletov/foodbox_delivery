@@ -24,6 +24,11 @@ tags:
     description: Admin notification operations
   - name: Media Admin
     description: Admin media upload session operations
+  - name: Virtual Try-On
+    description: |
+      Client virtual try-on sessions, FASHN webhook integration, and websocket update flow.
+      Websocket handshake endpoint: `/ws/virtual-try-on` (STOMP over SockJS).
+      Subscription destination is returned per session in `websocketDestination`.
 paths:
   /api/v1/auth/methods:
     get:
@@ -87,6 +92,142 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/virtual-try-on/sessions:
+    post:
+      tags: [Virtual Try-On]
+      operationId: createVirtualTryOnSession
+      summary: Start a virtual try-on session
+      description: |
+        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        The backend resolves the garment image from the active product or variant and submits the request to FASHN.
+        The response includes websocket connection details for real-time status updates.
+      parameters:
+        - in: header
+          name: X-Install-Id
+          required: false
+          schema:
+            type: string
+          description: Guest installation identifier used when no bearer token is provided.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVirtualTryOnSessionRequest'
+      responses:
+        '200':
+          description: Virtual try-on session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VirtualTryOnSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/virtual-try-on/sessions/{sessionId}:
+    get:
+      tags: [Virtual Try-On]
+      operationId: getVirtualTryOnSession
+      summary: Get a virtual try-on session
+      description: |
+        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        Only the owner of the session can access it.
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: X-Install-Id
+          required: false
+          schema:
+            type: string
+          description: Guest installation identifier used when no bearer token is provided.
+      responses:
+        '200':
+          description: Virtual try-on session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VirtualTryOnSessionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/virtual-try-on/sessions/{sessionId}/sync:
+    post:
+      tags: [Virtual Try-On]
+      operationId: syncVirtualTryOnSession
+      summary: Force sync of a pending virtual try-on session with FASHN status API
+      description: |
+        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        If the session is still pending, the backend fetches the latest state from FASHN and pushes any update to websocket subscribers.
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: X-Install-Id
+          required: false
+          schema:
+            type: string
+          description: Guest installation identifier used when no bearer token is provided.
+      responses:
+        '200':
+          description: Synchronized virtual try-on session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VirtualTryOnSessionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/virtual-try-on/webhooks/fashn:
+    post:
+      tags: [Virtual Try-On]
+      operationId: handleFashnVirtualTryOnWebhook
+      summary: Receive FASHN webhook updates for virtual try-on sessions
+      parameters:
+        - in: query
+          name: token
+          required: false
+          schema:
+            type: string
+          description: Shared webhook secret appended to the configured FASHN `webhook_url`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FashnWebhookRequest'
+      responses:
+        '204':
+          description: Webhook accepted
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -2277,3 +2418,162 @@ components:
     MediaImageStatus:
       type: string
       enum: [PENDING, READY]
+
+    CreateVirtualTryOnSessionRequest:
+      type: object
+      required: [productId, modelImage]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
+        modelImage:
+          type: string
+          minLength: 1
+          description: Public image URL or base64 data URI accepted by FASHN as `model_image`.
+        category:
+          $ref: '#/components/schemas/VirtualTryOnCategory'
+        garmentPhotoType:
+          $ref: '#/components/schemas/VirtualTryOnGarmentPhotoType'
+        mode:
+          $ref: '#/components/schemas/VirtualTryOnMode'
+        moderationLevel:
+          $ref: '#/components/schemas/VirtualTryOnModerationLevel'
+        segmentationFree:
+          type: boolean
+          default: true
+        seed:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+          nullable: true
+        numSamples:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 4
+          nullable: true
+        outputFormat:
+          $ref: '#/components/schemas/VirtualTryOnOutputFormat'
+
+    VirtualTryOnSessionResponse:
+      type: object
+      required:
+        [
+          id,
+          productId,
+          garmentImageUrl,
+          status,
+          outputImages,
+          websocketEndpoint,
+          websocketDestination,
+          createdAt,
+          updatedAt,
+        ]
+      description: |
+        Session snapshot returned by REST endpoints and broadcast to websocket subscribers.
+        To receive live updates, connect to `websocketEndpoint` and subscribe to `websocketDestination`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+          nullable: true
+        garmentImageUrl:
+          type: string
+        status:
+          $ref: '#/components/schemas/VirtualTryOnSessionStatus'
+        providerStatus:
+          type: string
+          nullable: true
+          description: Raw provider state returned by FASHN, for example `starting`, `processing`, `completed`, `failed`.
+        outputImages:
+          type: array
+          items:
+            type: string
+        error:
+          $ref: '#/components/schemas/VirtualTryOnSessionErrorResponse'
+        websocketEndpoint:
+          type: string
+          description: STOMP/SockJS websocket endpoint path on this backend.
+        websocketDestination:
+          type: string
+          description: Topic destination to subscribe to for session updates.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    VirtualTryOnSessionErrorResponse:
+      type: object
+      nullable: true
+      properties:
+        name:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    FashnWebhookRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        output:
+          type: array
+          items:
+            type: string
+        error:
+          $ref: '#/components/schemas/FashnWebhookErrorRequest'
+
+    FashnWebhookErrorRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    VirtualTryOnCategory:
+      type: string
+      enum: [auto, tops, bottoms, one-pieces]
+
+    VirtualTryOnGarmentPhotoType:
+      type: string
+      enum: [auto, flat-lay, model]
+
+    VirtualTryOnMode:
+      type: string
+      enum: [performance, balanced, quality]
+
+    VirtualTryOnModerationLevel:
+      type: string
+      enum: [conservative, permissive, none]
+
+    VirtualTryOnOutputFormat:
+      type: string
+      enum: [png, jpeg]
+
+    VirtualTryOnSessionStatus:
+      type: string
+      enum: [pending, completed, failed]
