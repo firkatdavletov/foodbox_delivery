@@ -11,31 +11,31 @@ class TelegramOrderMessageFormatter {
 
     fun formatOrderCreated(order: Order): String {
         return buildString {
-            appendLine("New order received")
-            appendLine("Number: ${order.orderNumber}")
-            appendLine("Status: ${order.status}")
-            appendLine("Delivery: ${order.delivery.methodName}")
-            appendLine("Total: ${formatMoney(order.totalMinor)}")
-            appendLine("Customer: ${order.customerName ?: "N/A"}")
-            appendLine("Phone: ${order.customerPhone ?: "N/A"}")
-            appendLine("Address: ${deliveryAddress(order)}")
-            appendLine("Items:")
+            appendLine("Получен новый заказ")
+            appendLine("Номер: ${order.orderNumber}")
+            appendLine("Статус: ${order.status}")
+            appendLine("Способ доставки: ${order.delivery.methodName}")
+            appendLine("Сумма: ${formatMoney(order.totalMinor)}")
+            appendLine("Покупатель: ${order.customerName ?: "N/A"}")
+            appendLine("Телефон: ${order.customerPhone ?: "N/A"}")
+            appendLine("Адрес: ${deliveryAddress(order)}")
+            appendLine("Товары:")
             append(itemsBlock(order))
             appendLine()
-            append("Created at: ${order.createdAt}")
+            append("Время создания: ${order.createdAt}")
         }
     }
 
     fun formatOrderStatusChanged(order: Order, previousStatus: OrderStatus): String {
         return buildString {
-            appendLine("Order status changed")
-            appendLine("Number: ${order.orderNumber}")
-            appendLine("Status: $previousStatus -> ${order.status}")
-            appendLine("Delivery: ${order.delivery.methodName}")
-            appendLine("Total: ${formatMoney(order.totalMinor)}")
-            appendLine("Customer: ${order.customerName ?: "N/A"}")
-            appendLine("Phone: ${order.customerPhone ?: "N/A"}")
-            append("Updated at: ${order.updatedAt}")
+            appendLine("Статус заказа изменен")
+            appendLine("Номер: ${order.orderNumber}")
+            appendLine("Статус: $previousStatus -> ${order.status}")
+            appendLine("Способ доставки: ${order.delivery.methodName}")
+            appendLine("Сумма: ${formatMoney(order.totalMinor)}")
+            appendLine("Покупатель: ${order.customerName ?: "N/A"}")
+            appendLine("Телефон: ${order.customerPhone ?: "N/A"}")
+            append("Время обновления: ${order.updatedAt}")
         }
     }
 
