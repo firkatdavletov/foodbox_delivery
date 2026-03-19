@@ -39,6 +39,17 @@
 | `S3_ENDPOINT` | `https://storage.yandexcloud.net` |
 | `S3_REGION` | `ru-central1` |
 | `S3_PATH_STYLE_ACCESS` | `true` |
+| `YANDEX_DELIVERY_ENABLED` | `false` |
+| `YANDEX_DELIVERY_BASE_URL` | `https://b2b-authproxy.taxi.yandex.net` |
+| `YANDEX_DELIVERY_CONNECT_TIMEOUT_MS` | `3000` |
+| `YANDEX_DELIVERY_READ_TIMEOUT_MS` | `10000` |
+
+Для включения доставки в ПВЗ Яндекс Маркет дополнительно задайте:
+
+| Переменная | Используется в свойстве | Назначение |
+| --- | --- | --- |
+| `YANDEX_DELIVERY_TOKEN` | `yandex.delivery.token` | Bearer-токен API Яндекс Доставки |
+| `YANDEX_DELIVERY_SOURCE_STATION_ID` | `yandex.delivery.source-station-id` | `platform_station_id` вашего склада в Яндекс Доставке |
 
 ### Быстрый запуск
 

@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import ru.foodbox.delivery.modules.cart.domain.CartOwnerType
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
@@ -48,4 +49,12 @@ class CartEntity(
         fetch = FetchType.LAZY,
     )
     var items: MutableList<CartItemEntity> = mutableListOf(),
+
+    @OneToOne(
+        mappedBy = "cart",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+        fetch = FetchType.LAZY,
+    )
+    var deliveryDraft: CartDeliveryDraftEntity? = null,
 )

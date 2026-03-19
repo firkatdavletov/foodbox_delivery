@@ -7,9 +7,9 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
-import ru.foodbox.delivery.modules.orders.domain.OrderDeliveryType
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import java.time.Instant
 import java.util.UUID
@@ -47,13 +47,6 @@ class OrderEntity(
     @Column(nullable = false, length = 32)
     var status: OrderStatus,
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "delivery_type", nullable = false, length = 32)
-    var deliveryType: OrderDeliveryType,
-
-    @Column(name = "delivery_address", columnDefinition = "text")
-    var deliveryAddress: String? = null,
-
     @Column(columnDefinition = "text")
     var comment: String? = null,
 
@@ -78,4 +71,11 @@ class OrderEntity(
         orphanRemoval = true,
     )
     var items: MutableList<OrderItemEntity> = mutableListOf(),
+
+    @OneToOne(
+        mappedBy = "order",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+    )
+    var delivery: OrderDeliverySnapshotEntity? = null,
 )

@@ -2,12 +2,15 @@ package ru.foodbox.delivery.modules.orders.infrastructure.repository
 
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.orders.domain.Order
+import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
+import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderDeliverySnapshotEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderJpaRepository
+import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 
@@ -28,8 +31,6 @@ class OrderRepositoryImpl(
             customerPhone = order.customerPhone,
             customerEmail = order.customerEmail,
             status = order.status,
-            deliveryType = order.deliveryType,
-            deliveryAddress = order.deliveryAddress,
             comment = order.comment,
             subtotalMinor = order.subtotalMinor,
             deliveryFeeMinor = order.deliveryFeeMinor,
@@ -45,8 +46,6 @@ class OrderRepositoryImpl(
         entity.customerPhone = order.customerPhone
         entity.customerEmail = order.customerEmail
         entity.status = order.status
-        entity.deliveryType = order.deliveryType
-        entity.deliveryAddress = order.deliveryAddress
         entity.comment = order.comment
         entity.subtotalMinor = order.subtotalMinor
         entity.deliveryFeeMinor = order.deliveryFeeMinor
@@ -68,6 +67,36 @@ class OrderRepositoryImpl(
                     totalMinor = item.totalMinor,
                 )
             }
+        )
+
+        entity.delivery = entity.delivery?.apply {
+            method = order.delivery.method
+            methodName = order.delivery.methodName
+            priceMinor = order.delivery.priceMinor
+            currency = order.delivery.currency
+            zoneCode = order.delivery.zoneCode
+            zoneName = order.delivery.zoneName
+            estimatedDays = order.delivery.estimatedDays
+            pickupPointId = order.delivery.pickupPointId
+            pickupPointExternalId = order.delivery.pickupPointExternalId
+            pickupPointName = order.delivery.pickupPointName
+            pickupPointAddress = order.delivery.pickupPointAddress
+            address = DeliveryAddressEmbeddable.fromDomain(order.delivery.address)
+        } ?: OrderDeliverySnapshotEntity(
+            id = UUID.randomUUID(),
+            order = entity,
+            method = order.delivery.method,
+            methodName = order.delivery.methodName,
+            priceMinor = order.delivery.priceMinor,
+            currency = order.delivery.currency,
+            zoneCode = order.delivery.zoneCode,
+            zoneName = order.delivery.zoneName,
+            estimatedDays = order.delivery.estimatedDays,
+            pickupPointId = order.delivery.pickupPointId,
+            pickupPointExternalId = order.delivery.pickupPointExternalId,
+            pickupPointName = order.delivery.pickupPointName,
+            pickupPointAddress = order.delivery.pickupPointAddress,
+            address = DeliveryAddressEmbeddable.fromDomain(order.delivery.address),
         )
 
         return toDomain(jpaRepository.save(entity))
@@ -105,8 +134,8 @@ class OrderRepositoryImpl(
             customerPhone = entity.customerPhone,
             customerEmail = entity.customerEmail,
             status = entity.status,
-            deliveryType = entity.deliveryType,
-            deliveryAddress = entity.deliveryAddress,
+            delivery = entity.delivery?.toDomain()
+                ?: error("Order delivery snapshot is missing for order ${entity.id}"),
             comment = entity.comment,
             items = entity.items.map { item ->
                 OrderItem(
@@ -125,6 +154,23 @@ class OrderRepositoryImpl(
             totalMinor = entity.totalMinor,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
+        )
+    }
+
+    private fun OrderDeliverySnapshotEntity.toDomain(): OrderDeliverySnapshot {
+        return OrderDeliverySnapshot(
+            method = method,
+            methodName = methodName,
+            priceMinor = priceMinor,
+            currency = currency,
+            zoneCode = zoneCode,
+            zoneName = zoneName,
+            estimatedDays = estimatedDays,
+            pickupPointId = pickupPointId,
+            pickupPointExternalId = pickupPointExternalId,
+            pickupPointName = pickupPointName,
+            pickupPointAddress = pickupPointAddress,
+            address = address?.toDomain(),
         )
     }
 }

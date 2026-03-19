@@ -8,6 +8,7 @@ data class Cart(
     var owner: CartOwner,
     var status: CartStatus,
     val items: MutableList<CartItem>,
+    var deliveryDraft: CartDeliveryDraft?,
     var totalPriceMinor: Long,
     val createdAt: Instant,
     var updatedAt: Instant,
@@ -21,7 +22,7 @@ data class Cart(
         } else {
             existing.increase(item.quantity)
         }
-        touch()
+        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
     }
 
     fun changeQuantity(productId: UUID, variantId: UUID?, quantity: Int) {
@@ -42,7 +43,7 @@ data class Cart(
         val item = matchingItems.first()
 
         item.changeQuantity(quantity)
-        touch()
+        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
     }
 
     fun removeItem(productId: UUID, variantId: UUID?) {
@@ -52,37 +53,54 @@ data class Cart(
         } else {
             items.removeIf { it.productId == productId && it.variantId == variantId }
         }
-        touch()
+        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
     }
 
     fun clear() {
         ensureActive()
         items.clear()
-        touch()
+        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
+    }
+
+    fun upsertDeliveryDraft(draft: CartDeliveryDraft) {
+        ensureActive()
+        deliveryDraft = draft
+        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
+    }
+
+    fun clearDeliveryDraft() {
+        ensureActive()
+        deliveryDraft = null
+        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
     }
 
     fun reassignOwner(newOwner: CartOwner) {
         ensureActive()
         owner = newOwner
-        touch()
+        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
     }
 
     fun markMerged() {
         status = CartStatus.MERGED
-        touch()
+        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
     }
 
     fun markOrdered() {
         status = CartStatus.ORDERED
-        touch()
+        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
     }
 
     private fun ensureActive() {
         require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
     }
 
-    private fun touch() {
+    private fun touch(recalculateTotal: Boolean, invalidateDeliveryQuote: Boolean) {
         updatedAt = Instant.now()
-        totalPriceMinor = items.sumOf { it.lineTotalMinor() }
+        if (recalculateTotal) {
+            totalPriceMinor = items.sumOf { it.lineTotalMinor() }
+        }
+        if (invalidateDeliveryQuote) {
+            deliveryDraft = deliveryDraft?.invalidateQuote(updatedAt)
+        }
     }
 }

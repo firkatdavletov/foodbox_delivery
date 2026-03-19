@@ -8,13 +8,19 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.CartService
+import ru.foodbox.delivery.modules.delivery.application.DeliveryService
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryValidationException
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.event.OrderCreatedEvent
 import ru.foodbox.delivery.modules.orders.application.event.OrderStatusChangedEvent
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
-import ru.foodbox.delivery.modules.orders.domain.OrderDeliveryType
+import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
@@ -28,6 +34,7 @@ class OrderServiceImpl(
     private val cartService: CartService,
     private val productReadService: ProductReadService,
     private val userRepository: UserRepository,
+    private val deliveryService: DeliveryService,
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) : OrderService {
 
@@ -40,7 +47,8 @@ class OrderServiceImpl(
             throw IllegalArgumentException("Cart is empty")
         }
 
-        val now = Instant.now()
+        val deliveryDraft = cart.deliveryDraft
+            ?: throw DeliveryValidationException("Cart delivery draft is not selected")
 
         val user = (actor as? CurrentActor.User)?.let { userRepository.findById(it.userId) }
 
@@ -54,22 +62,27 @@ class OrderServiceImpl(
             ?: user?.email
 
         val normalizedPhone = customerPhone?.let(::normalizePhone)
-
-        val items = cart.items.map {
-            OrderItem(
-                id = UUID.randomUUID(),
-                productId = it.productId,
-                variantId = it.variantId,
-                title = it.title,
-                unit = it.unit,
-                quantity = it.quantity,
-                priceMinor = it.priceMinor,
-                totalMinor = it.lineTotalMinor(),
-            )
-        }
-
+        val now = Instant.now()
+        val items = cart.items.map { it.toOrderItem() }
         val subtotal = items.sumOf { it.totalMinor }
-        val deliveryFee = deliveryFee(command.deliveryType)
+        val deliveryQuote = requireAvailableQuote(
+            deliveryService.calculateQuote(
+                DeliveryQuoteContext(
+                    cartId = cart.id,
+                    subtotalMinor = subtotal,
+                    itemCount = cart.items.sumOf { it.quantity },
+                    deliveryMethod = deliveryDraft.deliveryMethod,
+                    deliveryAddress = deliveryDraft.deliveryAddress,
+                    pickupPointId = deliveryDraft.pickupPointId,
+                    pickupPointExternalId = deliveryDraft.pickupPointExternalId,
+                )
+            )
+        )
+        val deliverySnapshot = buildDeliverySnapshot(
+            method = deliveryDraft.deliveryMethod,
+            address = deliveryDraft.deliveryAddress,
+            quote = deliveryQuote,
+        )
 
         val order = Order(
             id = UUID.randomUUID(),
@@ -81,13 +94,12 @@ class OrderServiceImpl(
             customerPhone = normalizedPhone,
             customerEmail = customerEmail,
             status = OrderStatus.PENDING,
-            deliveryType = command.deliveryType,
-            deliveryAddress = command.deliveryAddress?.trim()?.takeIf { it.isNotBlank() },
+            delivery = deliverySnapshot,
             comment = command.comment?.trim()?.takeIf { it.isNotBlank() },
             items = items,
             subtotalMinor = subtotal,
-            deliveryFeeMinor = deliveryFee,
-            totalMinor = subtotal + deliveryFee,
+            deliveryFeeMinor = deliverySnapshot.priceMinor,
+            totalMinor = subtotal + deliverySnapshot.priceMinor,
             createdAt = now,
             updatedAt = now,
         )
@@ -130,7 +142,23 @@ class OrderServiceImpl(
         }
 
         val subtotal = orderItems.sumOf { it.totalMinor }
-        val deliveryFee = deliveryFee(command.deliveryType)
+        val deliveryQuote = requireAvailableQuote(
+            deliveryService.calculateQuote(
+                DeliveryQuoteContext(
+                    subtotalMinor = subtotal,
+                    itemCount = orderItems.sumOf { it.quantity },
+                    deliveryMethod = command.deliveryMethod,
+                    deliveryAddress = command.deliveryAddress,
+                    pickupPointId = command.pickupPointId,
+                    pickupPointExternalId = command.pickupPointExternalId,
+                )
+            )
+        )
+        val deliverySnapshot = buildDeliverySnapshot(
+            method = command.deliveryMethod,
+            address = command.deliveryAddress,
+            quote = deliveryQuote,
+        )
 
         val order = Order(
             id = UUID.randomUUID(),
@@ -142,13 +170,12 @@ class OrderServiceImpl(
             customerPhone = normalizedPhone,
             customerEmail = command.customerEmail?.trim()?.lowercase()?.takeIf { it.isNotBlank() },
             status = OrderStatus.PENDING,
-            deliveryType = command.deliveryType,
-            deliveryAddress = command.deliveryAddress?.trim()?.takeIf { it.isNotBlank() },
+            delivery = deliverySnapshot,
             comment = command.comment?.trim()?.takeIf { it.isNotBlank() },
             items = orderItems,
             subtotalMinor = subtotal,
-            deliveryFeeMinor = deliveryFee,
-            totalMinor = subtotal + deliveryFee,
+            deliveryFeeMinor = deliverySnapshot.priceMinor,
+            totalMinor = subtotal + deliverySnapshot.priceMinor,
             createdAt = now,
             updatedAt = now,
         )
@@ -216,11 +243,35 @@ class OrderServiceImpl(
         }
     }
 
-    private fun deliveryFee(deliveryType: OrderDeliveryType): Long {
-        return when (deliveryType) {
-            OrderDeliveryType.PICKUP -> 0
-            OrderDeliveryType.DELIVERY -> 19_900
+    private fun buildDeliverySnapshot(
+        method: DeliveryMethodType,
+        address: DeliveryAddress?,
+        quote: DeliveryQuote,
+    ): OrderDeliverySnapshot {
+        val priceMinor = quote.priceMinor
+            ?: throw DeliveryValidationException("Delivery price is unavailable")
+
+        return OrderDeliverySnapshot(
+            method = method,
+            methodName = method.displayName,
+            priceMinor = priceMinor,
+            currency = quote.currency,
+            zoneCode = quote.zoneCode,
+            zoneName = quote.zoneName,
+            estimatedDays = quote.estimatedDays,
+            pickupPointId = quote.pickupPointId,
+            pickupPointExternalId = quote.pickupPointExternalId,
+            pickupPointName = quote.pickupPointName,
+            pickupPointAddress = quote.pickupPointAddress,
+            address = if (method == DeliveryMethodType.COURIER) address?.normalized() else null,
+        )
+    }
+
+    private fun requireAvailableQuote(quote: DeliveryQuote): DeliveryQuote {
+        if (!quote.available) {
+            throw DeliveryValidationException(quote.message ?: "Delivery is unavailable")
         }
+        return quote
     }
 
     private fun normalizePhone(phone: String): String {
@@ -239,5 +290,18 @@ class OrderServiceImpl(
 
     private fun generateOrderNumber(): String {
         return UUID.randomUUID().toString().take(6).uppercase()
+    }
+
+    private fun ru.foodbox.delivery.modules.cart.domain.CartItem.toOrderItem(): OrderItem {
+        return OrderItem(
+            id = UUID.randomUUID(),
+            productId = productId,
+            variantId = variantId,
+            title = title,
+            unit = unit,
+            quantity = quantity,
+            priceMinor = priceMinor,
+            totalMinor = lineTotalMinor(),
+        )
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -13,11 +14,15 @@ import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
 import ru.foodbox.delivery.modules.cart.api.dto.AddCartItemRequest
+import ru.foodbox.delivery.modules.cart.api.dto.CartDeliveryDraftResponse
 import ru.foodbox.delivery.modules.cart.api.dto.CartResponse
 import ru.foodbox.delivery.modules.cart.api.dto.ChangeCartItemQuantityRequest
+import ru.foodbox.delivery.modules.cart.api.dto.PutCartDeliveryRequest
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
+import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
+import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import java.util.UUID
 
 @RestController
@@ -31,6 +36,29 @@ class CartController(
         @CurrentActorParam actor: CurrentActor,
     ): CartResponse {
         return cartService.getOrCreateActiveCart(actor).toResponse()
+    }
+
+    @GetMapping("/delivery")
+    fun getDeliveryDraft(
+        @CurrentActorParam actor: CurrentActor,
+    ): CartDeliveryDraftResponse? {
+        return cartService.getDeliveryDraft(actor).toResponse()
+    }
+
+    @PutMapping("/delivery")
+    fun putDeliveryDraft(
+        @CurrentActorParam actor: CurrentActor,
+        @Valid @RequestBody request: PutCartDeliveryRequest,
+    ): CartDeliveryDraftResponse {
+        return cartService.updateDeliveryDraft(
+            actor = actor,
+            command = UpdateCartDeliveryCommand(
+                deliveryMethod = request.deliveryMethod,
+                deliveryAddress = request.address?.toDomain(),
+                pickupPointId = request.pickupPointId,
+                pickupPointExternalId = request.pickupPointExternalId,
+            ),
+        ).toResponse()!!
     }
 
     @PostMapping("/items")

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
+import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import ru.foodbox.delivery.modules.orders.api.dto.CheckoutRequest
 import ru.foodbox.delivery.modules.orders.api.dto.GuestCheckoutRequest
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
@@ -36,8 +37,6 @@ class OrderController(
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,
-                deliveryType = request.deliveryType,
-                deliveryAddress = request.deliveryAddress,
                 comment = request.comment,
             ),
         ).toResponse()
@@ -54,8 +53,10 @@ class OrderController(
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,
-                deliveryType = request.deliveryType,
-                deliveryAddress = request.deliveryAddress,
+                deliveryMethod = request.deliveryMethod,
+                deliveryAddress = request.address?.toDomain(),
+                pickupPointId = request.pickupPointId,
+                pickupPointExternalId = request.pickupPointExternalId,
                 comment = request.comment,
             ),
             installId = installId?.trim()?.takeIf { it.isNotBlank() },

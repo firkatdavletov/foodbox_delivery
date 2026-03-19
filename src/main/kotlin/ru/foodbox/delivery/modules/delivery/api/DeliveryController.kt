@@ -1,0 +1,67 @@
+package ru.foodbox.delivery.modules.delivery.api
+
+import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import ru.foodbox.delivery.modules.delivery.api.dto.CalculateDeliveryQuoteRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointsRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointsResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
+import ru.foodbox.delivery.modules.delivery.application.DeliveryService
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
+
+@RestController
+@RequestMapping("/api/v1/delivery")
+class DeliveryController(
+    private val deliveryService: DeliveryService,
+) {
+
+    @GetMapping("/methods")
+    fun getMethods(): DeliveryMethodsResponse {
+        return toMethodsResponse(
+            methods = deliveryService.getAvailableMethods(),
+            pickupPoints = deliveryService.getActivePickupPoints(),
+        )
+    }
+
+    @PostMapping("/yandex/location-detect")
+    fun detectYandexLocations(
+        @Valid @RequestBody request: YandexLocationDetectRequest,
+    ): YandexLocationDetectResponse {
+        return toYandexLocationDetectResponse(
+            deliveryService.detectYandexLocations(request.query),
+        )
+    }
+
+    @PostMapping("/yandex/pickup-points")
+    fun getYandexPickupPoints(
+        @Valid @RequestBody request: YandexPickupPointsRequest,
+    ): YandexPickupPointsResponse {
+        return toYandexPickupPointsResponse(
+            deliveryService.getYandexPickupPoints(request.geoId),
+        )
+    }
+
+    @PostMapping("/quotes")
+    fun calculateQuote(
+        @Valid @RequestBody request: CalculateDeliveryQuoteRequest,
+    ): DeliveryQuoteResponse {
+        return deliveryService.calculateQuote(
+            DeliveryQuoteContext(
+                subtotalMinor = request.subtotalMinor,
+                itemCount = request.itemCount,
+                deliveryMethod = request.deliveryMethod,
+                deliveryAddress = request.address?.toDomain(),
+                pickupPointId = request.pickupPointId,
+                pickupPointExternalId = request.pickupPointExternalId,
+            )
+        ).toResponse()
+    }
+}

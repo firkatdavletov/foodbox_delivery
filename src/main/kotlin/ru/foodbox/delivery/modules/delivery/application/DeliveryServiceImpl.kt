@@ -1,0 +1,38 @@
+package ru.foodbox.delivery.modules.delivery.application
+
+import org.springframework.stereotype.Service
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryValidationException
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.repository.PickupPointRepository
+
+@Service
+class DeliveryServiceImpl(
+    private val pickupPointRepository: PickupPointRepository,
+    private val yandexDeliveryGateway: YandexDeliveryGateway,
+    private val calculators: List<DeliveryCostCalculator>,
+) : DeliveryService {
+
+    override fun getAvailableMethods(): List<DeliveryMethodType> {
+        return DeliveryMethodType.entries.filter {
+            it != DeliveryMethodType.YANDEX_PICKUP_POINT || yandexDeliveryGateway.isConfigured()
+        }
+    }
+
+    override fun getActivePickupPoints() = pickupPointRepository.findAllActive()
+
+    override fun detectYandexLocations(query: String) = yandexDeliveryGateway.detectLocations(query)
+
+    override fun getYandexPickupPoints(geoId: Long) = yandexDeliveryGateway.listPickupPoints(geoId)
+
+    override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
+        require(context.subtotalMinor >= 0) { "subtotalMinor must be greater than or equal to zero" }
+        require(context.itemCount > 0) { "itemCount must be greater than zero" }
+
+        val calculator = calculators.firstOrNull { it.supports(context.deliveryMethod) }
+            ?: throw DeliveryValidationException("Unsupported delivery method: ${context.deliveryMethod}")
+
+        return calculator.calculate(context)
+    }
+}

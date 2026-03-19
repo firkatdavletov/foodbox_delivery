@@ -19,6 +19,10 @@ spring:
 telegram:
   enabled: false
 
+yandex:
+  delivery:
+    enabled: false
+
 virtual-try-on:
   fashn:
     api-key: test-api-key

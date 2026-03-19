@@ -2,7 +2,6 @@ package ru.foodbox.delivery.modules.notifications.application
 
 import org.springframework.stereotype.Component
 import ru.foodbox.delivery.modules.orders.domain.Order
-import ru.foodbox.delivery.modules.orders.domain.OrderDeliveryType
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -15,11 +14,11 @@ class TelegramOrderMessageFormatter {
             appendLine("New order received")
             appendLine("Number: ${order.orderNumber}")
             appendLine("Status: ${order.status}")
-            appendLine("Delivery: ${deliveryType(order.deliveryType)}")
+            appendLine("Delivery: ${order.delivery.methodName}")
             appendLine("Total: ${formatMoney(order.totalMinor)}")
             appendLine("Customer: ${order.customerName ?: "N/A"}")
             appendLine("Phone: ${order.customerPhone ?: "N/A"}")
-            appendLine("Address: ${order.deliveryAddress ?: "Pickup"}")
+            appendLine("Address: ${deliveryAddress(order)}")
             appendLine("Items:")
             append(itemsBlock(order))
             appendLine()
@@ -32,7 +31,7 @@ class TelegramOrderMessageFormatter {
             appendLine("Order status changed")
             appendLine("Number: ${order.orderNumber}")
             appendLine("Status: $previousStatus -> ${order.status}")
-            appendLine("Delivery: ${deliveryType(order.deliveryType)}")
+            appendLine("Delivery: ${order.delivery.methodName}")
             appendLine("Total: ${formatMoney(order.totalMinor)}")
             appendLine("Customer: ${order.customerName ?: "N/A"}")
             appendLine("Phone: ${order.customerPhone ?: "N/A"}")
@@ -57,11 +56,11 @@ class TelegramOrderMessageFormatter {
         return "${BigDecimal.valueOf(minor, 2).setScale(2, RoundingMode.HALF_UP)} RUB"
     }
 
-    private fun deliveryType(deliveryType: OrderDeliveryType): String {
-        return when (deliveryType) {
-            OrderDeliveryType.PICKUP -> "PICKUP"
-            OrderDeliveryType.DELIVERY -> "DELIVERY"
-        }
+    private fun deliveryAddress(order: Order): String {
+        return order.delivery.address?.toSingleLine()
+            ?: order.delivery.pickupPointAddress
+            ?: order.delivery.pickupPointName
+            ?: "Pickup"
     }
 
     companion object {

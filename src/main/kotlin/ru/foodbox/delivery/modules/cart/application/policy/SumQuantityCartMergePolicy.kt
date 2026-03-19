@@ -2,6 +2,7 @@ package ru.foodbox.delivery.modules.cart.application.policy
 
 import org.springframework.stereotype.Component
 import ru.foodbox.delivery.modules.cart.domain.Cart
+import java.time.Instant
 
 @Component
 class SumQuantityCartMergePolicy : CartMergePolicy {
@@ -16,7 +17,13 @@ class SumQuantityCartMergePolicy : CartMergePolicy {
                 existing.increase(sourceItem.quantity)
             }
         }
+        val now = Instant.now()
         target.totalPriceMinor = target.items.sumOf { it.lineTotalMinor() }
+        target.deliveryDraft = when {
+            target.deliveryDraft == null -> source.deliveryDraft?.invalidateQuote(now)
+            else -> target.deliveryDraft?.invalidateQuote(now)
+        }
+        target.updatedAt = now
         return target
     }
 }

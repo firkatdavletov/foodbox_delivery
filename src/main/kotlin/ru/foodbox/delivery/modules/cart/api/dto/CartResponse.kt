@@ -8,4 +8,5 @@ data class CartResponse(
     val status: CartStatus,
     val items: List<CartItemResponse>,
     val totalPriceMinor: Long,
+    val delivery: CartDeliveryDraftResponse?,
 )

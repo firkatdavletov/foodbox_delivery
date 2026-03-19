@@ -1,5 +1,7 @@
 package ru.foodbox.delivery.modules.orders.api
 
+import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderDeliveryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderItemResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
 import ru.foodbox.delivery.modules.orders.domain.Order
@@ -15,8 +17,21 @@ internal fun Order.toResponse(): OrderResponse {
         customerPhone = customerPhone,
         customerEmail = customerEmail,
         status = status,
-        deliveryType = deliveryType,
-        deliveryAddress = deliveryAddress,
+        deliveryMethod = delivery.method,
+        delivery = OrderDeliveryResponse(
+            method = delivery.method,
+            methodName = delivery.methodName,
+            priceMinor = delivery.priceMinor,
+            currency = delivery.currency,
+            zoneCode = delivery.zoneCode,
+            zoneName = delivery.zoneName,
+            estimatedDays = delivery.estimatedDays,
+            pickupPointId = delivery.pickupPointId,
+            pickupPointExternalId = delivery.pickupPointExternalId,
+            pickupPointName = delivery.pickupPointName,
+            pickupPointAddress = delivery.pickupPointAddress,
+            address = delivery.address?.toResponse(),
+        ),
         comment = comment,
         items = items.map {
             OrderItemResponse(
