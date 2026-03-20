@@ -85,7 +85,8 @@ class YandexPickupPointDeliveryCostCalculatorTest {
 
         override fun detectLocations(query: String): List<YandexDeliveryLocationVariant> = emptyList()
 
-        override fun listPickupPoints(geoId: Long): List<YandexPickupPointOption> = listOfNotNull(pickupPoint)
+        override fun listPickupPoints(geoId: Long, paymentMethod: String?): List<YandexPickupPointOption> =
+            listOfNotNull(pickupPoint)
 
         override fun getPickupPoint(pickupPointId: String): YandexPickupPointOption? = pickupPoint
 

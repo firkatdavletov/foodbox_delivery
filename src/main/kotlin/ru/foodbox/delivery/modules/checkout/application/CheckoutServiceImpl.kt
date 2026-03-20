@@ -30,7 +30,7 @@ class CheckoutServiceImpl(
         return deliveryService.getAvailableMethods().mapNotNull { deliveryMethod ->
             val paymentMethods = when (deliveryMethod) {
                 DeliveryMethodType.YANDEX_PICKUP_POINT -> resolveYandexPaymentMethods(
-                    yandexGeoId = query.yandexGeoId,
+                    pickupPointId = query.pickupPointId,
                     availablePaymentMethods = availablePaymentMethods,
                 )
                 else -> resolveConfiguredPaymentMethods(
@@ -66,18 +66,19 @@ class CheckoutServiceImpl(
     }
 
     private fun resolveYandexPaymentMethods(
-        yandexGeoId: Long?,
+        pickupPointId: String?,
         availablePaymentMethods: Map<PaymentMethodCode, PaymentMethodInfo>,
     ): List<PaymentMethodInfo> {
-        val geoId = yandexGeoId ?: run {
-            logger.debug("Checkout Yandex pickup point payment methods skipped because yandexGeoId is not provided")
+        val normalizedPickupPointId = pickupPointId?.trim()?.takeIf { it.isNotBlank() } ?: run {
+            logger.debug("Checkout Yandex pickup point payment methods skipped because pickupPointId is not provided")
             return emptyList()
         }
 
         return try {
             val resolvedCodes = linkedSetOf<PaymentMethodCode>()
-            deliveryService.getYandexPickupPoints(geoId)
-                .flatMap { it.paymentMethods }
+            deliveryService.getYandexPickupPoint(normalizedPickupPointId)
+                ?.paymentMethods
+                .orEmpty()
                 .map { it.trim().lowercase() }
                 .forEach { paymentMethod ->
                     when (paymentMethod) {
@@ -95,9 +96,9 @@ class CheckoutServiceImpl(
                             ?.code
                             ?.let(resolvedCodes::add)
                         else -> logger.debug(
-                            "Unsupported Yandex pickup point payment method {} returned for geoId={}",
+                            "Unsupported Yandex pickup point payment method {} returned for pickupPointId={}",
                             paymentMethod,
-                            geoId,
+                            normalizedPickupPointId,
                         )
                     }
                 }
@@ -107,8 +108,8 @@ class CheckoutServiceImpl(
                 .mapNotNull(availablePaymentMethods::get)
         } catch (ex: Exception) {
             logger.warn(
-                "Checkout Yandex pickup point payment methods are unavailable for geoId={} errorType={}",
-                geoId,
+                "Checkout Yandex pickup point payment methods are unavailable for pickupPointId={} errorType={}",
+                normalizedPickupPointId,
                 ex.javaClass.simpleName,
             )
             emptyList()

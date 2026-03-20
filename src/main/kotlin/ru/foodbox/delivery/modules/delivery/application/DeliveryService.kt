@@ -12,5 +12,6 @@ interface DeliveryService {
     fun getActivePickupPoints(): List<PickupPoint>
     fun detectYandexLocations(query: String): List<YandexDeliveryLocationVariant>
     fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption>
+    fun getYandexPickupPoint(pickupPointId: String): YandexPickupPointOption?
     fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote
 }

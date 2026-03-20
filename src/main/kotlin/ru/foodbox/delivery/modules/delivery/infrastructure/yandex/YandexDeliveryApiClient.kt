@@ -57,13 +57,14 @@ class YandexDeliveryApiClient(
         }
     }
 
-    override fun listPickupPoints(geoId: Long): List<YandexPickupPointOption> {
+    override fun listPickupPoints(geoId: Long, paymentMethod: String?): List<YandexPickupPointOption> {
         ensureConfigured()
         require(geoId >= 0) { "geoId must be greater than or equal to zero" }
 
         return listPickupPointsInternal(
             PickupPointsListRequest(
                 geoId = geoId,
+                paymentMethod = paymentMethod?.trim()?.takeIf { it.isNotBlank() },
                 type = PICKUP_POINT_TYPE,
             )
         )
@@ -222,6 +223,8 @@ class YandexDeliveryApiClient(
         val geoId: Long? = null,
         @JsonProperty("pickup_point_ids")
         val pickupPointIds: List<String>? = null,
+        @JsonProperty("payment_method")
+        val paymentMethod: String? = null,
         val type: String = PICKUP_POINT_TYPE,
     )
 

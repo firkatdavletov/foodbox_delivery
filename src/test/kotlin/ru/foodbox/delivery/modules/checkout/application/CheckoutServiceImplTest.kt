@@ -33,6 +33,12 @@ class CheckoutServiceImplTest {
                 ),
                 yandexPickupPoints = listOf(
                     YandexPickupPointOption(
+                        id = "y-0",
+                        name = "Yandex 0",
+                        address = "Address 0",
+                        paymentMethods = listOf("cash_on_receipt"),
+                    ),
+                    YandexPickupPointOption(
                         id = "y-1",
                         name = "Yandex 1",
                         address = "Address 1",
@@ -70,7 +76,7 @@ class CheckoutServiceImplTest {
 
         val options = service.getAvailableOptions(
             CheckoutOptionsQuery(
-                yandexGeoId = 213L,
+                pickupPointId = "y-1",
             )
         )
 
@@ -147,6 +153,10 @@ class CheckoutServiceImplTest {
         override fun detectYandexLocations(query: String): List<YandexDeliveryLocationVariant> = emptyList()
 
         override fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption> = yandexPickupPoints
+
+        override fun getYandexPickupPoint(pickupPointId: String): YandexPickupPointOption? {
+            return yandexPickupPoints.firstOrNull { it.id == pickupPointId }
+        }
 
         override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
             throw UnsupportedOperationException("Not used in checkout tests")

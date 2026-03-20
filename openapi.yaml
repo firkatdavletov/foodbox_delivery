@@ -12,6 +12,8 @@ tags:
     description: Admin authentication and session management
   - name: Cart
     description: Shopping cart operations
+  - name: Checkout
+    description: Checkout option discovery for delivery and payment combinations
   - name: Catalog
     description: Public product and category catalog
   - name: Catalog Admin
@@ -926,6 +928,37 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/checkout/options:
+    get:
+      tags: [Checkout]
+      operationId: getCheckoutOptions
+      summary: List available delivery methods with payment methods for checkout
+      description: |
+        Returns delivery methods currently available in the system and payment methods allowed for each of them.
+        `YANDEX_PICKUP_POINT` is resolved dynamically from Yandex pickup point data and is included only when
+        `pickupPointId` is provided and at least one supported Yandex payment method can be mapped to active
+        payment methods in the backend.
+      parameters:
+        - name: pickupPointId
+          in: query
+          required: false
+          description: |
+            Optional Yandex pickup point id used to resolve `YANDEX_PICKUP_POINT` payment methods
+            for the selected pickup point.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checkout options
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutOptionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/orders/checkout:
     post:
       tags: [Orders]
@@ -1508,6 +1541,48 @@ components:
         refreshToken:
           type: string
           nullable: true
+
+    CheckoutOptionsResponse:
+      type: object
+      required: [options]
+      properties:
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutDeliveryOptionResponse'
+
+    CheckoutDeliveryOptionResponse:
+      type: object
+      required: [code, name, requiresAddress, requiresPickupPoint, paymentMethods]
+      properties:
+        code:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        name:
+          type: string
+        requiresAddress:
+          type: boolean
+        requiresPickupPoint:
+          type: boolean
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutPaymentMethodResponse'
+
+    CheckoutPaymentMethodResponse:
+      type: object
+      required: [code, name, isOnline, isActive]
+      properties:
+        code:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isOnline:
+          type: boolean
+        isActive:
+          type: boolean
 
     AddCartItemRequest:
       type: object
@@ -2394,6 +2469,14 @@ components:
     ProductUnit:
       type: string
       enum: [PIECE, KILOGRAM, GRAM, LITER, MILLILITER]
+
+    DeliveryMethodType:
+      type: string
+      enum: [PICKUP, COURIER, YANDEX_PICKUP_POINT]
+
+    PaymentMethodCode:
+      type: string
+      enum: [CASH, CARD_ON_DELIVERY, CARD_ONLINE, SBP]
 
     CartStatus:
       type: string

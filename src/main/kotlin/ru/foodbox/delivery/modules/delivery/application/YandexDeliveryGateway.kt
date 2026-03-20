@@ -6,7 +6,7 @@ import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
 interface YandexDeliveryGateway {
     fun isConfigured(): Boolean
     fun detectLocations(query: String): List<YandexDeliveryLocationVariant>
-    fun listPickupPoints(geoId: Long): List<YandexPickupPointOption>
+    fun listPickupPoints(geoId: Long, paymentMethod: String? = null): List<YandexPickupPointOption>
     fun getPickupPoint(pickupPointId: String): YandexPickupPointOption?
     fun calculateSelfPickupPrice(
         pickupPointId: String,

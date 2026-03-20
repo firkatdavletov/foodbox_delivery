@@ -34,6 +34,7 @@ class SecurityConfig(
                 it.requestMatchers("/api/v1/auth/**").permitAll()
                 it.requestMatchers("/api/v1/cart/**").permitAll()
                 it.requestMatchers("/api/v1/catalog/**").permitAll()
+                it.requestMatchers("/api/v1/delivery/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/checkout/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/payments/methods").permitAll()
                 it.requestMatchers("/api/v1/payments/**").permitAll()
@@ -70,6 +71,10 @@ class SecurityConfig(
         )
         source.registerCorsConfiguration(
             "/api/v1/catalog/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/delivery/**",
             buildCorsConfiguration(corsProps.siteAllowedOrigins)
         )
         source.registerCorsConfiguration(

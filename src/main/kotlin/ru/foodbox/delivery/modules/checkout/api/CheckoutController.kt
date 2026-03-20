@@ -1,6 +1,5 @@
 package ru.foodbox.delivery.modules.checkout.api
 
-import jakarta.validation.constraints.Min
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -19,13 +18,12 @@ class CheckoutController(
 
     @GetMapping("/options")
     fun getOptions(
-        @RequestParam(name = "yandexGeoId", required = false)
-        @Min(0)
-        yandexGeoId: Long?,
+        @RequestParam(name = "pickupPointId", required = false)
+        pickupPointId: String?,
     ): CheckoutOptionsResponse {
         return checkoutService.getAvailableOptions(
             CheckoutOptionsQuery(
-                yandexGeoId = yandexGeoId,
+                pickupPointId = pickupPointId,
             )
         ).toResponse()
     }

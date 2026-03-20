@@ -7,24 +7,28 @@ enum class DeliveryMethodType(
     val displayName: String,
     val requiresAddress: Boolean,
     val requiresPickupPoint: Boolean,
+    val isActive: Boolean,
 ) {
     PICKUP(
         apiCode = "pickup",
-        displayName = "Pickup",
+        displayName = "Забрать из магазина",
         requiresAddress = false,
         requiresPickupPoint = true,
+        isActive = false,
     ),
     COURIER(
         apiCode = "courier",
-        displayName = "Courier",
+        displayName = "Курьером",
         requiresAddress = true,
         requiresPickupPoint = false,
+        isActive = false,
     ),
     YANDEX_PICKUP_POINT(
         apiCode = "yandex_pickup_point",
         displayName = "Доставка в ПВЗ Яндекс Маркет",
         requiresAddress = false,
         requiresPickupPoint = true,
+        isActive = true,
     ),
 
     ;
