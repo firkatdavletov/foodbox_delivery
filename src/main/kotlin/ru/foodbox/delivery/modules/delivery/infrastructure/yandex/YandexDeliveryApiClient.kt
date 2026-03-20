@@ -108,9 +108,10 @@ class YandexDeliveryApiClient(
         val pricingTotal = response.pricingTotal?.trim().takeIf { !it.isNullOrBlank() }
             ?: throw IllegalStateException("Yandex Delivery API returned empty pricing_total")
         val parsed = parsePricingTotal(pricingTotal)
+        val roundedPriceMinor = roundUpToNearestHundredRubles(parsed.first)
 
         return YandexDeliveryPricingQuote(
-            priceMinor = parsed.first,
+            priceMinor = roundedPriceMinor,
             currency = parsed.second,
             deliveryDays = response.deliveryDays,
         )
@@ -174,6 +175,14 @@ class YandexDeliveryApiClient(
             .longValueExact()
 
         return amountMinor to parts[1]
+    }
+
+    private fun roundUpToNearestHundredRubles(amountMinor: Long): Long {
+        if (amountMinor <= 0L) {
+            return amountMinor
+        }
+
+        return ((amountMinor + HUNDRED_RUBLES_MINOR - 1) / HUNDRED_RUBLES_MINOR) * HUNDRED_RUBLES_MINOR
     }
 
     private fun ensureConfigured() {
@@ -292,6 +301,7 @@ class YandexDeliveryApiClient(
         private const val SELF_PICKUP_TARIFF = "self_pickup"
         private const val DEFAULT_PAYMENT_METHOD = "already_paid"
         private const val MAX_ERROR_BODY_LOG_LENGTH = 300
+        private const val HUNDRED_RUBLES_MINOR = 10_000L
         private val MINOR_UNITS_MULTIPLIER = BigDecimal(100)
     }
 }
