@@ -14,6 +14,8 @@ data class Cart(
     var updatedAt: Instant,
 ) {
 
+    fun itemsSubtotalMinor(): Long = items.sumOf { it.lineTotalMinor() }
+
     fun addItem(item: CartItem) {
         ensureActive()
         val existing = items.firstOrNull { it.productId == item.productId && it.variantId == item.variantId }
@@ -65,13 +67,13 @@ data class Cart(
     fun upsertDeliveryDraft(draft: CartDeliveryDraft) {
         ensureActive()
         deliveryDraft = draft
-        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun clearDeliveryDraft() {
         ensureActive()
         deliveryDraft = null
-        touch(recalculateTotal = false, invalidateDeliveryQuote = false)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun reassignOwner(newOwner: CartOwner) {
@@ -94,13 +96,24 @@ data class Cart(
         require(status == CartStatus.ACTIVE) { "Only active cart can be modified" }
     }
 
+    fun recalculateTotalPrice(now: Instant = Instant.now()) {
+        totalPriceMinor = itemsSubtotalMinor() + deliveryFeeMinor(now)
+    }
+
     private fun touch(recalculateTotal: Boolean, invalidateDeliveryQuote: Boolean) {
         updatedAt = Instant.now()
-        if (recalculateTotal) {
-            totalPriceMinor = items.sumOf { it.lineTotalMinor() }
-        }
         if (invalidateDeliveryQuote) {
             deliveryDraft = deliveryDraft?.invalidateQuote(updatedAt)
         }
+        if (recalculateTotal) {
+            recalculateTotalPrice(updatedAt)
+        }
+    }
+
+    private fun deliveryFeeMinor(now: Instant): Long {
+        return deliveryDraft?.quote
+            ?.takeIf { it.available && !it.isExpired(now) }
+            ?.priceMinor
+            ?: 0L
     }
 }

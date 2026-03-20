@@ -18,11 +18,11 @@ class SumQuantityCartMergePolicy : CartMergePolicy {
             }
         }
         val now = Instant.now()
-        target.totalPriceMinor = target.items.sumOf { it.lineTotalMinor() }
         target.deliveryDraft = when {
             target.deliveryDraft == null -> source.deliveryDraft?.invalidateQuote(now)
             else -> target.deliveryDraft?.invalidateQuote(now)
         }
+        target.recalculateTotalPrice(now)
         target.updatedAt = now
         return target
     }

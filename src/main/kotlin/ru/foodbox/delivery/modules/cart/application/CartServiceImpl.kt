@@ -108,7 +108,7 @@ class CartServiceImpl(
         val quote = deliveryService.calculateQuote(
             DeliveryQuoteContext(
                 cartId = cart.id,
-                subtotalMinor = cart.totalPriceMinor,
+                subtotalMinor = cart.itemsSubtotalMinor(),
                 itemCount = cart.items.sumOf { it.quantity },
                 deliveryMethod = command.deliveryMethod,
                 deliveryAddress = deliveryAddress,

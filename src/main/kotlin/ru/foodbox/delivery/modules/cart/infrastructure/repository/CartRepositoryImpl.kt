@@ -127,7 +127,9 @@ class CartRepositoryImpl(
             totalPriceMinor = entity.totalPriceMinor,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
-        )
+        ).apply {
+            recalculateTotalPrice()
+        }
     }
 
     private fun CartDeliveryDraftEntity.toDomain(): CartDeliveryDraft {
