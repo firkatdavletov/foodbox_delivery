@@ -65,7 +65,6 @@ class YandexDeliveryApiClient(
             PickupPointsListRequest(
                 geoId = geoId,
                 type = PICKUP_POINT_TYPE,
-                paymentMethod = DEFAULT_PAYMENT_METHOD,
             )
         )
     }
@@ -78,7 +77,6 @@ class YandexDeliveryApiClient(
             PickupPointsListRequest(
                 pickupPointIds = listOf(normalizedPickupPointId),
                 type = PICKUP_POINT_TYPE,
-                paymentMethod = DEFAULT_PAYMENT_METHOD,
             )
         ).firstOrNull()
     }
@@ -225,8 +223,6 @@ class YandexDeliveryApiClient(
         @JsonProperty("pickup_point_ids")
         val pickupPointIds: List<String>? = null,
         val type: String = PICKUP_POINT_TYPE,
-        @JsonProperty("payment_method")
-        val paymentMethod: String = DEFAULT_PAYMENT_METHOD,
     )
 
     private data class PickupPointsListResponse(

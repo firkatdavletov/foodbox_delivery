@@ -28,13 +28,6 @@ class InMemoryCheckoutPaymentMethodRuleRepository : CheckoutPaymentMethodRuleRep
                 PaymentMethodCode.SBP,
             ),
         ),
-        CheckoutPaymentMethodRule(
-            deliveryMethod = DeliveryMethodType.YANDEX_PICKUP_POINT,
-            paymentMethods = listOf(
-                PaymentMethodCode.CARD_ONLINE,
-                PaymentMethodCode.SBP,
-            ),
-        ),
     )
 
     init {
@@ -53,6 +46,7 @@ class InMemoryCheckoutPaymentMethodRuleRepository : CheckoutPaymentMethodRuleRep
         }
 
         val missingDeliveryMethods = DeliveryMethodType.entries.filterNot { method ->
+            method in DYNAMIC_DELIVERY_METHODS ||
             rules.any { it.deliveryMethod == method }
         }
         require(missingDeliveryMethods.isEmpty()) {
@@ -75,5 +69,9 @@ class InMemoryCheckoutPaymentMethodRuleRepository : CheckoutPaymentMethodRuleRep
         require(duplicatedPaymentMethods.isEmpty()) {
             "Duplicate payment methods found in checkout rules: ${duplicatedPaymentMethods.joinToString()}"
         }
+    }
+
+    private companion object {
+        private val DYNAMIC_DELIVERY_METHODS = setOf(DeliveryMethodType.YANDEX_PICKUP_POINT)
     }
 }

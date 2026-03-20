@@ -31,12 +31,21 @@ class CheckoutServiceImplTest {
                     DeliveryMethodType.COURIER,
                     DeliveryMethodType.YANDEX_PICKUP_POINT,
                 ),
+                yandexPickupPoints = listOf(
+                    YandexPickupPointOption(
+                        id = "y-1",
+                        name = "Yandex 1",
+                        address = "Address 1",
+                        paymentMethods = listOf("already_paid", "card_on_receipt"),
+                    )
+                ),
             ),
             paymentService = StubPaymentService(
                 methods = listOf(
                     paymentMethodInfo(PaymentMethodCode.CASH, isActive = true),
                     paymentMethodInfo(PaymentMethodCode.CARD_ON_DELIVERY, isActive = true),
-                    paymentMethodInfo(PaymentMethodCode.CARD_ONLINE, isActive = false),
+                    paymentMethodInfo(PaymentMethodCode.CARD_ONLINE, isActive = true),
+                    paymentMethodInfo(PaymentMethodCode.SBP, isActive = true),
                 ),
             ),
             checkoutPaymentMethodRuleRepository = StubCheckoutPaymentMethodRuleRepository(
@@ -51,22 +60,26 @@ class CheckoutServiceImplTest {
                     CheckoutPaymentMethodRule(
                         deliveryMethod = DeliveryMethodType.COURIER,
                         paymentMethods = listOf(
-                            PaymentMethodCode.CARD_ONLINE,
                             PaymentMethodCode.CASH,
+                            PaymentMethodCode.CARD_ONLINE,
                         ),
-                    ),
-                    CheckoutPaymentMethodRule(
-                        deliveryMethod = DeliveryMethodType.YANDEX_PICKUP_POINT,
-                        paymentMethods = listOf(PaymentMethodCode.SBP),
                     ),
                 )
             ),
         )
 
-        val options = service.getAvailableOptions()
+        val options = service.getAvailableOptions(
+            CheckoutOptionsQuery(
+                yandexGeoId = 213L,
+            )
+        )
 
         assertEquals(
-            listOf(DeliveryMethodType.PICKUP, DeliveryMethodType.COURIER),
+            listOf(
+                DeliveryMethodType.PICKUP,
+                DeliveryMethodType.COURIER,
+                DeliveryMethodType.YANDEX_PICKUP_POINT,
+            ),
             options.map { it.deliveryMethod },
         )
         assertEquals(
@@ -74,8 +87,16 @@ class CheckoutServiceImplTest {
             options[0].paymentMethods.map { it.code },
         )
         assertEquals(
-            listOf(PaymentMethodCode.CASH),
+            listOf(PaymentMethodCode.CASH, PaymentMethodCode.CARD_ONLINE),
             options[1].paymentMethods.map { it.code },
+        )
+        assertEquals(
+            listOf(
+                PaymentMethodCode.CARD_ON_DELIVERY,
+                PaymentMethodCode.CARD_ONLINE,
+                PaymentMethodCode.SBP,
+            ),
+            options[2].paymentMethods.map { it.code },
         )
     }
 
@@ -117,6 +138,7 @@ class CheckoutServiceImplTest {
 
     private class StubDeliveryService(
         private val methods: List<DeliveryMethodType>,
+        private val yandexPickupPoints: List<YandexPickupPointOption> = emptyList(),
     ) : DeliveryService {
         override fun getAvailableMethods(): List<DeliveryMethodType> = methods
 
@@ -124,7 +146,7 @@ class CheckoutServiceImplTest {
 
         override fun detectYandexLocations(query: String): List<YandexDeliveryLocationVariant> = emptyList()
 
-        override fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption> = emptyList()
+        override fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption> = yandexPickupPoints
 
         override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
             throw UnsupportedOperationException("Not used in checkout tests")
