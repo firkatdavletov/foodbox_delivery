@@ -1,9 +1,11 @@
 package ru.foodbox.delivery.modules.orders.infrastructure.repository
 
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
+import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderDeliverySnapshotEntity
@@ -32,6 +34,8 @@ class OrderRepositoryImpl(
             customerEmail = order.customerEmail,
             status = order.status,
             comment = order.comment,
+            paymentMethodCode = order.payment?.methodCode,
+            paymentMethodName = order.payment?.methodName,
             subtotalMinor = order.subtotalMinor,
             deliveryFeeMinor = order.deliveryFeeMinor,
             totalMinor = order.totalMinor,
@@ -47,6 +51,8 @@ class OrderRepositoryImpl(
         entity.customerEmail = order.customerEmail
         entity.status = order.status
         entity.comment = order.comment
+        entity.paymentMethodCode = order.payment?.methodCode
+        entity.paymentMethodName = order.payment?.methodName
         entity.subtotalMinor = order.subtotalMinor
         entity.deliveryFeeMinor = order.deliveryFeeMinor
         entity.totalMinor = order.totalMinor
@@ -102,23 +108,28 @@ class OrderRepositoryImpl(
         return toDomain(jpaRepository.save(entity))
     }
 
+    @Transactional(readOnly = true)
     override fun findById(orderId: UUID): Order? {
         val entity = jpaRepository.findById(orderId).getOrNull() ?: return null
         return toDomain(entity)
     }
 
+    @Transactional(readOnly = true)
     override fun findAllByStatuses(statuses: Set<OrderStatus>): List<Order> {
         return jpaRepository.findAllByStatusInOrderByCreatedAtDesc(statuses).map(::toDomain)
     }
 
+    @Transactional(readOnly = true)
     override fun findByOrderNumber(orderNumber: String): Order? {
         return jpaRepository.findByOrderNumber(orderNumber)?.let(::toDomain)
     }
 
+    @Transactional(readOnly = true)
     override fun findByUserId(userId: UUID): List<Order> {
         return jpaRepository.findAllByUserIdOrderByCreatedAtDesc(userId).map(::toDomain)
     }
 
+    @Transactional(readOnly = true)
     override fun findByGuestInstallId(installId: String): List<Order> {
         return jpaRepository.findAllByGuestInstallIdOrderByCreatedAtDesc(installId).map(::toDomain)
     }
@@ -154,6 +165,12 @@ class OrderRepositoryImpl(
             totalMinor = entity.totalMinor,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
+            payment = entity.paymentMethodCode?.let { methodCode ->
+                OrderPaymentSnapshot(
+                    methodCode = methodCode,
+                    methodName = entity.paymentMethodName ?: methodCode.displayName,
+                )
+            },
         )
     }
 

@@ -101,6 +101,20 @@ class GlobalExceptionHandler {
         )
     }
 
+    @ExceptionHandler(ConflictException::class)
+    fun handleConflict(
+        ex: ConflictException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ApiError(
+                code = ErrorCode.CONFLICT.name,
+                message = ex.message ?: "Conflict",
+                traceId = request.getHeader("X-Trace-Id")
+            )
+        )
+    }
+
     @ExceptionHandler(ForbiddenException::class, AccessDeniedException::class)
     fun handleForbidden(
         ex: Exception,

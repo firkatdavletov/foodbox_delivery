@@ -5,6 +5,7 @@ import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryAddressResponse
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import java.time.Instant
 import java.util.UUID
 
@@ -18,6 +19,7 @@ data class OrderResponse(
     val customerPhone: String?,
     val customerEmail: String?,
     val status: OrderStatus,
+    val payment: OrderPaymentResponse?,
     val deliveryMethod: DeliveryMethodType,
     val delivery: OrderDeliveryResponse,
     val comment: String?,
@@ -27,6 +29,11 @@ data class OrderResponse(
     val totalMinor: Long,
     val createdAt: Instant,
     val updatedAt: Instant,
+)
+
+data class OrderPaymentResponse(
+    val code: PaymentMethodCode,
+    val name: String,
 )
 
 data class OrderItemResponse(

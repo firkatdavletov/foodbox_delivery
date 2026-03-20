@@ -11,6 +11,7 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import java.time.Instant
 import java.util.UUID
 
@@ -49,6 +50,13 @@ class OrderEntity(
 
     @Column(columnDefinition = "text")
     var comment: String? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method_code", length = 32)
+    var paymentMethodCode: PaymentMethodCode? = null,
+
+    @Column(name = "payment_method_name", length = 255)
+    var paymentMethodName: String? = null,
 
     @Column(name = "subtotal_minor", nullable = false)
     var subtotalMinor: Long,

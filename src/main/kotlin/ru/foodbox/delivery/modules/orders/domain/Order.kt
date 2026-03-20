@@ -21,9 +21,15 @@ data class Order(
     val totalMinor: Long,
     val createdAt: Instant,
     var updatedAt: Instant,
+    var payment: OrderPaymentSnapshot? = null,
 ) {
     fun updateStatus(newStatus: OrderStatus) {
         status = newStatus
+        updatedAt = Instant.now()
+    }
+
+    fun updatePaymentSnapshot(snapshot: OrderPaymentSnapshot?) {
+        payment = snapshot
         updatedAt = Instant.now()
     }
 }

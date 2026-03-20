@@ -3,6 +3,7 @@ package ru.foodbox.delivery.modules.orders.api
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderDeliveryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderItemResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderPaymentResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
 import ru.foodbox.delivery.modules.orders.domain.Order
 
@@ -17,6 +18,12 @@ internal fun Order.toResponse(): OrderResponse {
         customerPhone = customerPhone,
         customerEmail = customerEmail,
         status = status,
+        payment = payment?.let {
+            OrderPaymentResponse(
+                code = it.methodCode,
+                name = it.methodName,
+            )
+        },
         deliveryMethod = delivery.method,
         delivery = OrderDeliveryResponse(
             method = delivery.method,
