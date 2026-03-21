@@ -24,7 +24,7 @@ data class Cart(
         } else {
             existing.increase(item.quantity)
         }
-        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun changeQuantity(productId: UUID, variantId: UUID?, quantity: Int) {
@@ -45,7 +45,7 @@ data class Cart(
         val item = matchingItems.first()
 
         item.changeQuantity(quantity)
-        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun removeItem(productId: UUID, variantId: UUID?) {
@@ -55,13 +55,13 @@ data class Cart(
         } else {
             items.removeIf { it.productId == productId && it.variantId == variantId }
         }
-        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun clear() {
         ensureActive()
         items.clear()
-        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
     fun upsertDeliveryDraft(draft: CartDeliveryDraft) {
