@@ -89,6 +89,7 @@ class DeliveryOrderRequestServiceImplTest {
         assertEquals(40_000L, confirmation.deliveryFeeMinor)
         assertEquals(YandexOfferPaymentMethod.CARD_ON_RECEIPT, gateway.lastCreateRequest?.paymentMethod)
         assertEquals(40_000L, gateway.lastCreateRequest?.deliveryCostMinor)
+        assertEquals("sku-1", gateway.lastCreateRequest?.items?.single()?.article)
 
         val savedOffer = offerRepository.saved.single()
         assertEquals("offer-best", savedOffer.externalOfferId)
@@ -204,6 +205,7 @@ class DeliveryOrderRequestServiceImplTest {
                     id = UUID.randomUUID(),
                     productId = UUID.randomUUID(),
                     variantId = null,
+                    sku = "sku-1",
                     title = "T-Shirt",
                     unit = ProductUnit.PIECE,
                     quantity = 2,

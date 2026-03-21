@@ -45,6 +45,7 @@ internal fun Order.toResponse(): OrderResponse {
                 id = it.id,
                 productId = it.productId,
                 variantId = it.variantId,
+                sku = it.sku,
                 title = it.title,
                 unit = it.unit,
                 quantity = it.quantity,

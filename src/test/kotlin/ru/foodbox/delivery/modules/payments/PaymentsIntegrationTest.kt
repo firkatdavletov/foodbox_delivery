@@ -187,6 +187,7 @@ class PaymentsIntegrationTest {
                         id = UUID.randomUUID(),
                         productId = UUID.randomUUID(),
                         variantId = null,
+                        sku = "PAYMENT-ORDER-1",
                         title = "Test product",
                         unit = ProductUnit.PIECE,
                         quantity = 1,

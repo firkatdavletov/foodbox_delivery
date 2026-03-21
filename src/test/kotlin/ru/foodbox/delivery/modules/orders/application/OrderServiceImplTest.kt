@@ -86,6 +86,7 @@ class OrderServiceImplTest {
                     productId to ProductSnapshot(
                         id = productId,
                         variantId = null,
+                        sku = "SKU-COURIER-1",
                         title = "Fresh title",
                         unit = ProductUnit.PIECE,
                         countStep = 1,
@@ -123,6 +124,7 @@ class OrderServiceImplTest {
         assertEquals(3_500L, savedOrder.deliveryFeeMinor)
         assertEquals(28_500L, savedOrder.totalMinor)
         assertEquals("Fresh title", savedOrder.items.single().title)
+        assertEquals("SKU-COURIER-1", savedOrder.items.single().sku)
         assertEquals(12_500L, savedOrder.items.single().priceMinor)
         assertEquals(OrderStatus.PENDING, savedOrder.status)
         assertEquals(
@@ -189,6 +191,7 @@ class OrderServiceImplTest {
                     productId to ProductSnapshot(
                         id = productId,
                         variantId = null,
+                        sku = "SKU-YANDEX-1",
                         title = "Fresh Yandex title",
                         unit = ProductUnit.PIECE,
                         countStep = 1,
@@ -229,6 +232,7 @@ class OrderServiceImplTest {
         assertEquals(22_000L, firstSave.totalMinor)
         assertNotNull(deliveryOrderRequestService.lastOrder)
         assertEquals(firstSave.id, deliveryOrderRequestService.lastOrder?.id)
+        assertEquals("SKU-YANDEX-1", deliveryOrderRequestService.lastOrder?.items?.single()?.sku)
         assertEquals(
             OrderPaymentSnapshot(
                 methodCode = PaymentMethodCode.CARD_ON_DELIVERY,

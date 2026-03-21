@@ -7,6 +7,7 @@ data class OrderItem(
     val id: UUID,
     val productId: UUID,
     val variantId: UUID?,
+    val sku: String?,
     val title: String,
     val unit: ProductUnit,
     val quantity: Int,

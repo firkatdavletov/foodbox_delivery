@@ -86,6 +86,7 @@ class CatalogServiceImpl(
         return ProductSnapshot(
             id = product.id,
             variantId = resolvedVariant?.id,
+            sku = resolvedVariant?.sku ?: product.sku,
             title = resolvedTitle,
             unit = product.unit,
             countStep = product.countStep,

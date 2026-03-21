@@ -58,7 +58,7 @@ class DeliveryOrderRequestServiceImpl(
                         YandexOfferItem(
                             id = item.id.toString(),
                             name = item.title,
-                            article = (item.variantId ?: item.productId).toString(),
+                            article = item.sku,
                             count = item.quantity,
                             unitPriceMinor = item.priceMinor,
                         )

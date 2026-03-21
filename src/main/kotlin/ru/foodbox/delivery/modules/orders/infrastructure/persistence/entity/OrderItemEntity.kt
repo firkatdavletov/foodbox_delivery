@@ -28,6 +28,9 @@ class OrderItemEntity(
     @Column(name = "variant_id")
     var variantId: UUID? = null,
 
+    @Column(length = 255)
+    var sku: String? = null,
+
     @Column(nullable = false, length = 255)
     var title: String,
 
