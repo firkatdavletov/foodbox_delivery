@@ -115,6 +115,81 @@ class CartServiceImplTest {
         assertEquals(600L, deliveryDraft.quote?.priceMinor)
     }
 
+    @Test
+    fun `refreshes expired delivery quote when getting cart`() {
+        val now = Instant.now()
+        val actor = CurrentActor.Guest("install-1")
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, actor.installId),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = UUID.randomUUID(),
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 1_000,
+                )
+            ),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 450,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now.minusSeconds(1_800),
+                    expiresAt = now.minusSeconds(60),
+                ),
+                createdAt = now.minusSeconds(1_800),
+                updatedAt = now.minusSeconds(1_800),
+            ),
+            totalPriceMinor = 1_450,
+            createdAt = now.minusSeconds(1_800),
+            updatedAt = now.minusSeconds(1_800),
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val deliveryService = CapturingDeliveryService(
+            quoteToReturn = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 200,
+                currency = "RUB",
+                zoneCode = "EKB",
+                zoneName = "Yekaterinburg",
+                estimatedDays = 1,
+            )
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            deliveryService = deliveryService,
+        )
+
+        val refreshedCart = service.getOrCreateActiveCart(actor)
+
+        assertEquals(1_000L, deliveryService.lastContext?.subtotalMinor)
+        assertEquals(1_200L, refreshedCart.totalPriceMinor)
+        assertEquals(200L, refreshedCart.deliveryDraft?.quote?.priceMinor)
+        assertEquals(1_200L, cartRepository.savedCart?.totalPriceMinor)
+    }
+
     private class InMemoryCartRepository(
         private var activeCart: Cart?,
     ) : CartRepository {

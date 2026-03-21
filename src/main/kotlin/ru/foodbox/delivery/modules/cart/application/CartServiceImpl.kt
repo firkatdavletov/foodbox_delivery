@@ -18,7 +18,9 @@ import ru.foodbox.delivery.modules.cart.domain.CartOwnerType
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
 import ru.foodbox.delivery.modules.cart.domain.repository.CartRepository
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -33,8 +35,7 @@ class CartServiceImpl(
 ) : CartService {
 
     override fun getOrCreateActiveCart(actor: CurrentActor): Cart {
-        val owner = toOwner(actor)
-        return cartRepository.findActiveByOwner(owner) ?: createNewActiveCart(owner)
+        return refreshExpiredDeliveryDraftIfNeeded(loadOrCreateActiveCart(actor))
     }
 
     @Transactional
@@ -44,7 +45,7 @@ class CartServiceImpl(
             variantId = command.variantId,
         ) ?: throw NotFoundException("Product not found")
 
-        val cart = getOrCreateActiveCart(actor)
+        val cart = loadOrCreateActiveCart(actor)
         cart.addItem(
             CartItem(
                 productId = product.id,
@@ -61,21 +62,21 @@ class CartServiceImpl(
 
     @Transactional
     override fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart {
-        val cart = getOrCreateActiveCart(actor)
+        val cart = loadOrCreateActiveCart(actor)
         cart.changeQuantity(command.productId, command.variantId, command.quantity)
         return cartRepository.save(cart)
     }
 
     @Transactional
     override fun removeItem(actor: CurrentActor, productId: UUID, variantId: UUID?): Cart {
-        val cart = getOrCreateActiveCart(actor)
+        val cart = loadOrCreateActiveCart(actor)
         cart.removeItem(productId, variantId)
         return cartRepository.save(cart)
     }
 
     @Transactional
     override fun clear(actor: CurrentActor): Cart {
-        val cart = getOrCreateActiveCart(actor)
+        val cart = loadOrCreateActiveCart(actor)
         cart.clear()
         return cartRepository.save(cart)
     }
@@ -86,7 +87,7 @@ class CartServiceImpl(
 
     @Transactional
     override fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft {
-        val cart = getOrCreateActiveCart(actor)
+        val cart = loadOrCreateActiveCart(actor)
         if (cart.items.isEmpty()) {
             throw IllegalArgumentException("Cannot select delivery for an empty cart")
         }
@@ -116,28 +117,15 @@ class CartServiceImpl(
                 pickupPointExternalId = pickupPointExternalId,
             )
         )
-
         cart.upsertDeliveryDraft(
-            CartDeliveryDraft(
+            buildDeliveryDraft(
                 deliveryMethod = command.deliveryMethod,
                 deliveryAddress = deliveryAddress,
-                pickupPointId = quote.pickupPointId ?: pickupPointId,
-                pickupPointExternalId = quote.pickupPointExternalId ?: pickupPointExternalId,
-                pickupPointName = quote.pickupPointName,
-                pickupPointAddress = quote.pickupPointAddress,
-                quote = CartDeliveryQuote(
-                    available = quote.available,
-                    priceMinor = quote.priceMinor,
-                    currency = quote.currency,
-                    zoneCode = quote.zoneCode,
-                    zoneName = quote.zoneName,
-                    estimatedDays = quote.estimatedDays,
-                    message = quote.message,
-                    calculatedAt = now,
-                    expiresAt = now.plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES),
-                ),
-                createdAt = cart.deliveryDraft?.createdAt ?: now,
-                updatedAt = now,
+                pickupPointId = pickupPointId,
+                pickupPointExternalId = pickupPointExternalId,
+                quote = quote,
+                createdAt = cart.deliveryDraft?.createdAt,
+                now = now,
             )
         )
 
@@ -195,6 +183,109 @@ class CartServiceImpl(
         )
     }
 
+    private fun loadOrCreateActiveCart(actor: CurrentActor): Cart {
+        val owner = toOwner(actor)
+        return cartRepository.findActiveByOwner(owner) ?: createNewActiveCart(owner)
+    }
+
+    private fun refreshExpiredDeliveryDraftIfNeeded(cart: Cart): Cart {
+        val draft = cart.deliveryDraft ?: return cart
+        val quote = draft.quote ?: return cart
+        val now = Instant.now()
+
+        if (!quote.isExpired(now) || cart.items.isEmpty()) {
+            return cart
+        }
+
+        cart.upsertDeliveryDraft(
+            buildDeliveryDraft(
+                deliveryMethod = draft.deliveryMethod,
+                deliveryAddress = draft.deliveryAddress,
+                pickupPointId = draft.pickupPointId,
+                pickupPointExternalId = draft.pickupPointExternalId,
+                quote = calculateDeliveryQuoteOrUnavailable(
+                    cart = cart,
+                    deliveryMethod = draft.deliveryMethod,
+                    deliveryAddress = draft.deliveryAddress,
+                    pickupPointId = draft.pickupPointId,
+                    pickupPointExternalId = draft.pickupPointExternalId,
+                    fallbackCurrency = quote.currency,
+                ),
+                fallbackPickupPointName = draft.pickupPointName,
+                fallbackPickupPointAddress = draft.pickupPointAddress,
+                createdAt = draft.createdAt,
+                now = now,
+            )
+        )
+
+        return cartRepository.save(cart)
+    }
+
+    private fun buildDeliveryDraft(
+        deliveryMethod: DeliveryMethodType,
+        deliveryAddress: DeliveryAddress?,
+        pickupPointId: UUID?,
+        pickupPointExternalId: String?,
+        quote: DeliveryQuote,
+        fallbackPickupPointName: String? = null,
+        fallbackPickupPointAddress: String? = null,
+        createdAt: Instant?,
+        now: Instant,
+    ): CartDeliveryDraft {
+        return CartDeliveryDraft(
+            deliveryMethod = deliveryMethod,
+            deliveryAddress = deliveryAddress,
+            pickupPointId = quote.pickupPointId ?: pickupPointId,
+            pickupPointExternalId = quote.pickupPointExternalId ?: pickupPointExternalId,
+            pickupPointName = quote.pickupPointName ?: fallbackPickupPointName,
+            pickupPointAddress = quote.pickupPointAddress ?: fallbackPickupPointAddress,
+            quote = CartDeliveryQuote(
+                available = quote.available,
+                priceMinor = quote.priceMinor,
+                currency = quote.currency,
+                zoneCode = quote.zoneCode,
+                zoneName = quote.zoneName,
+                estimatedDays = quote.estimatedDays,
+                message = quote.message,
+                calculatedAt = now,
+                expiresAt = now.plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES),
+            ),
+            createdAt = createdAt ?: now,
+            updatedAt = now,
+        )
+    }
+
+    private fun calculateDeliveryQuoteOrUnavailable(
+        cart: Cart,
+        deliveryMethod: DeliveryMethodType,
+        deliveryAddress: DeliveryAddress?,
+        pickupPointId: UUID?,
+        pickupPointExternalId: String?,
+        fallbackCurrency: String,
+    ): DeliveryQuote {
+        return try {
+            deliveryService.calculateQuote(
+                DeliveryQuoteContext(
+                    cartId = cart.id,
+                    subtotalMinor = cart.itemsSubtotalMinor(),
+                    itemCount = cart.items.sumOf { it.quantity },
+                    deliveryMethod = deliveryMethod,
+                    deliveryAddress = deliveryAddress,
+                    pickupPointId = pickupPointId,
+                    pickupPointExternalId = pickupPointExternalId,
+                )
+            )
+        } catch (ex: IllegalArgumentException) {
+            DeliveryQuote(
+                deliveryMethod = deliveryMethod,
+                available = false,
+                priceMinor = null,
+                currency = fallbackCurrency,
+                message = ex.message ?: "Delivery is unavailable",
+            )
+        }
+    }
+
     private fun toOwner(actor: CurrentActor): CartOwner {
         return when (actor) {
             is CurrentActor.User -> CartOwner(CartOwnerType.USER, actor.userId.toString())
@@ -203,6 +294,7 @@ class CartServiceImpl(
     }
 
     private companion object {
+        private const val DEFAULT_CURRENCY = "RUB"
         private const val QUOTE_TTL_MINUTES = 15L
     }
 }

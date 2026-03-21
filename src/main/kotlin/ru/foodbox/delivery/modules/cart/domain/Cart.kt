@@ -61,7 +61,7 @@ data class Cart(
     fun clear() {
         ensureActive()
         items.clear()
-        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = true)
     }
 
     fun upsertDeliveryDraft(draft: CartDeliveryDraft) {

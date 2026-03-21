@@ -6,7 +6,6 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class CartDeliveryDraftTest {
 
@@ -62,7 +61,7 @@ class CartDeliveryDraftTest {
     }
 
     @Test
-    fun `invalidates delivery quote when cart items change`() {
+    fun `keeps delivery quote when item is added`() {
         val now = Instant.now()
         val cart = Cart(
             id = UUID.randomUUID(),
@@ -117,7 +116,119 @@ class CartDeliveryDraftTest {
             )
         )
 
-        assertNull(cart.deliveryDraft?.quote)
-        assertEquals(499_800, cart.totalPriceMinor)
+        assertEquals(29_900, cart.deliveryDraft?.quote?.priceMinor)
+        assertEquals(529_700, cart.totalPriceMinor)
+    }
+
+    @Test
+    fun `keeps delivery quote when item quantity changes`() {
+        val now = Instant.now()
+        val productId = UUID.randomUUID()
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, "install-1"),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = productId,
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 199_900,
+                )
+            ),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = null,
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 29_900,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now,
+                    expiresAt = now.plusSeconds(900),
+                ),
+                createdAt = now,
+                updatedAt = now,
+            ),
+            totalPriceMinor = 229_800,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        cart.changeQuantity(productId = productId, variantId = null, quantity = 2)
+
+        assertEquals(29_900, cart.deliveryDraft?.quote?.priceMinor)
+        assertEquals(429_700, cart.totalPriceMinor)
+    }
+
+    @Test
+    fun `keeps delivery quote when item is removed`() {
+        val now = Instant.now()
+        val productId = UUID.randomUUID()
+        val secondProductId = UUID.randomUUID()
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, "install-1"),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = productId,
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 199_900,
+                ),
+                CartItem(
+                    productId = secondProductId,
+                    variantId = null,
+                    title = "Jeans",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 299_900,
+                )
+            ),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = null,
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 29_900,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now,
+                    expiresAt = now.plusSeconds(900),
+                ),
+                createdAt = now,
+                updatedAt = now,
+            ),
+            totalPriceMinor = 529_700,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        cart.removeItem(productId = productId, variantId = null)
+
+        assertEquals(29_900, cart.deliveryDraft?.quote?.priceMinor)
+        assertEquals(329_800, cart.totalPriceMinor)
     }
 }
