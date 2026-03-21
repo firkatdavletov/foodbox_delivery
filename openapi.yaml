@@ -12,12 +12,16 @@ tags:
     description: Admin authentication and session management
   - name: Cart
     description: Shopping cart operations
+  - name: Delivery
+    description: Delivery methods, quotes, and Yandex pickup point discovery
   - name: Checkout
     description: Checkout option discovery for delivery and payment combinations
   - name: Catalog
     description: Public product and category catalog
   - name: Catalog Admin
     description: Admin catalog management
+  - name: Payments
+    description: Payment methods and payment operations
   - name: Orders
     description: Order placement and retrieval
   - name: Orders Admin
@@ -513,6 +517,57 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/cart/delivery:
+    get:
+      tags: [Cart]
+      operationId: getCartDeliveryDraft
+      summary: Get current cart delivery draft
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      responses:
+        '200':
+          description: Current cart delivery draft or `null` when not selected
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CartDeliveryDraftResponse'
+                nullable: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Cart]
+      operationId: putCartDeliveryDraft
+      summary: Create or replace current cart delivery draft
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutCartDeliveryRequest'
+      responses:
+        '200':
+          description: Updated cart delivery draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDeliveryDraftResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/cart/items:
     post:
       tags: [Cart]
@@ -928,6 +983,113 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/admin/catalog-import:
+    post:
+      tags: [Catalog Admin]
+      operationId: importCatalogLegacy
+      summary: Import catalog CSV file
+      description: Legacy alias for `/api/v1/admin/catalog-import`.
+      deprecated: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, importType, importMode]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                importType:
+                  $ref: '#/components/schemas/CatalogImportType'
+                importMode:
+                  $ref: '#/components/schemas/CatalogImportMode'
+      responses:
+        '200':
+          description: Import report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/admin/catalog-import/examples:
+    get:
+      tags: [Catalog Admin]
+      operationId: listCatalogImportExamplesLegacy
+      summary: List available example CSV files for catalog import
+      description: Legacy alias for `/api/v1/admin/catalog-import/examples`.
+      deprecated: true
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Available example files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogImportExampleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/admin/catalog-import/examples/{importType}/{importMode}:
+    get:
+      tags: [Catalog Admin]
+      operationId: downloadCatalogImportExampleLegacy
+      summary: Download example CSV file for catalog import
+      description: Legacy alias for `/api/v1/admin/catalog-import/examples/{importType}/{importMode}`.
+      deprecated: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: importType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogImportType'
+        - name: importMode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogImportMode'
+      responses:
+        '200':
+          description: CSV file content
+          headers:
+            Content-Disposition:
+              description: Suggested attachment filename.
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/checkout/options:
     get:
       tags: [Checkout]
@@ -956,6 +1118,174 @@ paths:
                 $ref: '#/components/schemas/CheckoutOptionsResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/delivery/methods:
+    get:
+      tags: [Delivery]
+      operationId: getDeliveryMethods
+      summary: Get available delivery methods and active internal pickup points
+      responses:
+        '200':
+          description: Delivery methods and pickup points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryMethodsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/delivery/yandex/location-detect:
+    post:
+      tags: [Delivery]
+      operationId: detectYandexLocations
+      summary: Detect Yandex geo locations by free-form query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexLocationDetectRequest'
+      responses:
+        '200':
+          description: Matching Yandex locations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YandexLocationDetectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/delivery/yandex/pickup-points:
+    post:
+      tags: [Delivery]
+      operationId: getYandexPickupPoints
+      summary: Get Yandex pickup points for geo id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexPickupPointsRequest'
+      responses:
+        '200':
+          description: Yandex pickup points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YandexPickupPointsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/delivery/quotes:
+    post:
+      tags: [Delivery]
+      operationId: calculateDeliveryQuote
+      summary: Calculate delivery quote for selected method and order subtotal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculateDeliveryQuoteRequest'
+      responses:
+        '200':
+          description: Delivery quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/payments/methods:
+    get:
+      tags: [Payments]
+      operationId: getAvailablePaymentMethods
+      summary: List available payment methods
+      responses:
+        '200':
+          description: Payment methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethodResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/payments:
+    post:
+      tags: [Payments]
+      operationId: createPayment
+      summary: Create payment for order visible to current actor
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '200':
+          description: Payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/payments/{paymentId}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Get payment visible to current actor
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1313,6 +1643,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    ConflictError:
+      description: Request conflicts with current resource state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     InternalServerError:
       description: Internal server error
       content:
@@ -1584,6 +1920,94 @@ components:
         isActive:
           type: boolean
 
+    PaymentMethodResponse:
+      type: object
+      required: [code, name, isOnline, isActive]
+      properties:
+        code:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isOnline:
+          type: boolean
+        isActive:
+          type: boolean
+
+    CreatePaymentRequest:
+      type: object
+      required: [orderId, paymentMethodCode]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        paymentMethodCode:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        details:
+          type: string
+          nullable: true
+          maxLength: 2000
+
+    PaymentResponse:
+      type: object
+      required:
+        [
+          id,
+          orderId,
+          paymentMethodCode,
+          paymentMethodName,
+          status,
+          amountMinor,
+          currency,
+          isOnline,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        paymentMethodCode:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        paymentMethodName:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        isOnline:
+          type: boolean
+        providerCode:
+          type: string
+          nullable: true
+        externalPaymentId:
+          type: string
+          nullable: true
+        confirmationUrl:
+          type: string
+          nullable: true
+        details:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+
     AddCartItemRequest:
       type: object
       required: [productId, quantity]
@@ -1616,6 +2040,24 @@ components:
           format: int32
           minimum: 1
 
+    PutCartDeliveryRequest:
+      type: object
+      required: [deliveryMethod]
+      properties:
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressRequest'
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
+          type: string
+          nullable: true
+
     CartResponse:
       type: object
       required: [id, status, items, totalPriceMinor]
@@ -1632,6 +2074,45 @@ components:
         totalPriceMinor:
           type: integer
           format: int64
+        delivery:
+          allOf:
+            - $ref: '#/components/schemas/CartDeliveryDraftResponse'
+          nullable: true
+
+    CartDeliveryDraftResponse:
+      type: object
+      required: [quoteExpired]
+      properties:
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+          nullable: true
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressResponse'
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
+          type: string
+          nullable: true
+        pickupPointName:
+          type: string
+          nullable: true
+        pickupPointAddress:
+          type: string
+          nullable: true
+        quote:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryQuoteResponse'
+          nullable: true
+        quoteExpired:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
 
     CartItemResponse:
       type: object
@@ -1661,6 +2142,191 @@ components:
         lineTotalMinor:
           type: integer
           format: int64
+
+    DeliveryMethodsResponse:
+      type: object
+      required: [methods, pickupPoints]
+      properties:
+        methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryMethodResponse'
+        pickupPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickupPointResponse'
+
+    DeliveryMethodResponse:
+      type: object
+      required: [code, name, requiresAddress, requiresPickupPoint]
+      properties:
+        code:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        name:
+          type: string
+        requiresAddress:
+          type: boolean
+        requiresPickupPoint:
+          type: boolean
+
+    PickupPointResponse:
+      type: object
+      required: [id, code, name, address, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        address:
+          $ref: '#/components/schemas/DeliveryAddressResponse'
+        isActive:
+          type: boolean
+
+    YandexLocationDetectRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+
+    YandexLocationDetectResponse:
+      type: object
+      required: [variants]
+      properties:
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/YandexLocationVariantResponse'
+
+    YandexLocationVariantResponse:
+      type: object
+      required: [geoId, address]
+      properties:
+        geoId:
+          type: integer
+          format: int64
+        address:
+          type: string
+
+    YandexPickupPointsRequest:
+      type: object
+      required: [geoId]
+      properties:
+        geoId:
+          type: integer
+          format: int64
+          minimum: 0
+
+    YandexPickupPointsResponse:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/YandexPickupPointResponse'
+
+    YandexPickupPointResponse:
+      type: object
+      required: [id, name, address, paymentMethods, isYandexBranded]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        fullAddress:
+          type: string
+          nullable: true
+        instruction:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        paymentMethods:
+          type: array
+          items:
+            type: string
+        isYandexBranded:
+          type: boolean
+
+    CalculateDeliveryQuoteRequest:
+      type: object
+      required: [subtotalMinor, itemCount, deliveryMethod]
+      properties:
+        subtotalMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        itemCount:
+          type: integer
+          format: int32
+          minimum: 1
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressRequest'
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
+          type: string
+          nullable: true
+
+    DeliveryQuoteResponse:
+      type: object
+      required: [deliveryMethod, available, currency]
+      properties:
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        available:
+          type: boolean
+        priceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        currency:
+          type: string
+        zoneCode:
+          type: string
+          nullable: true
+        zoneName:
+          type: string
+          nullable: true
+        estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
+          type: string
+          nullable: true
+        pickupPointName:
+          type: string
+          nullable: true
+        pickupPointAddress:
+          type: string
+          nullable: true
 
     CategoryResponse:
       type: object
@@ -2095,8 +2761,10 @@ components:
 
     CheckoutRequest:
       type: object
-      required: [deliveryType]
+      required: [paymentMethodCode]
       properties:
+        paymentMethodCode:
+          $ref: '#/components/schemas/PaymentMethodCode'
         customerName:
           type: string
           nullable: true
@@ -2106,18 +2774,13 @@ components:
         customerEmail:
           type: string
           nullable: true
-        deliveryType:
-          $ref: '#/components/schemas/OrderDeliveryType'
-        deliveryAddress:
-          type: string
-          nullable: true
         comment:
           type: string
           nullable: true
 
     GuestCheckoutRequest:
       type: object
-      required: [items, customerName, customerPhone, deliveryType]
+      required: [items, customerName, customerPhone, paymentMethodCode, deliveryMethod]
       properties:
         items:
           type: array
@@ -2133,9 +2796,19 @@ components:
         customerEmail:
           type: string
           nullable: true
-        deliveryType:
-          $ref: '#/components/schemas/OrderDeliveryType'
-        deliveryAddress:
+        paymentMethodCode:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressRequest'
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
           type: string
           nullable: true
         comment:
@@ -2173,7 +2846,8 @@ components:
           orderNumber,
           customerType,
           status,
-          deliveryType,
+          deliveryMethod,
+          delivery,
           items,
           subtotalMinor,
           deliveryFeeMinor,
@@ -2207,11 +2881,14 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/OrderStatus'
-        deliveryType:
-          $ref: '#/components/schemas/OrderDeliveryType'
-        deliveryAddress:
-          type: string
+        payment:
+          allOf:
+            - $ref: '#/components/schemas/OrderPaymentResponse'
           nullable: true
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        delivery:
+          $ref: '#/components/schemas/OrderDeliveryResponse'
         comment:
           type: string
           nullable: true
@@ -2249,6 +2926,9 @@ components:
           type: string
           format: uuid
           nullable: true
+        sku:
+          type: string
+          nullable: true
         title:
           type: string
         unit:
@@ -2262,6 +2942,157 @@ components:
         totalMinor:
           type: integer
           format: int64
+
+    OrderPaymentResponse:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          $ref: '#/components/schemas/PaymentMethodCode'
+        name:
+          type: string
+
+    OrderDeliveryResponse:
+      type: object
+      required: [method, methodName, priceMinor, currency]
+      properties:
+        method:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        methodName:
+          type: string
+        priceMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        zoneCode:
+          type: string
+          nullable: true
+        zoneName:
+          type: string
+          nullable: true
+        estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+        pickupPointId:
+          type: string
+          format: uuid
+          nullable: true
+        pickupPointExternalId:
+          type: string
+          nullable: true
+        pickupPointName:
+          type: string
+          nullable: true
+        pickupPointAddress:
+          type: string
+          nullable: true
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressResponse'
+          nullable: true
+
+    DeliveryAddressRequest:
+      type: object
+      properties:
+        country:
+          type: string
+          nullable: true
+          maxLength: 255
+        region:
+          type: string
+          nullable: true
+          maxLength: 255
+        city:
+          type: string
+          nullable: true
+          maxLength: 255
+        street:
+          type: string
+          nullable: true
+          maxLength: 255
+        house:
+          type: string
+          nullable: true
+          maxLength: 255
+        apartment:
+          type: string
+          nullable: true
+          maxLength: 255
+        postalCode:
+          type: string
+          nullable: true
+          maxLength: 64
+        entrance:
+          type: string
+          nullable: true
+          maxLength: 255
+        floor:
+          type: string
+          nullable: true
+          maxLength: 255
+        intercom:
+          type: string
+          nullable: true
+          maxLength: 255
+        comment:
+          type: string
+          nullable: true
+          maxLength: 500
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+
+    DeliveryAddressResponse:
+      type: object
+      properties:
+        country:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        street:
+          type: string
+          nullable: true
+        house:
+          type: string
+          nullable: true
+        apartment:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        entrance:
+          type: string
+          nullable: true
+        floor:
+          type: string
+          nullable: true
+        intercom:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
 
     CreateUploadSessionRequest:
       type: object
@@ -2478,6 +3309,10 @@ components:
       type: string
       enum: [CASH, CARD_ON_DELIVERY, CARD_ONLINE, SBP]
 
+    PaymentStatus:
+      type: string
+      enum: [AWAITING_PAYMENT, PENDING, SUCCEEDED, FAILED, CANCELED]
+
     CartStatus:
       type: string
       enum: [ACTIVE, ORDERED, MERGED, ABANDONED]
@@ -2485,10 +3320,6 @@ components:
     OrderCustomerType:
       type: string
       enum: [USER, GUEST]
-
-    OrderDeliveryType:
-      type: string
-      enum: [PICKUP, DELIVERY]
 
     OrderStatus:
       type: string
