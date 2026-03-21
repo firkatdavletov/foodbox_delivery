@@ -92,9 +92,10 @@ class CheckoutServiceImpl(
                         -> availablePaymentMethods[PaymentMethodCode.CARD_ON_DELIVERY]
                             ?.code
                             ?.let(resolvedCodes::add)
-                        YANDEX_PAYMENT_METHOD_CASH_ON_RECEIPT -> availablePaymentMethods[PaymentMethodCode.CASH]
-                            ?.code
-                            ?.let(resolvedCodes::add)
+                        YANDEX_PAYMENT_METHOD_CASH_ON_RECEIPT -> logger.debug(
+                            "Yandex pickup point payment method {} is ignored because offers/create supports only already_paid, card_on_receipt and postpay",
+                            paymentMethod,
+                        )
                         else -> logger.debug(
                             "Unsupported Yandex pickup point payment method {} returned for pickupPointId={}",
                             paymentMethod,

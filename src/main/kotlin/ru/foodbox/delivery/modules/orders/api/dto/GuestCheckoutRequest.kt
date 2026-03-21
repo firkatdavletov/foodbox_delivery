@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryAddressRequest
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import java.util.UUID
 
 data class GuestCheckoutRequest(
@@ -21,6 +22,9 @@ data class GuestCheckoutRequest(
     val customerPhone: String,
 
     val customerEmail: String? = null,
+
+    @field:NotNull
+    val paymentMethodCode: PaymentMethodCode,
 
     @field:NotNull
     val deliveryMethod: DeliveryMethodType,

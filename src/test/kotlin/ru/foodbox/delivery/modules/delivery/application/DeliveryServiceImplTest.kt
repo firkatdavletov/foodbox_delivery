@@ -103,6 +103,14 @@ class DeliveryServiceImplTest {
         ): YandexDeliveryPricingQuote {
             throw UnsupportedOperationException("Not used in delivery service tests")
         }
+
+        override fun createOffers(request: YandexOfferCreateRequest): List<YandexDeliveryOffer> {
+            throw UnsupportedOperationException("Not used in delivery service tests")
+        }
+
+        override fun confirmOffer(offerId: String): YandexConfirmedDeliveryRequest {
+            throw UnsupportedOperationException("Not used in delivery service tests")
+        }
     }
 
     private class StubPickupPointRepository : PickupPointRepository {

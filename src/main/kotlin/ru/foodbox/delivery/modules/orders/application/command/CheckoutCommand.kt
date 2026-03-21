@@ -1,6 +1,9 @@
 package ru.foodbox.delivery.modules.orders.application.command
 
+import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
+
 data class CheckoutCommand(
+    val paymentMethodCode: PaymentMethodCode,
     val customerName: String?,
     val customerPhone: String?,
     val customerEmail: String?,

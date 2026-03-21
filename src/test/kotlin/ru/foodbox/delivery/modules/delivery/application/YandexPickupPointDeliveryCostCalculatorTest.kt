@@ -95,5 +95,13 @@ class YandexPickupPointDeliveryCostCalculatorTest {
             subtotalMinor: Long,
             totalWeightGrams: Long?,
         ): YandexDeliveryPricingQuote = pricingQuote
+
+        override fun createOffers(request: YandexOfferCreateRequest): List<YandexDeliveryOffer> {
+            throw UnsupportedOperationException("Not used in pickup point calculator tests")
+        }
+
+        override fun confirmOffer(offerId: String): YandexConfirmedDeliveryRequest {
+            throw UnsupportedOperationException("Not used in pickup point calculator tests")
+        }
     }
 }

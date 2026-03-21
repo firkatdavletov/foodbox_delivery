@@ -34,6 +34,7 @@ class OrderController(
         return orderService.checkout(
             actor = actor,
             command = CheckoutCommand(
+                paymentMethodCode = request.paymentMethodCode,
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,
@@ -53,6 +54,7 @@ class OrderController(
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,
+                paymentMethodCode = request.paymentMethodCode,
                 deliveryMethod = request.deliveryMethod,
                 deliveryAddress = request.address?.toDomain(),
                 pickupPointId = request.pickupPointId,

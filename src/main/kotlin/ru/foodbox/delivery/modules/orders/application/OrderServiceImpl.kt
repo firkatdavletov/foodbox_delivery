@@ -8,6 +8,9 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.CartService
+import ru.foodbox.delivery.modules.checkout.application.CheckoutOptionsQuery
+import ru.foodbox.delivery.modules.checkout.application.CheckoutService
+import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestService
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -22,8 +25,10 @@ import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
+import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
+import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
 import java.time.Instant
 import java.util.UUID
@@ -35,6 +40,8 @@ class OrderServiceImpl(
     private val productReadService: ProductReadService,
     private val userRepository: UserRepository,
     private val deliveryService: DeliveryService,
+    private val checkoutService: CheckoutService,
+    private val deliveryOrderRequestService: DeliveryOrderRequestService,
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) : OrderService {
 
@@ -63,7 +70,12 @@ class OrderServiceImpl(
 
         val normalizedPhone = customerPhone?.let(::normalizePhone)
         val now = Instant.now()
-        val items = cart.items.map { it.toOrderItem() }
+        validatePaymentMethod(
+            deliveryMethod = deliveryDraft.deliveryMethod,
+            pickupPointExternalId = deliveryDraft.pickupPointExternalId,
+            paymentMethodCode = command.paymentMethodCode,
+        )
+        val items = resolveCartItems(cart)
         val subtotal = items.sumOf { it.totalMinor }
         val deliveryQuote = requireAvailableQuote(
             deliveryService.calculateQuote(
@@ -102,9 +114,21 @@ class OrderServiceImpl(
             totalMinor = subtotal + deliverySnapshot.priceMinor,
             createdAt = now,
             updatedAt = now,
+            payment = OrderPaymentSnapshot(
+                methodCode = command.paymentMethodCode,
+                methodName = command.paymentMethodCode.displayName,
+            ),
         )
 
-        val saved = orderRepository.save(order)
+        var saved = orderRepository.save(order)
+        deliveryOrderRequestService.createAndConfirm(saved)?.let { confirmation ->
+            saved.updateDeliveryPricing(
+                priceMinor = confirmation.deliveryFeeMinor,
+                currency = confirmation.currency,
+            )
+            saved.updateStatus(OrderStatus.CONFIRMED)
+            saved = orderRepository.save(saved)
+        }
         cartService.markOrdered(cart.id)
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
@@ -119,6 +143,11 @@ class OrderServiceImpl(
         val normalizedPhone = normalizePhone(command.customerPhone)
         val now = Instant.now()
 
+        validatePaymentMethod(
+            deliveryMethod = command.deliveryMethod,
+            pickupPointExternalId = command.pickupPointExternalId,
+            paymentMethodCode = command.paymentMethodCode,
+        )
         val orderItems = command.items.map { item ->
             val product = productReadService.getActiveProductSnapshot(
                 productId = item.productId,
@@ -178,9 +207,21 @@ class OrderServiceImpl(
             totalMinor = subtotal + deliverySnapshot.priceMinor,
             createdAt = now,
             updatedAt = now,
+            payment = OrderPaymentSnapshot(
+                methodCode = command.paymentMethodCode,
+                methodName = command.paymentMethodCode.displayName,
+            ),
         )
 
-        val saved = orderRepository.save(order)
+        var saved = orderRepository.save(order)
+        deliveryOrderRequestService.createAndConfirm(saved)?.let { confirmation ->
+            saved.updateDeliveryPricing(
+                priceMinor = confirmation.deliveryFeeMinor,
+                currency = confirmation.currency,
+            )
+            saved.updateStatus(OrderStatus.CONFIRMED)
+            saved = orderRepository.save(saved)
+        }
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
     }
@@ -292,16 +333,46 @@ class OrderServiceImpl(
         return UUID.randomUUID().toString().take(6).uppercase()
     }
 
-    private fun ru.foodbox.delivery.modules.cart.domain.CartItem.toOrderItem(): OrderItem {
-        return OrderItem(
-            id = UUID.randomUUID(),
-            productId = productId,
-            variantId = variantId,
-            title = title,
-            unit = unit,
-            quantity = quantity,
-            priceMinor = priceMinor,
-            totalMinor = lineTotalMinor(),
-        )
+    private fun validatePaymentMethod(
+        deliveryMethod: DeliveryMethodType,
+        pickupPointExternalId: String?,
+        paymentMethodCode: PaymentMethodCode,
+    ) {
+        val availablePaymentMethods = checkoutService.getAvailableOptions(
+            CheckoutOptionsQuery(
+                pickupPointId = pickupPointExternalId,
+            )
+        ).firstOrNull { it.deliveryMethod == deliveryMethod }
+            ?.paymentMethods
+            ?.map { it.code }
+            ?.toSet()
+            ?: throw DeliveryValidationException("Selected delivery method is unavailable")
+
+        if (paymentMethodCode !in availablePaymentMethods) {
+            throw DeliveryValidationException("Selected payment method is unavailable for delivery")
+        }
+    }
+
+    private fun resolveCartItems(cart: ru.foodbox.delivery.modules.cart.domain.Cart): List<OrderItem> {
+        return cart.items.map { item ->
+            val product = productReadService.getActiveProductSnapshot(
+                productId = item.productId,
+                variantId = item.variantId,
+            ) ?: throw NotFoundException("Product not found")
+
+            require(item.quantity > 0) { "quantity must be greater than zero" }
+            require(item.quantity % product.countStep == 0) { "quantity must match countStep" }
+
+            OrderItem(
+                id = UUID.randomUUID(),
+                productId = product.id,
+                variantId = product.variantId,
+                title = product.title,
+                unit = product.unit,
+                quantity = item.quantity,
+                priceMinor = product.priceMinor,
+                totalMinor = product.priceMinor * item.quantity,
+            )
+        }
     }
 }
