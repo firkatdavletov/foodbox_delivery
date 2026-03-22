@@ -11,10 +11,10 @@ class YandexDeliveryProperties {
     var baseUrl: String = "https://b2b-authproxy.taxi.yandex.net"
     var sourceStationId: String = ""
     var sourcePickupIntervalHours: Long = 24
-    var defaultPlaceWeightGrams: Long = 1_000
-    var defaultPlaceLengthCm: Int = 10
-    var defaultPlaceHeightCm: Int = 10
-    var defaultPlaceWidthCm: Int = 10
+    var defaultPlaceWeightGrams: Long = 1_00
+    var defaultPlaceLengthCm: Int = 15
+    var defaultPlaceHeightCm: Int = 15
+    var defaultPlaceWidthCm: Int = 5
     var connectTimeoutMs: Int = 3_000
     var readTimeoutMs: Int = 10_000
 
