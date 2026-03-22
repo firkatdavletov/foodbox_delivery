@@ -71,7 +71,6 @@ class DeliveryOrderRequestServiceImplTest {
                 enabled = true
                 token = "test-token"
                 baseUrl = "https://example.test"
-                merchantId = "merchant-1"
                 sourceStationId = "source-station-1"
                 sourcePickupIntervalHours = 12
             },
@@ -128,7 +127,6 @@ class DeliveryOrderRequestServiceImplTest {
                 enabled = true
                 token = "test-token"
                 baseUrl = "https://example.test"
-                merchantId = "merchant-1"
                 sourceStationId = "source-station-1"
             },
             deliveryOfferRepository = InMemoryDeliveryOfferRepository(),
@@ -158,7 +156,6 @@ class DeliveryOrderRequestServiceImplTest {
                 enabled = true
                 token = "test-token"
                 baseUrl = "https://example.test"
-                merchantId = "merchant-1"
                 sourceStationId = "source-station-1"
             },
             deliveryOfferRepository = InMemoryDeliveryOfferRepository(),

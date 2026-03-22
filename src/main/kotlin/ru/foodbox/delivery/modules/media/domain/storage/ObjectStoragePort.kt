@@ -26,5 +26,6 @@ interface ObjectStoragePort {
     fun bucket(): String
     fun createDirectUpload(request: CreateDirectUploadRequest): DirectUpload
     fun getObjectMetadata(objectKey: String): StoredObjectMetadata?
+    fun moveObject(sourceKey: String, destinationKey: String)
     fun buildPublicUrl(objectKey: String): String
 }

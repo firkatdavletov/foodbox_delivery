@@ -123,7 +123,6 @@ class YandexDeliveryApiClientTest {
             assertEquals("POST", requestMethod.get())
             assertEquals("Bearer test-token", authorizationHeader.get())
             assertTrue(requestUri.get()?.contains("/api/b2b/platform/offers/create?send_unix=false") == true)
-            assertTrue(requestBody.get()?.contains("\"merchant_id\":\"merchant-1\"") == true)
             assertTrue(requestBody.get()?.contains("\"payment_method\":\"card_on_receipt\"") == true)
             assertTrue(requestBody.get()?.contains("\"platform_id\":\"pickup-point-1\"") == true)
         }
@@ -216,7 +215,6 @@ class YandexDeliveryApiClientTest {
                 enabled = true
                 token = "test-token"
                 baseUrl = "http://127.0.0.1:${server.address.port}"
-                merchantId = "merchant-1"
                 sourceStationId = "source-station-id"
             }
             val client = YandexDeliveryApiClient(properties, RestClient.builder())

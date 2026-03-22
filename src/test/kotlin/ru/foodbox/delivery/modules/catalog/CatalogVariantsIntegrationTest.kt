@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.ActiveProfiles
@@ -33,6 +35,7 @@ import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportMode
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportType
 import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
+import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
 import java.time.Instant
@@ -94,8 +97,16 @@ class CatalogVariantsIntegrationTest {
     @Autowired
     private lateinit var mediaImageJpaRepository: MediaImageJpaRepository
 
+    @MockBean
+    private lateinit var storagePort: ObjectStoragePort
+
     @BeforeEach
     fun cleanup() {
+        Mockito.reset(storagePort)
+        Mockito.doNothing().`when`(storagePort).moveObject(Mockito.anyString(), Mockito.anyString())
+        Mockito.doAnswer { invocation ->
+            "https://cdn.example.com/${invocation.getArgument<String>(0)}"
+        }.`when`(storagePort).buildPublicUrl(Mockito.anyString())
         variantImageJpaRepository.deleteAllInBatch()
         productImageJpaRepository.deleteAllInBatch()
         categoryImageJpaRepository.deleteAllInBatch()
@@ -186,16 +197,23 @@ class CatalogVariantsIntegrationTest {
 
         val upsertResponse = upsertProductAsAdmin(request)
         val productId = UUID.fromString(upsertResponse.get("id").asText())
-        assertEquals("https://cdn.example.com/products/shirt-main.jpg", upsertResponse["imageUrls"][0].asText())
+        val productImage = mediaImageJpaRepository.findById(productImageId).orElseThrow()
+        assertEquals(productId, productImage.targetId)
+        assertTrue(productImage.objectKey.startsWith("products/$productId/"))
+        assertEquals("https://cdn.example.com/${productImage.objectKey}", upsertResponse["imageUrls"][0].asText())
 
         val details = getProductDetails(productId)
-        assertEquals("https://cdn.example.com/products/shirt-main.jpg", details["imageUrls"][0].asText())
+        assertEquals("https://cdn.example.com/${productImage.objectKey}", details["imageUrls"][0].asText())
         assertEquals(2, details.get("optionGroups").size())
         assertEquals(2, details.get("variants").size())
         assertNotNull(details.get("defaultVariantId")?.asText())
         assertEquals("TSHIRT-BLACK-S", details.get("variants")[0].get("sku").asText())
+        val blackVariantId = UUID.fromString(details["variants"][0]["id"].asText())
+        val blackVariantImage = mediaImageJpaRepository.findById(blackVariantImageId).orElseThrow()
+        assertEquals(blackVariantId, blackVariantImage.targetId)
+        assertTrue(blackVariantImage.objectKey.startsWith("variants/$blackVariantId/"))
         assertEquals(
-            "https://cdn.example.com/products/shirt-black-s.jpg",
+            "https://cdn.example.com/${blackVariantImage.objectKey}",
             details["variants"][0]["imageUrls"][0].asText(),
         )
     }
@@ -457,9 +475,16 @@ class CatalogVariantsIntegrationTest {
         )
 
         val details = getProductDetails(productId)
-        assertEquals("https://cdn.example.com/products/image-sync-next.jpg", details["imageUrls"][0].asText())
+        val nextProductImage = mediaImageJpaRepository.findById(nextProductImageId).orElseThrow()
+        assertEquals(productId, nextProductImage.targetId)
+        assertTrue(nextProductImage.objectKey.startsWith("products/$productId/"))
+        assertEquals("https://cdn.example.com/${nextProductImage.objectKey}", details["imageUrls"][0].asText())
+        val nextVariantId = UUID.fromString(details["variants"][0]["id"].asText())
+        val nextVariantImage = mediaImageJpaRepository.findById(nextVariantImageId).orElseThrow()
+        assertEquals(nextVariantId, nextVariantImage.targetId)
+        assertTrue(nextVariantImage.objectKey.startsWith("variants/$nextVariantId/"))
         assertEquals(
-            "https://cdn.example.com/products/image-sync-variant-next.jpg",
+            "https://cdn.example.com/${nextVariantImage.objectKey}",
             details["variants"][0]["imageUrls"][0].asText(),
         )
         assertEquals(
@@ -495,7 +520,10 @@ class CatalogVariantsIntegrationTest {
             )
         )
         val categoryId = UUID.fromString(created["id"].asText())
-        assertEquals("https://cdn.example.com/categories/dresses-initial.jpg", created["imageUrls"][0].asText())
+        val initialCategoryImage = mediaImageJpaRepository.findById(initialImageId).orElseThrow()
+        assertEquals(categoryId, initialCategoryImage.targetId)
+        assertTrue(initialCategoryImage.objectKey.startsWith("categories/$categoryId/"))
+        assertEquals("https://cdn.example.com/${initialCategoryImage.objectKey}", created["imageUrls"][0].asText())
 
         val updated = upsertCategoryAsAdmin(
             mapOf(
@@ -507,7 +535,10 @@ class CatalogVariantsIntegrationTest {
             )
         )
 
-        assertEquals("https://cdn.example.com/categories/dresses-next.jpg", updated["imageUrls"][0].asText())
+        val nextCategoryImage = mediaImageJpaRepository.findById(nextImageId).orElseThrow()
+        assertEquals(categoryId, nextCategoryImage.targetId)
+        assertTrue(nextCategoryImage.objectKey.startsWith("categories/$categoryId/"))
+        assertEquals("https://cdn.example.com/${nextCategoryImage.objectKey}", updated["imageUrls"][0].asText())
         assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(initialImageId).orElseThrow().status)
         assertEquals(MediaImageStatus.READY, mediaImageJpaRepository.findById(nextImageId).orElseThrow().status)
     }
@@ -888,12 +919,17 @@ class CatalogVariantsIntegrationTest {
         targetId: UUID? = null,
     ): UUID {
         val now = Instant.now()
+        val keyPrefix = when (targetType) {
+            MediaTargetType.PRODUCT -> "products"
+            MediaTargetType.CATEGORY -> "categories"
+            MediaTargetType.VARIANT -> "variants"
+        }
         val image = MediaImageEntity(
             id = UUID.randomUUID(),
             targetType = targetType,
             targetId = targetId,
             bucket = "test-bucket",
-            objectKey = "test/${UUID.randomUUID()}.jpg",
+            objectKey = "$keyPrefix/${targetId?.toString() ?: "unassigned"}/${UUID.randomUUID()}.jpg",
             originalFilename = "test.jpg",
             contentType = "image/jpeg",
             fileSize = 1024,

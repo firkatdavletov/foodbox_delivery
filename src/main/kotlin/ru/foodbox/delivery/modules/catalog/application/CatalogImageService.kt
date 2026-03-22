@@ -13,6 +13,7 @@ import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
+import ru.foodbox.delivery.modules.media.application.MediaObjectKeyFactory
 import java.time.Instant
 import java.util.UUID
 
@@ -23,6 +24,7 @@ class CatalogImageService(
     private val productVariantImageRepository: CatalogProductVariantImageRepository,
     private val mediaImageRepository: MediaImageRepository,
     private val storagePort: ObjectStoragePort,
+    private val objectKeyFactory: MediaObjectKeyFactory,
 ) {
 
     fun getCategoryImageUrls(categoryIds: Collection<UUID>): Map<UUID, List<String>> {
@@ -251,20 +253,76 @@ class CatalogImageService(
             return
         }
 
-        val touchedImages = mediaImageRepository.findAllByIds(imageIds)
-            .map { image ->
+        val currentImages = mediaImageRepository.findAllByIds(imageIds)
+        val completedRelocations = mutableListOf<CompletedRelocation>()
+
+        try {
+            val touchedImages = currentImages.map { image ->
                 if (image.targetType == targetType && image.targetId == targetId && image.status == MediaImageStatus.READY) {
                     image
                 } else {
-                    image.copy(
+                    val relocatedImage = relocateImageIfNeeded(
+                        image = image,
                         targetType = targetType,
                         targetId = targetId,
-                        status = MediaImageStatus.READY,
-                        updatedAt = now,
+                        now = now,
                     )
+                    if (relocatedImage.objectKey != image.objectKey) {
+                        completedRelocations += CompletedRelocation(
+                            fromKey = image.objectKey,
+                            toKey = relocatedImage.objectKey,
+                        )
+                    }
+                    relocatedImage
                 }
             }
-        mediaImageRepository.saveAll(touchedImages)
+            mediaImageRepository.saveAll(touchedImages)
+        } catch (ex: Exception) {
+            completedRelocations.asReversed().forEach { relocation ->
+                runCatching { storagePort.moveObject(relocation.toKey, relocation.fromKey) }
+            }
+            throw ex
+        }
+    }
+
+    private fun relocateImageIfNeeded(
+        image: MediaImage,
+        targetType: MediaTargetType,
+        targetId: UUID,
+        now: Instant,
+    ): MediaImage {
+        val nextObjectKey = if (requiresRelocation(image, targetType, targetId)) {
+            objectKeyFactory.assignedKey(
+                targetType = targetType,
+                targetId = targetId,
+                currentObjectKey = image.objectKey,
+                originalFilename = image.originalFilename,
+                contentType = image.contentType,
+            )
+        } else {
+            image.objectKey
+        }
+
+        if (nextObjectKey != image.objectKey) {
+            storagePort.moveObject(image.objectKey, nextObjectKey)
+        }
+
+        return image.copy(
+            targetType = targetType,
+            targetId = targetId,
+            objectKey = nextObjectKey,
+            publicUrl = storagePort.buildPublicUrl(nextObjectKey),
+            status = MediaImageStatus.READY,
+            updatedAt = now,
+        )
+    }
+
+    private fun requiresRelocation(
+        image: MediaImage,
+        targetType: MediaTargetType,
+        targetId: UUID,
+    ): Boolean {
+        return image.targetType != targetType || image.targetId != targetId
     }
 
     private fun loadUsageByImageIds(imageIds: Collection<UUID>): Map<UUID, List<MediaUsage>> {
@@ -336,4 +394,9 @@ private data class MediaUsage(
 private data class MediaOwnerUsage(
     val targetType: MediaTargetType,
     val ownerId: UUID,
+)
+
+private data class CompletedRelocation(
+    val fromKey: String,
+    val toKey: String,
 )

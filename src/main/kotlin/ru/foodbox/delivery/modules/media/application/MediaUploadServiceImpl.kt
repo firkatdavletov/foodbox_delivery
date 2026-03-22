@@ -27,6 +27,7 @@ class MediaUploadServiceImpl(
     private val categoryRepository: CatalogCategoryRepository,
     private val variantRepository: CatalogProductVariantRepository,
     private val mediaUploadProperties: MediaUploadProperties,
+    private val objectKeyFactory: MediaObjectKeyFactory,
 ) : MediaUploadService {
 
     @Transactional
@@ -39,7 +40,7 @@ class MediaUploadServiceImpl(
             ensureTargetExists(command.targetType, targetId)
         }
 
-        val objectKey = generateObjectKey(
+        val objectKey = objectKeyFactory.newUploadKey(
             targetType = command.targetType,
             targetId = command.targetId,
             originalFilename = normalizedFilename,
@@ -165,38 +166,6 @@ class MediaUploadServiceImpl(
             }
         }
     }
-
-    private fun generateObjectKey(
-        targetType: MediaTargetType,
-        targetId: UUID?,
-        originalFilename: String,
-        contentType: String,
-    ): String {
-        val prefix = when (targetType) {
-            MediaTargetType.PRODUCT -> "products"
-            MediaTargetType.CATEGORY -> "categories"
-            MediaTargetType.VARIANT -> "variants"
-        }
-
-        val extension = resolveExtension(originalFilename, contentType)
-        val ownerSegment = targetId?.toString() ?: "unassigned"
-        return "$prefix/$ownerSegment/${UUID.randomUUID()}.$extension"
-    }
-
-    private fun resolveExtension(originalFilename: String, contentType: String): String {
-        val fromContentType = CONTENT_TYPE_EXTENSIONS[normalizeContentType(contentType)]
-        if (fromContentType != null) {
-            return fromContentType
-        }
-
-        val fromFilename = originalFilename
-            .substringAfterLast('.', "")
-            .lowercase()
-            .takeIf { it.matches(EXTENSION_REGEX) }
-
-        return fromFilename ?: "bin"
-    }
-
     private fun sanitizeOriginalFilename(originalFilename: String): String {
         val sanitized = originalFilename
             .trim()
@@ -223,14 +192,7 @@ class MediaUploadServiceImpl(
     }
 
     private companion object {
-        val EXTENSION_REGEX = Regex("^[a-z0-9]{1,10}$")
         const val MIN_PRESIGN_MINUTES = 1L
         const val MAX_PRESIGN_MINUTES = 60L
-        val CONTENT_TYPE_EXTENSIONS = mapOf(
-            "image/jpeg" to "jpg",
-            "image/png" to "png",
-            "image/webp" to "webp",
-            "image/gif" to "gif",
-        )
     }
 }

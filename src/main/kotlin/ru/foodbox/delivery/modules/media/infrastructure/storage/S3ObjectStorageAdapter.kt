@@ -11,6 +11,8 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.S3Exception
@@ -92,6 +94,29 @@ class S3ObjectStorageAdapter(
                 throw ex
             }
         }
+    }
+
+    override fun moveObject(sourceKey: String, destinationKey: String) {
+        validateConfigured()
+
+        if (sourceKey == destinationKey) {
+            return
+        }
+
+        s3Client.copyObject(
+            CopyObjectRequest.builder()
+                .sourceBucket(properties.bucket)
+                .sourceKey(sourceKey)
+                .destinationBucket(properties.bucket)
+                .destinationKey(destinationKey)
+                .build()
+        )
+        s3Client.deleteObject(
+            DeleteObjectRequest.builder()
+                .bucket(properties.bucket)
+                .key(sourceKey)
+                .build()
+        )
     }
 
     override fun buildPublicUrl(objectKey: String): String {
