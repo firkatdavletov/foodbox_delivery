@@ -4,6 +4,7 @@ import java.util.UUID
 
 data class CatalogProductDetails(
     val product: CatalogProduct,
+    val imageIds: List<UUID> = emptyList(),
     val optionGroups: List<CatalogProductOptionGroupDetails>,
     val defaultVariantId: UUID?,
     val variants: List<CatalogProductVariantDetails>,
@@ -31,6 +32,7 @@ data class CatalogProductVariantDetails(
     val title: String?,
     val priceMinor: Long?,
     val oldPriceMinor: Long?,
+    val imageIds: List<UUID> = emptyList(),
     val imageUrls: List<String> = emptyList(),
     val sortOrder: Int,
     val isActive: Boolean,

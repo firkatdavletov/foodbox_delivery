@@ -40,7 +40,7 @@ class CatalogProductVariantsService(
 
         val variants = variantRepository.findAllByProductId(productId)
         val variantIds = variants.map { it.id }
-        val imageUrlsByVariantId = imageService.getVariantImageUrls(variantIds)
+        val imagesByVariantId = imageService.getVariantImages(variantIds)
         val linksByVariantId = variantOptionValueRepository.findAllByVariantIds(variantIds)
             .groupBy { it.variantId }
 
@@ -69,7 +69,8 @@ class CatalogProductVariantsService(
                 title = variant.title,
                 priceMinor = variant.priceMinor,
                 oldPriceMinor = variant.oldPriceMinor,
-                imageUrls = imageUrlsByVariantId[variant.id].orEmpty(),
+                imageIds = imagesByVariantId[variant.id].orEmpty().map { it.id },
+                imageUrls = imagesByVariantId[variant.id].orEmpty().map { it.url },
                 sortOrder = variant.sortOrder,
                 isActive = variant.isActive,
                 optionValueIds = linksByVariantId[variant.id].orEmpty().map { it.optionValueId },

@@ -1,6 +1,8 @@
 package ru.foodbox.delivery.modules.catalog.api
 
 import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductDetailsResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductVariantResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductOptionGroupResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductOptionValueResponse
@@ -38,7 +40,7 @@ internal fun CatalogProduct.toResponse(): ProductResponse {
     )
 }
 
-internal fun CatalogProductDetails.toDetailsResponse(): ProductDetailsResponse {
+internal fun CatalogProductDetails.toPublicDetailsResponse(): ProductDetailsResponse {
     return ProductDetailsResponse(
         id = product.id,
         categoryId = product.categoryId,
@@ -77,6 +79,56 @@ internal fun CatalogProductDetails.toDetailsResponse(): ProductDetailsResponse {
                 title = variant.title,
                 priceMinor = variant.priceMinor,
                 oldPriceMinor = variant.oldPriceMinor,
+                imageUrls = variant.imageUrls,
+                sortOrder = variant.sortOrder,
+                isActive = variant.isActive,
+                optionValueIds = variant.optionValueIds,
+            )
+        },
+    )
+}
+
+internal fun CatalogProductDetails.toAdminDetailsResponse(): AdminProductDetailsResponse {
+    return AdminProductDetailsResponse(
+        id = product.id,
+        categoryId = product.categoryId,
+        title = product.title,
+        slug = product.slug,
+        description = product.description,
+        priceMinor = product.priceMinor,
+        oldPriceMinor = product.oldPriceMinor,
+        sku = product.sku,
+        imageIds = imageIds,
+        imageUrls = product.imageUrls,
+        unit = product.unit,
+        countStep = product.countStep,
+        isActive = product.isActive,
+        optionGroups = optionGroups.map { optionGroup ->
+            ProductOptionGroupResponse(
+                id = optionGroup.id,
+                code = optionGroup.code,
+                title = optionGroup.title,
+                sortOrder = optionGroup.sortOrder,
+                values = optionGroup.values.map { optionValue ->
+                    ProductOptionValueResponse(
+                        id = optionValue.id,
+                        code = optionValue.code,
+                        title = optionValue.title,
+                        sortOrder = optionValue.sortOrder,
+                    )
+                },
+            )
+        },
+        defaultVariantId = defaultVariantId,
+        variants = variants.map { variant ->
+            AdminProductVariantResponse(
+                id = variant.id,
+                externalId = variant.externalId,
+                sku = variant.sku,
+                title = variant.title,
+                priceMinor = variant.priceMinor,
+                oldPriceMinor = variant.oldPriceMinor,
+                imageIds = variant.imageIds,
                 imageUrls = variant.imageUrls,
                 sortOrder = variant.sortOrder,
                 isActive = variant.isActive,

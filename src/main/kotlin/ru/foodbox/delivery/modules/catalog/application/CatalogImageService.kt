@@ -28,14 +28,22 @@ class CatalogImageService(
 ) {
 
     fun getCategoryImageUrls(categoryIds: Collection<UUID>): Map<UUID, List<String>> {
-        return mapCategoryImages(categoryImageRepository.findAllByCategoryIds(categoryIds))
+        return getCategoryImages(categoryIds).mapValues { (_, images) -> images.map { it.url } }
     }
 
     fun getProductImageUrls(productIds: Collection<UUID>): Map<UUID, List<String>> {
-        return mapProductImages(productImageRepository.findAllByProductIds(productIds))
+        return getProductImages(productIds).mapValues { (_, images) -> images.map { it.url } }
     }
 
     fun getVariantImageUrls(variantIds: Collection<UUID>): Map<UUID, List<String>> {
+        return getVariantImages(variantIds).mapValues { (_, images) -> images.map { it.url } }
+    }
+
+    fun getProductImages(productIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
+        return mapProductImages(productImageRepository.findAllByProductIds(productIds))
+    }
+
+    fun getVariantImages(variantIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
         return mapVariantImages(productVariantImageRepository.findAllByVariantIds(variantIds))
     }
 
@@ -145,7 +153,11 @@ class CatalogImageService(
         }
     }
 
-    private fun mapCategoryImages(links: List<CatalogCategoryImage>): Map<UUID, List<String>> {
+    private fun getCategoryImages(categoryIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
+        return mapCategoryImages(categoryImageRepository.findAllByCategoryIds(categoryIds))
+    }
+
+    private fun mapCategoryImages(links: List<CatalogCategoryImage>): Map<UUID, List<CatalogImageReference>> {
         if (links.isEmpty()) {
             return emptyMap()
         }
@@ -154,12 +166,15 @@ class CatalogImageService(
         return links.groupBy { it.categoryId }
             .mapValues { (_, categoryLinks) ->
                 categoryLinks.map { link ->
-                    resolveImageUrl(imagesById.getValue(link.imageId))
+                    CatalogImageReference(
+                        id = link.imageId,
+                        url = resolveImageUrl(imagesById.getValue(link.imageId)),
+                    )
                 }
             }
     }
 
-    private fun mapProductImages(links: List<CatalogProductImage>): Map<UUID, List<String>> {
+    private fun mapProductImages(links: List<CatalogProductImage>): Map<UUID, List<CatalogImageReference>> {
         if (links.isEmpty()) {
             return emptyMap()
         }
@@ -168,12 +183,15 @@ class CatalogImageService(
         return links.groupBy { it.productId }
             .mapValues { (_, productLinks) ->
                 productLinks.map { link ->
-                    resolveImageUrl(imagesById.getValue(link.imageId))
+                    CatalogImageReference(
+                        id = link.imageId,
+                        url = resolveImageUrl(imagesById.getValue(link.imageId)),
+                    )
                 }
             }
     }
 
-    private fun mapVariantImages(links: List<CatalogProductVariantImage>): Map<UUID, List<String>> {
+    private fun mapVariantImages(links: List<CatalogProductVariantImage>): Map<UUID, List<CatalogImageReference>> {
         if (links.isEmpty()) {
             return emptyMap()
         }
@@ -182,7 +200,10 @@ class CatalogImageService(
         return links.groupBy { it.variantId }
             .mapValues { (_, variantLinks) ->
                 variantLinks.map { link ->
-                    resolveImageUrl(imagesById.getValue(link.imageId))
+                    CatalogImageReference(
+                        id = link.imageId,
+                        url = resolveImageUrl(imagesById.getValue(link.imageId)),
+                    )
                 }
             }
     }
@@ -399,4 +420,9 @@ private data class MediaOwnerUsage(
 private data class CompletedRelocation(
     val fromKey: String,
     val toKey: String,
+)
+
+data class CatalogImageReference(
+    val id: UUID,
+    val url: String,
 )

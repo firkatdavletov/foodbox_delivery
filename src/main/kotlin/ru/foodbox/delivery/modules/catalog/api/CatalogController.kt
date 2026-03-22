@@ -41,6 +41,6 @@ class CatalogController(
         val product = catalogService.getProductDetails(productId)
             ?: throw NotFoundException("Product not found")
 
-        return product.toDetailsResponse()
+        return product.toPublicDetailsResponse()
     }
 }

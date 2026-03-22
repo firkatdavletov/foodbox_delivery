@@ -874,7 +874,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductDetailsResponse'
+                $ref: '#/components/schemas/AdminProductDetailsResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -2452,6 +2452,76 @@ components:
           items:
             $ref: '#/components/schemas/ProductVariantResponse'
 
+    AdminProductDetailsResponse:
+      type: object
+      required:
+        [
+          id,
+          categoryId,
+          title,
+          slug,
+          priceMinor,
+          imageIds,
+          imageUrls,
+          unit,
+          countStep,
+          isActive,
+          optionGroups,
+          variants,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+        oldPriceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        imageUrls:
+          type: array
+          items:
+            type: string
+        unit:
+          $ref: '#/components/schemas/ProductUnit'
+        countStep:
+          type: integer
+          format: int32
+        isActive:
+          type: boolean
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductOptionGroupResponse'
+        defaultVariantId:
+          type: string
+          format: uuid
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminProductVariantResponse'
+
     ProductOptionGroupResponse:
       type: object
       required: [id, code, title, sortOrder, values]
@@ -2509,6 +2579,49 @@ components:
           type: integer
           format: int64
           nullable: true
+        imageUrls:
+          type: array
+          items:
+            type: string
+        sortOrder:
+          type: integer
+          format: int32
+        isActive:
+          type: boolean
+        optionValueIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    AdminProductVariantResponse:
+      type: object
+      required: [id, sku, imageIds, imageUrls, sortOrder, isActive, optionValueIds]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          nullable: true
+        sku:
+          type: string
+        title:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        oldPriceMinor:
+          type: integer
+          format: int64
+          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         imageUrls:
           type: array
           items:

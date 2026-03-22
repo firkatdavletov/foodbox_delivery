@@ -501,6 +501,96 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `attaching variant image keeps product image attached`() {
+        val categoryId = createCategory(externalId = "cat-variant-image-keep", slug = "variant-image-keep")
+        val productImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/variant-image-keep-product.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+        val variantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/variant-image-keep-variant.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Куртка",
+                "priceMinor" to 6800,
+                "imageIds" to listOf(productImageId),
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "m", "title" to "M")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "JACKET-M",
+                        "options" to listOf(mapOf("optionGroupCode" to "size", "optionValueCode" to "m")),
+                    )
+                ),
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+
+        upsertProductAsAdmin(
+            mapOf(
+                "id" to productId,
+                "categoryId" to categoryId,
+                "title" to "Куртка",
+                "priceMinor" to 6800,
+                "imageIds" to listOf(productImageId),
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "m", "title" to "M")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "JACKET-M",
+                        "imageIds" to listOf(variantImageId),
+                        "options" to listOf(mapOf("optionGroupCode" to "size", "optionValueCode" to "m")),
+                    )
+                ),
+            )
+        )
+
+        val publicDetails = getProductDetails(productId)
+        assertTrue(publicDetails.path("imageIds").isMissingNode)
+        assertTrue(publicDetails.path("variants").path(0).path("imageIds").isMissingNode)
+
+        val adminDetails = getAdminProductDetails(productId)
+        val productImage = mediaImageJpaRepository.findById(productImageId).orElseThrow()
+        assertEquals(MediaImageStatus.READY, productImage.status)
+        assertEquals(productId, productImage.targetId)
+        assertTrue(productImage.objectKey.startsWith("products/$productId/"))
+        assertEquals(productImageId.toString(), adminDetails["imageIds"][0].asText())
+        assertEquals("https://cdn.example.com/${productImage.objectKey}", publicDetails["imageUrls"][0].asText())
+
+        val variantId = UUID.fromString(publicDetails["variants"][0]["id"].asText())
+        val variantImage = mediaImageJpaRepository.findById(variantImageId).orElseThrow()
+        assertEquals(MediaImageStatus.READY, variantImage.status)
+        assertEquals(variantId, variantImage.targetId)
+        assertTrue(variantImage.objectKey.startsWith("variants/$variantId/"))
+        assertEquals(variantImageId.toString(), adminDetails["variants"][0]["imageIds"][0].asText())
+        assertEquals(
+            "https://cdn.example.com/${variantImage.objectKey}",
+            publicDetails["variants"][0]["imageUrls"][0].asText(),
+        )
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `upsert category syncs image attachments`() {
         val initialImageId = createReadyImage(
             publicUrl = "https://cdn.example.com/categories/dresses-initial.jpg",

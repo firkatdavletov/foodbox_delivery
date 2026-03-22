@@ -125,9 +125,10 @@ class CatalogServiceImpl(
         val product = productRepository.findById(productId)
             ?: throw NotFoundException("Product not found")
         val variantDetails = productVariantsService.getDetails(product.id)
-        val productImageUrls = imageService.getProductImageUrls(listOf(product.id))[product.id].orEmpty()
+        val productImages = imageService.getProductImages(listOf(product.id))[product.id].orEmpty()
         return CatalogProductDetails(
-            product = product.copy(imageUrls = productImageUrls),
+            product = product.copy(imageUrls = productImages.map { it.url }),
+            imageIds = productImages.map { it.id },
             optionGroups = variantDetails.optionGroups,
             defaultVariantId = variantDetails.defaultVariantId,
             variants = variantDetails.variants,

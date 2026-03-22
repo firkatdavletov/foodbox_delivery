@@ -48,3 +48,36 @@ data class ProductVariantResponse(
     val isActive: Boolean,
     val optionValueIds: List<UUID>,
 )
+
+data class AdminProductDetailsResponse(
+    val id: UUID,
+    val categoryId: UUID,
+    val title: String,
+    val slug: String,
+    val description: String?,
+    val priceMinor: Long,
+    val oldPriceMinor: Long?,
+    val sku: String?,
+    val imageIds: List<UUID>,
+    val imageUrls: List<String>,
+    val unit: ProductUnit,
+    val countStep: Int,
+    val isActive: Boolean,
+    val optionGroups: List<ProductOptionGroupResponse> = emptyList(),
+    val defaultVariantId: UUID? = null,
+    val variants: List<AdminProductVariantResponse> = emptyList(),
+)
+
+data class AdminProductVariantResponse(
+    val id: UUID,
+    val externalId: String?,
+    val sku: String,
+    val title: String?,
+    val priceMinor: Long?,
+    val oldPriceMinor: Long?,
+    val imageIds: List<UUID>,
+    val imageUrls: List<String>,
+    val sortOrder: Int,
+    val isActive: Boolean,
+    val optionValueIds: List<UUID>,
+)
