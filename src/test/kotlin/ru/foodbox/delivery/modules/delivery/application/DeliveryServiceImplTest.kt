@@ -2,6 +2,7 @@ package ru.foodbox.delivery.modules.delivery.application
 
 import org.junit.jupiter.api.Test
 import ru.foodbox.delivery.common.web.CurrentActor
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.YandexDeliveryLocationVariant
 import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
@@ -15,6 +16,36 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class DeliveryServiceImplTest {
+
+    @Test
+    fun `returns pickup and courier when yandex delivery is not configured`() {
+        val yandexDeliveryGateway = RecordingYandexDeliveryGateway(isConfigured = false)
+        val service = DeliveryServiceImpl(
+            pickupPointRepository = StubPickupPointRepository(),
+            yandexDeliveryGateway = yandexDeliveryGateway,
+            paymentService = StubPaymentService(methods = emptyList()),
+            calculators = emptyList(),
+        )
+
+        val result = service.getAvailableMethods()
+
+        assertEquals(emptyList(), result)
+    }
+
+    @Test
+    fun `returns yandex pickup point in available methods when yandex delivery is configured`() {
+        val yandexDeliveryGateway = RecordingYandexDeliveryGateway(isConfigured = true)
+        val service = DeliveryServiceImpl(
+            pickupPointRepository = StubPickupPointRepository(),
+            yandexDeliveryGateway = yandexDeliveryGateway,
+            paymentService = StubPaymentService(methods = emptyList()),
+            calculators = emptyList(),
+        )
+
+        val result = service.getAvailableMethods()
+
+        assertEquals(listOf(DeliveryMethodType.YANDEX_PICKUP_POINT), result)
+    }
 
     @Test
     fun `uses already paid filter for yandex pickup points when online payment is available`() {
@@ -73,7 +104,9 @@ class DeliveryServiceImplTest {
         )
     }
 
-    private class RecordingYandexDeliveryGateway : YandexDeliveryGateway {
+    private class RecordingYandexDeliveryGateway(
+        private val isConfigured: Boolean,
+    ) : YandexDeliveryGateway {
         val pickupPoints = listOf(
             YandexPickupPointOption(
                 id = "yandex-1",
@@ -84,7 +117,9 @@ class DeliveryServiceImplTest {
         var lastGeoId: Long? = null
         var lastPaymentMethod: String? = null
 
-        override fun isConfigured(): Boolean = true
+        constructor() : this(isConfigured = true)
+
+        override fun isConfigured(): Boolean = isConfigured
 
         override fun detectLocations(query: String): List<YandexDeliveryLocationVariant> = emptyList()
 

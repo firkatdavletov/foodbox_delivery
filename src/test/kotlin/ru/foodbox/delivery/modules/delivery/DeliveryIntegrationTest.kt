@@ -30,8 +30,18 @@ class DeliveryIntegrationTest {
 
         mockMvc.perform(get("/api/v1/delivery/methods"))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.methods.length()").value(2))
-            .andExpect(jsonPath("$.methods[0].code").value("PICKUP"))
-            .andExpect(jsonPath("$.methods[1].code").value("COURIER"))
+            .andExpect(jsonPath("$.methods.length()").value(0))
+            .andExpect(jsonPath("$.pickupPoints.length()").value(0))
+    }
+
+    @Test
+    fun `returns only yandex pickup point method when yandex delivery is configured`() {
+        Mockito.`when`(yandexDeliveryGateway.isConfigured()).thenReturn(true)
+
+        mockMvc.perform(get("/api/v1/delivery/methods"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.methods.length()").value(1))
+            .andExpect(jsonPath("$.methods[0].code").value("YANDEX_PICKUP_POINT"))
+            .andExpect(jsonPath("$.pickupPoints.length()").value(0))
     }
 }

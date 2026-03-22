@@ -16,6 +16,7 @@ import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 
 @RestController
 @RequestMapping("/api/v1/delivery")
@@ -25,9 +26,15 @@ class DeliveryController(
 
     @GetMapping("/methods")
     fun getMethods(): DeliveryMethodsResponse {
+        val methods = deliveryService.getAvailableMethods()
+
         return toMethodsResponse(
-            methods = deliveryService.getAvailableMethods(),
-            pickupPoints = deliveryService.getActivePickupPoints(),
+            methods = methods,
+            pickupPoints = if (methods.contains(DeliveryMethodType.PICKUP)) {
+                deliveryService.getActivePickupPoints()
+            } else {
+                emptyList()
+            },
         )
     }
 
