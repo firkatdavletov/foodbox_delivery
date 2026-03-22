@@ -139,7 +139,6 @@ class YandexDeliveryApiClient(
                     OffersCreateApiRequest(
                         info = OffersCreateRequestInfo(
                             operatorRequestId = request.operatorRequestId,
-                            merchantId = properties.merchantId.trim(),
                             comment = request.comment,
                         ),
                         source = OfferSourceRequestNode(
@@ -454,8 +453,6 @@ class YandexDeliveryApiClient(
     private data class OffersCreateRequestInfo(
         @JsonProperty("operator_request_id")
         val operatorRequestId: String,
-        @JsonProperty("merchant_id")
-        val merchantId: String,
         val comment: String? = null,
     )
 

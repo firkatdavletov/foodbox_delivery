@@ -9,7 +9,6 @@ class YandexDeliveryProperties {
     var enabled: Boolean = false
     var token: String = ""
     var baseUrl: String = "https://b2b-authproxy.taxi.yandex.net"
-    var merchantId: String = ""
     var sourceStationId: String = ""
     var sourcePickupIntervalHours: Long = 24
     var defaultPlaceWeightGrams: Long = 1_000
@@ -23,7 +22,6 @@ class YandexDeliveryProperties {
         return enabled &&
             token.isNotBlank() &&
             baseUrl.isNotBlank() &&
-            merchantId.isNotBlank() &&
             sourceStationId.isNotBlank()
     }
 }
