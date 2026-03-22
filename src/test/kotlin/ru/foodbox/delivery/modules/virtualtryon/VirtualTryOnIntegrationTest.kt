@@ -20,9 +20,15 @@ import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
+import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.entity.CatalogProductImageEntity
+import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductImageJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogCategoryJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductVariantJpaRepository
+import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
+import ru.foodbox.delivery.modules.media.domain.MediaTargetType
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
 import ru.foodbox.delivery.modules.virtualtryon.application.StartVirtualTryOnProviderResponse
 import ru.foodbox.delivery.modules.virtualtryon.application.VirtualTryOnProviderGateway
 import ru.foodbox.delivery.modules.virtualtryon.application.VirtualTryOnProviderStatusResponse
@@ -62,6 +68,12 @@ class VirtualTryOnIntegrationTest {
     @Autowired
     private lateinit var categoryJpaRepository: CatalogCategoryJpaRepository
 
+    @Autowired
+    private lateinit var productImageJpaRepository: CatalogProductImageJpaRepository
+
+    @Autowired
+    private lateinit var mediaImageJpaRepository: MediaImageJpaRepository
+
     @MockBean
     private lateinit var providerGateway: VirtualTryOnProviderGateway
 
@@ -71,6 +83,8 @@ class VirtualTryOnIntegrationTest {
     @BeforeEach
     fun cleanup() {
         virtualTryOnSessionJpaRepository.deleteAllInBatch()
+        productImageJpaRepository.deleteAllInBatch()
+        mediaImageJpaRepository.deleteAllInBatch()
         variantJpaRepository.deleteAllInBatch()
         productJpaRepository.deleteAllInBatch()
         categoryJpaRepository.deleteAllInBatch()
@@ -200,14 +214,14 @@ class VirtualTryOnIntegrationTest {
                 id = UUID.randomUUID(),
                 name = "Dresses",
                 slug = "dresses",
-                imageUrl = null,
+                imageUrls = emptyList(),
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
             )
         )
 
-        return productRepository.save(
+        val productId = productRepository.save(
             CatalogProduct(
                 id = UUID.randomUUID(),
                 categoryId = category.id,
@@ -217,7 +231,7 @@ class VirtualTryOnIntegrationTest {
                 priceMinor = 10_000,
                 oldPriceMinor = null,
                 sku = "DRESS-001",
-                imageUrl = imageUrl,
+                imageUrls = emptyList(),
                 unit = ProductUnit.PIECE,
                 countStep = 1,
                 isActive = true,
@@ -225,6 +239,35 @@ class VirtualTryOnIntegrationTest {
                 updatedAt = now,
             )
         ).id
+
+        val mediaImage = mediaImageJpaRepository.save(
+            MediaImageEntity(
+                id = UUID.randomUUID(),
+                targetType = MediaTargetType.PRODUCT,
+                targetId = productId,
+                bucket = "test-bucket",
+                objectKey = "products/$productId/${UUID.randomUUID()}.jpg",
+                originalFilename = "dress.jpg",
+                contentType = "image/jpeg",
+                fileSize = 1024,
+                status = MediaImageStatus.READY,
+                publicUrl = imageUrl,
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        productImageJpaRepository.save(
+            CatalogProductImageEntity(
+                id = UUID.randomUUID(),
+                productId = productId,
+                imageId = mediaImage.id,
+                sortOrder = 0,
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+
+        return productId
     }
 
     private fun <T> anyObject(): T {

@@ -12,7 +12,7 @@ data class UpsertProductCommand(
     val priceMinor: Long,
     val oldPriceMinor: Long?,
     val sku: String?,
-    val imageUrl: String?,
+    val imageIds: List<UUID> = emptyList(),
     val unit: ProductUnit,
     val countStep: Int,
     val isActive: Boolean,

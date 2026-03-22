@@ -2330,7 +2330,7 @@ components:
 
     CategoryResponse:
       type: object
-      required: [id, name, slug, isActive]
+      required: [id, name, slug, imageUrls, isActive]
       properties:
         id:
           type: string
@@ -2339,15 +2339,16 @@ components:
           type: string
         slug:
           type: string
-        imageUrl:
-          type: string
-          nullable: true
+        imageUrls:
+          type: array
+          items:
+            type: string
         isActive:
           type: boolean
 
     ProductResponse:
       type: object
-      required: [id, categoryId, title, slug, priceMinor, unit, countStep, isActive]
+      required: [id, categoryId, title, slug, priceMinor, imageUrls, unit, countStep, isActive]
       properties:
         id:
           type: string
@@ -2375,9 +2376,10 @@ components:
         sku:
           type: string
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageUrls:
+          type: array
+          items:
+            type: string
         unit:
           $ref: '#/components/schemas/ProductUnit'
         countStep:
@@ -2395,6 +2397,7 @@ components:
           title,
           slug,
           priceMinor,
+          imageUrls,
           unit,
           countStep,
           isActive,
@@ -2425,9 +2428,10 @@ components:
         sku:
           type: string
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageUrls:
+          type: array
+          items:
+            type: string
         unit:
           $ref: '#/components/schemas/ProductUnit'
         countStep:
@@ -2484,7 +2488,7 @@ components:
 
     ProductVariantResponse:
       type: object
-      required: [id, sku, sortOrder, isActive, optionValueIds]
+      required: [id, sku, imageUrls, sortOrder, isActive, optionValueIds]
       properties:
         id:
           type: string
@@ -2505,9 +2509,10 @@ components:
           type: integer
           format: int64
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageUrls:
+          type: array
+          items:
+            type: string
         sortOrder:
           type: integer
           format: int32
@@ -2533,9 +2538,11 @@ components:
         slug:
           type: string
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         isActive:
           type: boolean
           default: true
@@ -2572,9 +2579,11 @@ components:
         sku:
           type: string
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         unit:
           $ref: '#/components/schemas/ProductUnit'
         countStep:
@@ -2650,9 +2659,11 @@ components:
           format: int64
           minimum: 0
           nullable: true
-        imageUrl:
-          type: string
-          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         sortOrder:
           type: integer
           format: int32
@@ -3096,13 +3107,14 @@ components:
 
     CreateUploadSessionRequest:
       type: object
-      required: [targetType, targetId, originalFilename, contentType, fileSize]
+      required: [targetType, originalFilename, contentType, fileSize]
       properties:
         targetType:
           $ref: '#/components/schemas/MediaTargetType'
         targetId:
           type: string
           format: uuid
+          nullable: true
         originalFilename:
           type: string
           minLength: 1
@@ -3125,7 +3137,6 @@ components:
         [
           id,
           targetType,
-          targetId,
           bucket,
           objectKey,
           originalFilename,
@@ -3148,6 +3159,7 @@ components:
         targetId:
           type: string
           format: uuid
+          nullable: true
         bucket:
           type: string
         objectKey:
@@ -3186,7 +3198,6 @@ components:
         [
           id,
           targetType,
-          targetId,
           bucket,
           objectKey,
           originalFilename,
@@ -3205,6 +3216,7 @@ components:
         targetId:
           type: string
           format: uuid
+          nullable: true
         bucket:
           type: string
         objectKey:
@@ -3327,11 +3339,11 @@ components:
 
     MediaTargetType:
       type: string
-      enum: [PRODUCT, CATEGORY]
+      enum: [PRODUCT, CATEGORY, VARIANT]
 
     MediaImageStatus:
       type: string
-      enum: [PENDING, READY]
+      enum: [PENDING, READY, DELETED]
 
     CreateVirtualTryOnSessionRequest:
       type: object

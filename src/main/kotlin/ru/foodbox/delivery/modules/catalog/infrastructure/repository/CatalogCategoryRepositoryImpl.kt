@@ -65,7 +65,6 @@ class CatalogCategoryRepositoryImpl(
             slug = category.slug,
             parentId = category.parentId,
             description = category.description,
-            imageUrl = category.imageUrl,
             sortOrder = category.sortOrder,
             isActive = category.isActive,
             createdAt = category.createdAt,
@@ -77,7 +76,6 @@ class CatalogCategoryRepositoryImpl(
         entity.slug = category.slug
         entity.parentId = category.parentId
         entity.description = category.description
-        entity.imageUrl = category.imageUrl
         entity.sortOrder = category.sortOrder
         entity.isActive = category.isActive
         entity.updatedAt = category.updatedAt
@@ -91,7 +89,7 @@ class CatalogCategoryRepositoryImpl(
             id = entity.id,
             name = entity.name,
             slug = entity.slug,
-            imageUrl = entity.imageUrl,
+            imageUrls = emptyList(),
             isActive = entity.isActive,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,

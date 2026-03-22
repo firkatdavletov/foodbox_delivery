@@ -6,6 +6,6 @@ data class UpsertCategoryCommand(
     val id: UUID?,
     val name: String,
     val slug: String?,
-    val imageUrl: String?,
+    val imageIds: List<UUID> = emptyList(),
     val isActive: Boolean,
 )

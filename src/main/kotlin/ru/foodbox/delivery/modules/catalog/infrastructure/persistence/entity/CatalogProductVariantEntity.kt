@@ -39,9 +39,6 @@ class CatalogProductVariantEntity(
     @Column(name = "old_price_minor")
     var oldPriceMinor: Long? = null,
 
-    @Column(name = "image_url", columnDefinition = "text")
-    var imageUrl: String? = null,
-
     @Column(name = "sort_order", nullable = false, columnDefinition = "integer default 0")
     var sortOrder: Int = 0,
 

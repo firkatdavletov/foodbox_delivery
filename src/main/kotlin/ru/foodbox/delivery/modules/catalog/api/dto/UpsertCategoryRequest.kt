@@ -10,6 +10,6 @@ data class UpsertCategoryRequest(
     val name: String,
 
     val slug: String? = null,
-    val imageUrl: String? = null,
+    val imageIds: List<UUID> = emptyList(),
     val isActive: Boolean = true,
 )

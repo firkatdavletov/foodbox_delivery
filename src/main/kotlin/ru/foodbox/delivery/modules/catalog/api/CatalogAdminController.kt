@@ -49,7 +49,7 @@ class CatalogAdminController(
                 id = request.id,
                 name = request.name,
                 slug = request.slug,
-                imageUrl = request.imageUrl,
+                imageIds = request.imageIds,
                 isActive = request.isActive,
             )
         )
@@ -71,7 +71,7 @@ class CatalogAdminController(
                 priceMinor = request.priceMinor,
                 oldPriceMinor = request.oldPriceMinor,
                 sku = request.sku,
-                imageUrl = request.imageUrl,
+                imageIds = request.imageIds,
                 unit = request.unit,
                 countStep = request.countStep,
                 isActive = request.isActive,
@@ -96,7 +96,7 @@ class CatalogAdminController(
                         title = variant.title,
                         priceMinor = variant.priceMinor,
                         oldPriceMinor = variant.oldPriceMinor,
-                        imageUrl = variant.imageUrl,
+                        imageIds = variant.imageIds,
                         sortOrder = variant.sortOrder,
                         isActive = variant.isActive,
                         options = variant.options.map(UpsertProductVariantOptionRequest::toCommand),

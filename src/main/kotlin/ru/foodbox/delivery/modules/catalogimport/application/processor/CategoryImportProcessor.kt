@@ -138,7 +138,7 @@ class CategoryImportProcessor(
                         id = UUID.randomUUID(),
                         name = row.name,
                         slug = row.slug,
-                        imageUrl = null,
+                        imageUrls = emptyList(),
                         isActive = row.isActive,
                         createdAt = now,
                         updatedAt = now,

@@ -18,16 +18,23 @@ import ru.foodbox.delivery.modules.catalog.application.CatalogService
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
+import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogCategoryImageJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogCategoryJpaRepository
+import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductImageJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductOptionGroupJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductOptionValueJpaRepository
+import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductVariantImageJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductVariantJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductVariantOptionValueJpaRepository
 import ru.foodbox.delivery.modules.catalogimport.application.CatalogImportService
 import ru.foodbox.delivery.modules.catalogimport.application.command.ExecuteCatalogImportCommand
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportMode
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportType
+import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
+import ru.foodbox.delivery.modules.media.domain.MediaTargetType
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
+import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -70,13 +77,29 @@ class CatalogVariantsIntegrationTest {
     private lateinit var optionGroupJpaRepository: CatalogProductOptionGroupJpaRepository
 
     @Autowired
+    private lateinit var variantImageJpaRepository: CatalogProductVariantImageJpaRepository
+
+    @Autowired
+    private lateinit var productImageJpaRepository: CatalogProductImageJpaRepository
+
+    @Autowired
+    private lateinit var categoryImageJpaRepository: CatalogCategoryImageJpaRepository
+
+    @Autowired
     private lateinit var productJpaRepository: CatalogProductJpaRepository
 
     @Autowired
     private lateinit var categoryJpaRepository: CatalogCategoryJpaRepository
 
+    @Autowired
+    private lateinit var mediaImageJpaRepository: MediaImageJpaRepository
+
     @BeforeEach
     fun cleanup() {
+        variantImageJpaRepository.deleteAllInBatch()
+        productImageJpaRepository.deleteAllInBatch()
+        categoryImageJpaRepository.deleteAllInBatch()
+        mediaImageJpaRepository.deleteAllInBatch()
         variantOptionValueJpaRepository.deleteAllInBatch()
         optionValueJpaRepository.deleteAllInBatch()
         variantJpaRepository.deleteAllInBatch()
@@ -89,12 +112,25 @@ class CatalogVariantsIntegrationTest {
     @WithMockUser(roles = ["ADMIN"])
     fun `create product with variants`() {
         val categoryId = createCategory(externalId = "cat-shirts", slug = "shirts")
+        val productImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/shirt-main.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+        val blackVariantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/shirt-black-s.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
+        val whiteVariantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/shirt-white-m.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
 
         val request = mapOf(
             "categoryId" to categoryId,
             "title" to "Футболка",
             "priceMinor" to 3000,
             "oldPriceMinor" to 3500,
+            "imageIds" to listOf(productImageId),
             "unit" to "PIECE",
             "countStep" to 1,
             "isActive" to true,
@@ -124,6 +160,7 @@ class CatalogVariantsIntegrationTest {
                     "sku" to "TSHIRT-BLACK-S",
                     "title" to "Черный S",
                     "priceMinor" to 3000,
+                    "imageIds" to listOf(blackVariantImageId),
                     "sortOrder" to 10,
                     "isActive" to true,
                     "options" to listOf(
@@ -136,6 +173,7 @@ class CatalogVariantsIntegrationTest {
                     "sku" to "TSHIRT-WHITE-M",
                     "title" to "Белый M",
                     "priceMinor" to 3200,
+                    "imageIds" to listOf(whiteVariantImageId),
                     "sortOrder" to 20,
                     "isActive" to true,
                     "options" to listOf(
@@ -148,12 +186,18 @@ class CatalogVariantsIntegrationTest {
 
         val upsertResponse = upsertProductAsAdmin(request)
         val productId = UUID.fromString(upsertResponse.get("id").asText())
+        assertEquals("https://cdn.example.com/products/shirt-main.jpg", upsertResponse["imageUrls"][0].asText())
 
         val details = getProductDetails(productId)
+        assertEquals("https://cdn.example.com/products/shirt-main.jpg", details["imageUrls"][0].asText())
         assertEquals(2, details.get("optionGroups").size())
         assertEquals(2, details.get("variants").size())
         assertNotNull(details.get("defaultVariantId")?.asText())
         assertEquals("TSHIRT-BLACK-S", details.get("variants")[0].get("sku").asText())
+        assertEquals(
+            "https://cdn.example.com/products/shirt-black-s.jpg",
+            details["variants"][0]["imageUrls"][0].asText(),
+        )
     }
 
     @Test
@@ -333,7 +377,139 @@ class CatalogVariantsIntegrationTest {
         val details = getProductDetails(productId)
         assertEquals(0, details.get("optionGroups").size())
         assertEquals(0, details.get("variants").size())
+        assertEquals(0, details.get("imageUrls").size())
         assertTrue(details.get("defaultVariantId").isNull)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `update product syncs image attachments and marks removed images as deleted`() {
+        val categoryId = createCategory(externalId = "cat-image-sync", slug = "image-sync")
+        val initialProductImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/image-sync-initial.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+        val nextProductImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/image-sync-next.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+        val initialVariantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/image-sync-variant-initial.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
+        val nextVariantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/image-sync-variant-next.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Худи",
+                "priceMinor" to 4200,
+                "imageIds" to listOf(initialProductImageId),
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "m", "title" to "M")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "HOODIE-M",
+                        "imageIds" to listOf(initialVariantImageId),
+                        "options" to listOf(mapOf("optionGroupCode" to "size", "optionValueCode" to "m")),
+                    )
+                ),
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+
+        upsertProductAsAdmin(
+            mapOf(
+                "id" to productId,
+                "categoryId" to categoryId,
+                "title" to "Худи",
+                "priceMinor" to 4300,
+                "imageIds" to listOf(nextProductImageId),
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "m", "title" to "M")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "HOODIE-M",
+                        "imageIds" to listOf(nextVariantImageId),
+                        "options" to listOf(mapOf("optionGroupCode" to "size", "optionValueCode" to "m")),
+                    )
+                ),
+            )
+        )
+
+        val details = getProductDetails(productId)
+        assertEquals("https://cdn.example.com/products/image-sync-next.jpg", details["imageUrls"][0].asText())
+        assertEquals(
+            "https://cdn.example.com/products/image-sync-variant-next.jpg",
+            details["variants"][0]["imageUrls"][0].asText(),
+        )
+        assertEquals(
+            MediaImageStatus.DELETED,
+            mediaImageJpaRepository.findById(initialProductImageId).orElseThrow().status,
+        )
+        assertEquals(
+            MediaImageStatus.DELETED,
+            mediaImageJpaRepository.findById(initialVariantImageId).orElseThrow().status,
+        )
+        assertEquals(MediaImageStatus.READY, mediaImageJpaRepository.findById(nextProductImageId).orElseThrow().status)
+        assertEquals(MediaImageStatus.READY, mediaImageJpaRepository.findById(nextVariantImageId).orElseThrow().status)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `upsert category syncs image attachments`() {
+        val initialImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/categories/dresses-initial.jpg",
+            targetType = MediaTargetType.CATEGORY,
+        )
+        val nextImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/categories/dresses-next.jpg",
+            targetType = MediaTargetType.CATEGORY,
+        )
+
+        val created = upsertCategoryAsAdmin(
+            mapOf(
+                "name" to "Платья",
+                "slug" to "dresses",
+                "imageIds" to listOf(initialImageId),
+                "isActive" to true,
+            )
+        )
+        val categoryId = UUID.fromString(created["id"].asText())
+        assertEquals("https://cdn.example.com/categories/dresses-initial.jpg", created["imageUrls"][0].asText())
+
+        val updated = upsertCategoryAsAdmin(
+            mapOf(
+                "id" to categoryId,
+                "name" to "Платья",
+                "slug" to "dresses",
+                "imageIds" to listOf(nextImageId),
+                "isActive" to true,
+            )
+        )
+
+        assertEquals("https://cdn.example.com/categories/dresses-next.jpg", updated["imageUrls"][0].asText())
+        assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(initialImageId).orElseThrow().status)
+        assertEquals(MediaImageStatus.READY, mediaImageJpaRepository.findById(nextImageId).orElseThrow().status)
     }
 
     @Test
@@ -697,7 +873,7 @@ class CatalogVariantsIntegrationTest {
                 externalId = externalId,
                 name = slug,
                 slug = slug,
-                imageUrl = null,
+                imageUrls = emptyList(),
                 isActive = true,
                 createdAt = now,
                 updatedAt = now,
@@ -706,9 +882,45 @@ class CatalogVariantsIntegrationTest {
         return category.id
     }
 
+    private fun createReadyImage(
+        publicUrl: String,
+        targetType: MediaTargetType,
+        targetId: UUID? = null,
+    ): UUID {
+        val now = Instant.now()
+        val image = MediaImageEntity(
+            id = UUID.randomUUID(),
+            targetType = targetType,
+            targetId = targetId,
+            bucket = "test-bucket",
+            objectKey = "test/${UUID.randomUUID()}.jpg",
+            originalFilename = "test.jpg",
+            contentType = "image/jpeg",
+            fileSize = 1024,
+            status = MediaImageStatus.READY,
+            publicUrl = publicUrl,
+            createdAt = now,
+            updatedAt = now,
+        )
+        return mediaImageJpaRepository.save(image).id
+    }
+
     private fun upsertProductAsAdmin(request: Any): JsonNode {
         val response = mockMvc.perform(
             post("/api/v1/admin/catalog/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(request))
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
+    private fun upsertCategoryAsAdmin(request: Any): JsonNode {
+        val response = mockMvc.perform(
+            post("/api/v1/admin/catalog/categories")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(request))
         ).andExpect(status().isOk)

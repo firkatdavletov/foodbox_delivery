@@ -10,7 +10,7 @@ import ru.foodbox.delivery.modules.media.domain.MediaUploadSession
 internal fun CreateUploadSessionRequest.toCommand(): CreateUploadSessionCommand {
     return CreateUploadSessionCommand(
         targetType = requireNotNull(targetType) { "targetType is required" },
-        targetId = requireNotNull(targetId) { "targetId is required" },
+        targetId = targetId,
         originalFilename = requireNotNull(originalFilename) { "originalFilename is required" },
         contentType = requireNotNull(contentType) { "contentType is required" },
         fileSize = requireNotNull(fileSize) { "fileSize is required" },

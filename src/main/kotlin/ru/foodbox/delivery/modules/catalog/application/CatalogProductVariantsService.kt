@@ -29,6 +29,7 @@ class CatalogProductVariantsService(
     private val variantRepository: CatalogProductVariantRepository,
     private val variantOptionValueRepository: CatalogProductVariantOptionValueRepository,
     private val productRepository: CatalogProductRepository,
+    private val imageService: CatalogImageService,
 ) {
 
     fun getDetails(productId: UUID): ProductVariantsDetails {
@@ -39,6 +40,7 @@ class CatalogProductVariantsService(
 
         val variants = variantRepository.findAllByProductId(productId)
         val variantIds = variants.map { it.id }
+        val imageUrlsByVariantId = imageService.getVariantImageUrls(variantIds)
         val linksByVariantId = variantOptionValueRepository.findAllByVariantIds(variantIds)
             .groupBy { it.variantId }
 
@@ -67,7 +69,7 @@ class CatalogProductVariantsService(
                 title = variant.title,
                 priceMinor = variant.priceMinor,
                 oldPriceMinor = variant.oldPriceMinor,
-                imageUrl = variant.imageUrl,
+                imageUrls = imageUrlsByVariantId[variant.id].orEmpty(),
                 sortOrder = variant.sortOrder,
                 isActive = variant.isActive,
                 optionValueIds = linksByVariantId[variant.id].orEmpty().map { it.optionValueId },
@@ -94,7 +96,19 @@ class CatalogProductVariantsService(
 
         validate(normalizedGroups, normalizedVariants, productId)
 
-        deleteExistingData(productId)
+        val existingVariantIds = variantRepository.findAllByProductId(productId).map { it.id }
+        val requestedVariantImageIds = normalizedVariants.flatMap { it.imageIds }
+        imageService.validateVariantImages(
+            existingVariantIds = existingVariantIds,
+            requestedImageIds = requestedVariantImageIds,
+        )
+        imageService.detachVariantImages(
+            existingVariantIds = existingVariantIds,
+            retainedImageIds = requestedVariantImageIds,
+            now = now,
+        )
+
+        deleteExistingData(productId, existingVariantIds)
 
         if (normalizedGroups.isEmpty() && normalizedVariants.isEmpty()) {
             return
@@ -141,7 +155,7 @@ class CatalogProductVariantsService(
                 title = variant.title,
                 priceMinor = variant.priceMinor,
                 oldPriceMinor = variant.oldPriceMinor,
-                imageUrl = variant.imageUrl,
+                imageUrls = emptyList(),
                 sortOrder = variant.sortOrder,
                 isActive = variant.isActive,
                 createdAt = now,
@@ -161,6 +175,13 @@ class CatalogProductVariantsService(
             }
         }
         variantOptionValueRepository.saveAll(linksToSave)
+
+        imageService.attachVariantImages(
+            imageIdsByVariantId = normalizedVariants.associate { variant ->
+                variantIdBySku.getValue(variant.sku) to variant.imageIds
+            },
+            now = now,
+        )
     }
 
     private fun normalizeGroups(groups: List<ReplaceProductOptionGroupCommand>): List<NormalizedOptionGroup> {
@@ -198,8 +219,6 @@ class CatalogProductVariantsService(
                 ?: throw IllegalArgumentException("variants[$index].sku is required")
             val externalId = variant.externalId?.trim()?.takeIf { it.isNotBlank() }
             val title = variant.title?.trim()?.takeIf { it.isNotBlank() }
-            val imageUrl = variant.imageUrl?.trim()?.takeIf { it.isNotBlank() }
-
             if (variant.priceMinor != null && variant.priceMinor < 0) {
                 throw IllegalArgumentException("variants[$index].priceMinor must be non-negative")
             }
@@ -225,7 +244,7 @@ class CatalogProductVariantsService(
                 title = title,
                 priceMinor = variant.priceMinor,
                 oldPriceMinor = variant.oldPriceMinor,
-                imageUrl = imageUrl,
+                imageIds = variant.imageIds,
                 sortOrder = variant.sortOrder,
                 isActive = variant.isActive,
                 options = options,
@@ -358,9 +377,7 @@ class CatalogProductVariantsService(
         }
     }
 
-    private fun deleteExistingData(productId: UUID) {
-        val existingVariants = variantRepository.findAllByProductId(productId)
-        val existingVariantIds = existingVariants.map { it.id }
+    private fun deleteExistingData(productId: UUID, existingVariantIds: List<UUID>) {
         variantOptionValueRepository.deleteAllByVariantIds(existingVariantIds)
         variantRepository.deleteAllByProductId(productId)
 
@@ -389,7 +406,7 @@ class CatalogProductVariantsService(
         val title: String?,
         val priceMinor: Long?,
         val oldPriceMinor: Long?,
-        val imageUrl: String?,
+        val imageIds: List<UUID>,
         val sortOrder: Int,
         val isActive: Boolean,
         val options: List<NormalizedVariantOption>,

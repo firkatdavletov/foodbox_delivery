@@ -6,7 +6,7 @@ import java.util.UUID
 data class MediaImage(
     val id: UUID,
     val targetType: MediaTargetType,
-    val targetId: UUID,
+    val targetId: UUID?,
     val bucket: String,
     val objectKey: String,
     val originalFilename: String,

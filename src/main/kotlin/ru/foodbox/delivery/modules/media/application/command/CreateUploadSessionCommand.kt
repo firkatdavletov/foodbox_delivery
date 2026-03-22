@@ -5,7 +5,7 @@ import java.util.UUID
 
 data class CreateUploadSessionCommand(
     val targetType: MediaTargetType,
-    val targetId: UUID,
+    val targetId: UUID?,
     val originalFilename: String,
     val contentType: String,
     val fileSize: Long,

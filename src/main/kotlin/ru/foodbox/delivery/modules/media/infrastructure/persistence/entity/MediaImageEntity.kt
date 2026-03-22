@@ -29,8 +29,8 @@ class MediaImageEntity(
     @Column(name = "target_type", nullable = false, length = 32)
     var targetType: MediaTargetType,
 
-    @Column(name = "target_id", nullable = false)
-    var targetId: UUID,
+    @Column(name = "target_id")
+    var targetId: UUID? = null,
 
     @Column(nullable = false, length = 255)
     var bucket: String,

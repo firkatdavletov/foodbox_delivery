@@ -29,9 +29,6 @@ class CatalogCategoryEntity(
     @Column(columnDefinition = "text")
     var description: String? = null,
 
-    @Column(name = "image_url")
-    var imageUrl: String? = null,
-
     @Column(name = "sort_order", nullable = false)
     var sortOrder: Int = 0,
 

@@ -21,25 +21,27 @@ class CatalogServiceImpl(
     private val categoryRepository: CatalogCategoryRepository,
     private val productRepository: CatalogProductRepository,
     private val productVariantsService: CatalogProductVariantsService,
+    private val imageService: CatalogImageService,
 ) : CatalogService, ProductReadService {
 
     override fun getCategories(activeOnly: Boolean): List<CatalogCategory> {
-        return categoryRepository.findAll(activeOnly)
+        return enrichCategories(categoryRepository.findAll(activeOnly))
     }
 
     override fun getProducts(categoryId: UUID?, query: String?): List<CatalogProduct> {
-        return productRepository.findAllActive(
+        val products = productRepository.findAllActive(
             categoryId = categoryId,
             query = query?.trim()?.takeIf { it.isNotBlank() },
         )
+        return enrichProducts(products)
     }
 
     override fun getAdminCategories(isActive: Boolean): List<CatalogCategory> {
-        return categoryRepository.findAllByIsActive(isActive)
+        return enrichCategories(categoryRepository.findAllByIsActive(isActive))
     }
 
     override fun getAdminProducts(isActive: Boolean): List<CatalogProduct> {
-        return productRepository.findAllByIsActive(isActive)
+        return enrichProducts(productRepository.findAllByIsActive(isActive))
     }
 
     override fun getProductDetails(productId: UUID): CatalogProductDetails? {
@@ -101,28 +103,31 @@ class CatalogServiceImpl(
         val category = existing?.copy(
             name = command.name.trim(),
             slug = normalizeSlug(command.slug, command.name),
-            imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            imageUrls = existing.imageUrls,
             isActive = command.isActive,
             updatedAt = now,
         ) ?: CatalogCategory(
             id = command.id ?: UUID.randomUUID(),
             name = command.name.trim(),
             slug = normalizeSlug(command.slug, command.name),
-            imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            imageUrls = emptyList(),
             isActive = command.isActive,
             createdAt = now,
             updatedAt = now,
         )
 
-        return categoryRepository.save(category)
+        val saved = categoryRepository.save(category)
+        imageService.syncCategoryImages(saved.id, command.imageIds, now)
+        return enrichCategories(listOf(saved)).first()
     }
 
     private fun buildProductDetails(productId: UUID): CatalogProductDetails {
         val product = productRepository.findById(productId)
             ?: throw NotFoundException("Product not found")
         val variantDetails = productVariantsService.getDetails(product.id)
+        val productImageUrls = imageService.getProductImageUrls(listOf(product.id))[product.id].orEmpty()
         return CatalogProductDetails(
-            product = product,
+            product = product.copy(imageUrls = productImageUrls),
             optionGroups = variantDetails.optionGroups,
             defaultVariantId = variantDetails.defaultVariantId,
             variants = variantDetails.variants,
@@ -159,7 +164,7 @@ class CatalogServiceImpl(
             oldPriceMinor = command.oldPriceMinor,
             sku = command.sku?.trim()?.takeIf { it.isNotBlank() },
             brand = command.brand?.trim()?.takeIf { it.isNotBlank() } ?: existing.brand,
-            imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            imageUrls = existing.imageUrls,
             sortOrder = command.sortOrder ?: existing.sortOrder,
             unit = command.unit,
             countStep = command.countStep,
@@ -176,7 +181,7 @@ class CatalogServiceImpl(
             oldPriceMinor = command.oldPriceMinor,
             sku = command.sku?.trim()?.takeIf { it.isNotBlank() },
             brand = command.brand?.trim()?.takeIf { it.isNotBlank() },
-            imageUrl = command.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            imageUrls = emptyList(),
             sortOrder = command.sortOrder ?: 0,
             unit = command.unit,
             countStep = command.countStep,
@@ -186,6 +191,7 @@ class CatalogServiceImpl(
         )
 
         val saved = productRepository.save(product)
+        imageService.syncProductImages(saved.id, command.imageIds, now)
         productVariantsService.replaceAll(
             productId = saved.id,
             command = ReplaceProductVariantsCommand(
@@ -194,7 +200,29 @@ class CatalogServiceImpl(
             ),
             now = now,
         )
-        return saved
+        return enrichProducts(listOf(saved)).first()
+    }
+
+    private fun enrichCategories(categories: List<CatalogCategory>): List<CatalogCategory> {
+        if (categories.isEmpty()) {
+            return emptyList()
+        }
+
+        val imageUrlsByCategoryId = imageService.getCategoryImageUrls(categories.map { it.id })
+        return categories.map { category ->
+            category.copy(imageUrls = imageUrlsByCategoryId[category.id].orEmpty())
+        }
+    }
+
+    private fun enrichProducts(products: List<CatalogProduct>): List<CatalogProduct> {
+        if (products.isEmpty()) {
+            return emptyList()
+        }
+
+        val imageUrlsByProductId = imageService.getProductImageUrls(products.map { it.id })
+        return products.map { product ->
+            product.copy(imageUrls = imageUrlsByProductId[product.id].orEmpty())
+        }
     }
 
     private fun normalizeSlug(rawSlug: String?, fallback: String): String {

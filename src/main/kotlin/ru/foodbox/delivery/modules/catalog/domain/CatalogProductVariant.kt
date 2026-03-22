@@ -11,7 +11,7 @@ data class CatalogProductVariant(
     val title: String? = null,
     val priceMinor: Long? = null,
     val oldPriceMinor: Long? = null,
-    val imageUrl: String? = null,
+    val imageUrls: List<String> = emptyList(),
     val sortOrder: Int = 0,
     val isActive: Boolean = true,
     val createdAt: Instant,

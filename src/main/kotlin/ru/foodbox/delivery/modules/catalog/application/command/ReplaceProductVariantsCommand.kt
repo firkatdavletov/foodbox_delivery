@@ -1,5 +1,7 @@
 package ru.foodbox.delivery.modules.catalog.application.command
 
+import java.util.UUID
+
 data class ReplaceProductVariantsCommand(
     val optionGroups: List<ReplaceProductOptionGroupCommand> = emptyList(),
     val variants: List<ReplaceProductVariantCommand> = emptyList(),
@@ -24,7 +26,7 @@ data class ReplaceProductVariantCommand(
     val title: String? = null,
     val priceMinor: Long? = null,
     val oldPriceMinor: Long? = null,
-    val imageUrl: String? = null,
+    val imageIds: List<UUID> = emptyList(),
     val sortOrder: Int = 0,
     val isActive: Boolean = true,
     val options: List<ReplaceProductVariantOptionCommand> = emptyList(),

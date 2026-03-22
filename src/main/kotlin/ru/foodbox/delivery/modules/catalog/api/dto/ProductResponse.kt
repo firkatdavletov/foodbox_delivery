@@ -13,7 +13,7 @@ data class ProductResponse(
     val priceMinor: Long,
     val oldPriceMinor: Long?,
     val sku: String?,
-    val imageUrl: String?,
+    val imageUrls: List<String>,
     val unit: ProductUnit,
     val countStep: Int,
     val isActive: Boolean,

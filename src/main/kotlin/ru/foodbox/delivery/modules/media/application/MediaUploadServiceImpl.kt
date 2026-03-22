@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
+import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductVariantRepository
 import ru.foodbox.delivery.modules.media.application.command.CreateUploadSessionCommand
 import ru.foodbox.delivery.modules.media.domain.MediaImage
 import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
@@ -24,6 +25,7 @@ class MediaUploadServiceImpl(
     private val storagePort: ObjectStoragePort,
     private val productRepository: CatalogProductRepository,
     private val categoryRepository: CatalogCategoryRepository,
+    private val variantRepository: CatalogProductVariantRepository,
     private val mediaUploadProperties: MediaUploadProperties,
 ) : MediaUploadService {
 
@@ -33,7 +35,9 @@ class MediaUploadServiceImpl(
         val normalizedFilename = sanitizeOriginalFilename(command.originalFilename)
         validateContentType(normalizedContentType)
         validateFileSize(command.fileSize)
-        ensureTargetExists(command.targetType, command.targetId)
+        command.targetId?.let { targetId ->
+            ensureTargetExists(command.targetType, targetId)
+        }
 
         val objectKey = generateObjectKey(
             targetType = command.targetType,
@@ -81,10 +85,11 @@ class MediaUploadServiceImpl(
         val uploadSession = mediaImageRepository.findById(uploadId)
             ?: throw NotFoundException("Upload session not found")
 
-        ensureTargetExists(uploadSession.targetType, uploadSession.targetId)
+        if (uploadSession.status == MediaImageStatus.DELETED) {
+            throw IllegalArgumentException("Upload session is deleted")
+        }
 
         if (uploadSession.status == MediaImageStatus.READY && !uploadSession.publicUrl.isNullOrBlank()) {
-            bindToTargetImage(uploadSession)
             return uploadSession
         }
 
@@ -101,39 +106,7 @@ class MediaUploadServiceImpl(
         )
 
         val saved = mediaImageRepository.save(readyImage)
-        bindToTargetImage(saved)
         return saved
-    }
-
-    private fun bindToTargetImage(mediaImage: MediaImage) {
-        val imageUrl = mediaImage.publicUrl ?: storagePort.buildPublicUrl(mediaImage.objectKey)
-        val now = Instant.now()
-
-        when (mediaImage.targetType) {
-            MediaTargetType.PRODUCT -> {
-                val product = productRepository.findById(mediaImage.targetId)
-                    ?: throw NotFoundException("Product not found")
-
-                productRepository.save(
-                    product.copy(
-                        imageUrl = imageUrl,
-                        updatedAt = now,
-                    )
-                )
-            }
-
-            MediaTargetType.CATEGORY -> {
-                val category = categoryRepository.findById(mediaImage.targetId)
-                    ?: throw NotFoundException("Category not found")
-
-                categoryRepository.save(
-                    category.copy(
-                        imageUrl = imageUrl,
-                        updatedAt = now,
-                    )
-                )
-            }
-        }
     }
 
     private fun validateUploadedObject(
@@ -184,22 +157,30 @@ class MediaUploadServiceImpl(
                     throw NotFoundException("Category not found")
                 }
             }
+
+            MediaTargetType.VARIANT -> {
+                if (variantRepository.findById(targetId) == null) {
+                    throw NotFoundException("Product variant not found")
+                }
+            }
         }
     }
 
     private fun generateObjectKey(
         targetType: MediaTargetType,
-        targetId: UUID,
+        targetId: UUID?,
         originalFilename: String,
         contentType: String,
     ): String {
         val prefix = when (targetType) {
             MediaTargetType.PRODUCT -> "products"
             MediaTargetType.CATEGORY -> "categories"
+            MediaTargetType.VARIANT -> "variants"
         }
 
         val extension = resolveExtension(originalFilename, contentType)
-        return "$prefix/$targetId/${UUID.randomUUID()}.$extension"
+        val ownerSegment = targetId?.toString() ?: "unassigned"
+        return "$prefix/$ownerSegment/${UUID.randomUUID()}.$extension"
     }
 
     private fun resolveExtension(originalFilename: String, contentType: String): String {

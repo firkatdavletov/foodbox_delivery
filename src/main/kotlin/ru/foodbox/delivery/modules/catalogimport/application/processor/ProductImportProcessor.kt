@@ -148,7 +148,7 @@ class ProductImportProcessor(
                 priceMinor = basePriceMinor,
                 oldPriceMinor = aggregate.productOldPriceMinor,
                 sku = if (aggregate.variants.isEmpty()) aggregate.productSku else null,
-                imageUrl = aggregate.productImageUrl,
+                imageIds = emptyList(),
                 unit = aggregate.productUnit,
                 countStep = aggregate.productCountStep,
                 isActive = aggregate.productIsActive,
@@ -269,7 +269,7 @@ class ProductImportProcessor(
                     title = row.variantTitle,
                     priceMinor = row.variantPriceMinor ?: row.productPriceMinor,
                     oldPriceMinor = row.variantOldPriceMinor ?: row.productOldPriceMinor,
-                    imageUrl = row.variantImageUrl ?: row.productImageUrl,
+                    imageIds = emptyList(),
                     sortOrder = row.variantSortOrder,
                     isActive = row.variantIsActive,
                     options = row.options.map { option ->

@@ -82,7 +82,6 @@ class CatalogProductRepositoryImpl(
             oldPriceMinor = product.oldPriceMinor,
             sku = product.sku,
             brand = product.brand,
-            imageUrl = product.imageUrl,
             sortOrder = product.sortOrder,
             unit = product.unit,
             countStep = product.countStep,
@@ -100,7 +99,6 @@ class CatalogProductRepositoryImpl(
         entity.oldPriceMinor = product.oldPriceMinor
         entity.sku = product.sku
         entity.brand = product.brand
-        entity.imageUrl = product.imageUrl
         entity.sortOrder = product.sortOrder
         entity.unit = product.unit
         entity.countStep = product.countStep
@@ -121,7 +119,7 @@ class CatalogProductRepositoryImpl(
             priceMinor = entity.priceMinor,
             oldPriceMinor = entity.oldPriceMinor,
             sku = entity.sku,
-            imageUrl = entity.imageUrl,
+            imageUrls = emptyList(),
             unit = entity.unit,
             countStep = entity.countStep,
             isActive = entity.isActive,

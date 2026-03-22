@@ -26,7 +26,7 @@ data class UpsertProductRequest(
     val oldPriceMinor: Long? = null,
 
     val sku: String? = null,
-    val imageUrl: String? = null,
+    val imageIds: List<UUID> = emptyList(),
 
     @field:NotNull
     val unit: ProductUnit,
@@ -80,7 +80,7 @@ data class UpsertProductVariantRequest(
     @field:Min(0)
     val oldPriceMinor: Long? = null,
 
-    val imageUrl: String? = null,
+    val imageIds: List<UUID> = emptyList(),
     val sortOrder: Int = 0,
     val isActive: Boolean = true,
 

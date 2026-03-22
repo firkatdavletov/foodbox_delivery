@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.common.error.ForbiddenException
 import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
+import ru.foodbox.delivery.modules.catalog.application.CatalogImageService
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductVariantRepository
 import ru.foodbox.delivery.modules.virtualtryon.application.command.CreateVirtualTryOnSessionCommand
@@ -19,6 +20,7 @@ class VirtualTryOnServiceImpl(
     private val sessionRepository: VirtualTryOnSessionRepository,
     private val productRepository: CatalogProductRepository,
     private val productVariantRepository: CatalogProductVariantRepository,
+    private val imageService: CatalogImageService,
     private val providerGateway: VirtualTryOnProviderGateway,
     private val webhookTokenVerifier: VirtualTryOnWebhookTokenVerifier,
     private val updatePublisher: VirtualTryOnUpdatePublisher,
@@ -43,9 +45,13 @@ class VirtualTryOnServiceImpl(
                 ?: throw NotFoundException("Product variant not found")
         }
 
+        val variantImageUrl = variant?.id?.let { variantId ->
+            imageService.getVariantImageUrls(listOf(variantId))[variantId].orEmpty().firstOrNull()
+        }
+        val productImageUrl = imageService.getProductImageUrls(listOf(product.id))[product.id].orEmpty().firstOrNull()
         val garmentImageUrl = listOfNotNull(
-            variant?.imageUrl?.trim()?.takeIf { it.isNotBlank() },
-            product.imageUrl?.trim()?.takeIf { it.isNotBlank() },
+            variantImageUrl?.trim()?.takeIf { it.isNotBlank() },
+            productImageUrl?.trim()?.takeIf { it.isNotBlank() },
         ).firstOrNull()
             ?: throw IllegalArgumentException("Product image is required for virtual try-on")
 

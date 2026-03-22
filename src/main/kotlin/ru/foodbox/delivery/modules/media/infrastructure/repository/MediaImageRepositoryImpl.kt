@@ -18,6 +18,14 @@ class MediaImageRepositoryImpl(
         return toDomain(entity)
     }
 
+    override fun findAllByIds(ids: Collection<UUID>): List<MediaImage> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+
+        return jpaRepository.findAllByIdIn(ids).map(::toDomain)
+    }
+
     override fun save(mediaImage: MediaImage): MediaImage {
         val existing = jpaRepository.findById(mediaImage.id).getOrNull()
         val entity = existing ?: MediaImageEntity(
@@ -47,6 +55,44 @@ class MediaImageRepositoryImpl(
         entity.updatedAt = mediaImage.updatedAt
 
         return toDomain(jpaRepository.save(entity))
+    }
+
+    override fun saveAll(mediaImages: List<MediaImage>): List<MediaImage> {
+        if (mediaImages.isEmpty()) {
+            return emptyList()
+        }
+
+        val existingById = jpaRepository.findAllByIdIn(mediaImages.map { it.id }).associateBy { it.id }
+        val entities = mediaImages.map { mediaImage ->
+            val entity = existingById[mediaImage.id] ?: MediaImageEntity(
+                id = mediaImage.id,
+                targetType = mediaImage.targetType,
+                targetId = mediaImage.targetId,
+                bucket = mediaImage.bucket,
+                objectKey = mediaImage.objectKey,
+                originalFilename = mediaImage.originalFilename,
+                contentType = mediaImage.contentType,
+                fileSize = mediaImage.fileSize,
+                status = mediaImage.status,
+                publicUrl = mediaImage.publicUrl,
+                createdAt = mediaImage.createdAt,
+                updatedAt = mediaImage.updatedAt,
+            )
+
+            entity.targetType = mediaImage.targetType
+            entity.targetId = mediaImage.targetId
+            entity.bucket = mediaImage.bucket
+            entity.objectKey = mediaImage.objectKey
+            entity.originalFilename = mediaImage.originalFilename
+            entity.contentType = mediaImage.contentType
+            entity.fileSize = mediaImage.fileSize
+            entity.status = mediaImage.status
+            entity.publicUrl = mediaImage.publicUrl
+            entity.updatedAt = mediaImage.updatedAt
+            entity
+        }
+
+        return jpaRepository.saveAll(entities).map(::toDomain)
     }
 
     private fun toDomain(entity: MediaImageEntity): MediaImage {

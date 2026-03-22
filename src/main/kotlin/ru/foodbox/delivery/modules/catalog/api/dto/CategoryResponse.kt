@@ -6,6 +6,6 @@ data class CategoryResponse(
     val id: UUID,
     val name: String,
     val slug: String,
-    val imageUrl: String?,
+    val imageUrls: List<String>,
     val isActive: Boolean,
 )
