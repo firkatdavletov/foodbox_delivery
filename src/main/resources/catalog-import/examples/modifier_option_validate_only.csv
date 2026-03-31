@@ -1,0 +1,3 @@
+group_code,option_code,name,description,price_type,price,application_scope,is_default,is_active,sort_order
+gift_wrap,classic,Classic wrap,Simple kraft paper,FIXED,1.50,PER_LINE,false,true,10
+coffee_addons,extra_shot,Extra shot,Additional espresso,FIXED,0.90,PER_ITEM,false,true,20
