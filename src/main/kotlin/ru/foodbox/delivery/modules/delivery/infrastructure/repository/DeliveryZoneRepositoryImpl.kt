@@ -5,11 +5,60 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryZoneEntity
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryZoneJpaRepository
+import java.time.Instant
+import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 @Repository
 class DeliveryZoneRepositoryImpl(
     private val jpaRepository: DeliveryZoneJpaRepository,
 ) : DeliveryZoneRepository {
+
+    override fun findAll(): List<DeliveryZone> {
+        return jpaRepository.findAll()
+            .sortedBy(DeliveryZoneEntity::name)
+            .map { it.toDomain() }
+    }
+
+    override fun findAllByIsActive(isActive: Boolean): List<DeliveryZone> {
+        return jpaRepository.findAllByIsActiveOrderByNameAsc(isActive).map { it.toDomain() }
+    }
+
+    override fun findById(id: UUID): DeliveryZone? {
+        return jpaRepository.findById(id).getOrNull()?.toDomain()
+    }
+
+    override fun findByCode(code: String): DeliveryZone? {
+        return jpaRepository.findByCode(code)?.toDomain()
+    }
+
+    override fun save(zone: DeliveryZone): DeliveryZone {
+        val existing = jpaRepository.findById(zone.id).getOrNull()
+        val now = Instant.now()
+        val normalizedCity = zone.city?.normalizeForLookup()
+        val normalizedPostalCode = zone.postalCode?.trim()?.takeIf { it.isNotBlank() }
+        val entity = existing ?: DeliveryZoneEntity(
+            id = zone.id,
+            code = zone.code,
+            name = zone.name,
+            city = zone.city,
+            normalizedCity = normalizedCity,
+            postalCode = normalizedPostalCode,
+            isActive = zone.active,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        entity.code = zone.code
+        entity.name = zone.name
+        entity.city = zone.city?.trim()?.takeIf { it.isNotBlank() }
+        entity.normalizedCity = normalizedCity
+        entity.postalCode = normalizedPostalCode
+        entity.isActive = zone.active
+        entity.updatedAt = now
+
+        return jpaRepository.save(entity).toDomain()
+    }
 
     override fun findActiveByCity(city: String): DeliveryZone? {
         return jpaRepository.findByNormalizedCityAndIsActiveTrue(city.normalizeForLookup())?.toDomain()

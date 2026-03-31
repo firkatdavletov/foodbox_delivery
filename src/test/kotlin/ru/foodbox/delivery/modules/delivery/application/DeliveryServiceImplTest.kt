@@ -2,10 +2,12 @@ package ru.foodbox.delivery.modules.delivery.application
 
 import org.junit.jupiter.api.Test
 import ru.foodbox.delivery.common.web.CurrentActor
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.YandexDeliveryLocationVariant
 import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
+import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.PickupPointRepository
 import ru.foodbox.delivery.modules.payments.application.PaymentService
 import ru.foodbox.delivery.modules.payments.application.command.CreatePaymentCommand
@@ -18,9 +20,10 @@ import kotlin.test.assertEquals
 class DeliveryServiceImplTest {
 
     @Test
-    fun `returns pickup and courier when yandex delivery is not configured`() {
+    fun `returns enabled local methods when yandex delivery is not configured`() {
         val yandexDeliveryGateway = RecordingYandexDeliveryGateway(isConfigured = false)
         val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(methods = emptyList()),
@@ -29,13 +32,14 @@ class DeliveryServiceImplTest {
 
         val result = service.getAvailableMethods()
 
-        assertEquals(emptyList(), result)
+        assertEquals(listOf(DeliveryMethodType.PICKUP, DeliveryMethodType.COURIER), result)
     }
 
     @Test
-    fun `returns yandex pickup point in available methods when yandex delivery is configured`() {
+    fun `returns all enabled methods when yandex delivery is configured`() {
         val yandexDeliveryGateway = RecordingYandexDeliveryGateway(isConfigured = true)
         val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(methods = emptyList()),
@@ -44,13 +48,21 @@ class DeliveryServiceImplTest {
 
         val result = service.getAvailableMethods()
 
-        assertEquals(listOf(DeliveryMethodType.YANDEX_PICKUP_POINT), result)
+        assertEquals(
+            listOf(
+                DeliveryMethodType.PICKUP,
+                DeliveryMethodType.COURIER,
+                DeliveryMethodType.YANDEX_PICKUP_POINT,
+            ),
+            result,
+        )
     }
 
     @Test
     fun `uses already paid filter for yandex pickup points when online payment is available`() {
         val yandexDeliveryGateway = RecordingYandexDeliveryGateway()
         val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(
@@ -73,6 +85,7 @@ class DeliveryServiceImplTest {
     fun `uses card on receipt filter for yandex pickup points when no active online payment is available`() {
         val yandexDeliveryGateway = RecordingYandexDeliveryGateway()
         val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(
@@ -102,6 +115,16 @@ class DeliveryServiceImplTest {
             isOnline = code.isOnline,
             isActive = isActive,
         )
+    }
+
+    private fun allEnabledMethodSettings(): List<DeliveryMethodSetting> {
+        return DeliveryMethodType.entries.mapIndexed { index, method ->
+            DeliveryMethodSetting(
+                method = method,
+                enabled = true,
+                sortOrder = index,
+            )
+        }
     }
 
     private class RecordingYandexDeliveryGateway(
@@ -148,8 +171,28 @@ class DeliveryServiceImplTest {
         }
     }
 
+    private class StubDeliveryMethodSettingRepository(
+        private val settings: List<DeliveryMethodSetting>,
+    ) : DeliveryMethodSettingRepository {
+        override fun findAll(): List<DeliveryMethodSetting> = settings
+
+        override fun findByMethod(method: DeliveryMethodType): DeliveryMethodSetting? {
+            return settings.firstOrNull { it.method == method }
+        }
+
+        override fun save(setting: DeliveryMethodSetting): DeliveryMethodSetting = setting
+    }
+
     private class StubPickupPointRepository : PickupPointRepository {
+        override fun findAll(): List<PickupPoint> = emptyList()
+
+        override fun findAllByIsActive(isActive: Boolean): List<PickupPoint> = emptyList()
+
         override fun findById(id: UUID): PickupPoint? = null
+
+        override fun findByCode(code: String): PickupPoint? = null
+
+        override fun save(point: PickupPoint): PickupPoint = point
 
         override fun findActiveById(id: UUID): PickupPoint? = null
 

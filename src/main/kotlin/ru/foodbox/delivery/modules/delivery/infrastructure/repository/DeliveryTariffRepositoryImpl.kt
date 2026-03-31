@@ -7,13 +7,59 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryTariffEntity
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryZoneEntity
+import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryZoneJpaRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryTariffJpaRepository
+import java.time.Instant
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 @Repository
 class DeliveryTariffRepositoryImpl(
     private val jpaRepository: DeliveryTariffJpaRepository,
+    private val deliveryZoneJpaRepository: DeliveryZoneJpaRepository,
 ) : DeliveryTariffRepository {
+
+    override fun findAll(): List<DeliveryTariff> {
+        return jpaRepository.findAll()
+            .map { it.toDomain() }
+            .sortedWith(compareBy<DeliveryTariff> { it.method.ordinal }.thenBy { it.zone?.name ?: "" })
+    }
+
+    override fun findById(id: UUID): DeliveryTariff? {
+        return jpaRepository.findById(id).getOrNull()?.toDomain()
+    }
+
+    override fun save(tariff: DeliveryTariff): DeliveryTariff {
+        val existing = jpaRepository.findById(tariff.id).getOrNull()
+        val now = Instant.now()
+        val zoneEntity = tariff.zone?.id?.let { zoneId ->
+            deliveryZoneJpaRepository.findById(zoneId).getOrNull()
+                ?: throw IllegalArgumentException("Delivery zone not found: $zoneId")
+        }
+        val entity = existing ?: DeliveryTariffEntity(
+            id = tariff.id,
+            method = tariff.method,
+            zone = zoneEntity,
+            isAvailable = tariff.available,
+            fixedPriceMinor = tariff.fixedPriceMinor,
+            freeFromAmountMinor = tariff.freeFromAmountMinor,
+            currency = tariff.currency,
+            estimatedDays = tariff.estimatedDays,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        entity.method = tariff.method
+        entity.zone = zoneEntity
+        entity.isAvailable = tariff.available
+        entity.fixedPriceMinor = tariff.fixedPriceMinor
+        entity.freeFromAmountMinor = tariff.freeFromAmountMinor
+        entity.currency = tariff.currency
+        entity.estimatedDays = tariff.estimatedDays
+        entity.updatedAt = now
+
+        return jpaRepository.save(entity).toDomain()
+    }
 
     override fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff? {
         if (zoneId == null) {

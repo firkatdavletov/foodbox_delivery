@@ -4,106 +4,137 @@ import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentRuleDefaults
+import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryTariffEntity
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryZoneEntity
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.PickupPointEntity
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryTariffJpaRepository
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryZoneJpaRepository
-import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.PickupPointJpaRepository
-import java.time.Instant
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
+import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
+import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
+import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
+import ru.foodbox.delivery.modules.delivery.domain.repository.PickupPointRepository
 import java.util.UUID
 
 @Component
 class DeliveryBootstrapInitializer(
-    private val deliveryZoneJpaRepository: DeliveryZoneJpaRepository,
-    private val deliveryTariffJpaRepository: DeliveryTariffJpaRepository,
-    private val pickupPointJpaRepository: PickupPointJpaRepository,
+    private val deliveryMethodSettingRepository: DeliveryMethodSettingRepository,
+    private val deliveryZoneRepository: DeliveryZoneRepository,
+    private val deliveryTariffRepository: DeliveryTariffRepository,
+    private val pickupPointRepository: PickupPointRepository,
+    private val checkoutPaymentMethodRuleRepository: CheckoutPaymentMethodRuleRepository,
 ) : ApplicationRunner {
 
     @Transactional
     override fun run(args: ApplicationArguments?) {
-        if (
-            deliveryZoneJpaRepository.count() > 0L ||
-            deliveryTariffJpaRepository.count() > 0L ||
-            pickupPointJpaRepository.count() > 0L
-        ) {
+        seedMethodSettings()
+        val zonesByCode = seedZones()
+        seedTariffs(zonesByCode)
+        seedPickupPoints()
+        seedCheckoutPaymentRules()
+    }
+
+    private fun seedMethodSettings() {
+        if (deliveryMethodSettingRepository.findAll().isNotEmpty()) {
             return
         }
 
-        val now = Instant.now()
-        val ekbZone = DeliveryZoneEntity(
-            id = UUID.randomUUID(),
-            code = "EKB",
-            name = "Yekaterinburg",
-            city = "Yekaterinburg",
-            normalizedCity = "yekaterinburg",
-            postalCode = null,
-            isActive = true,
-            createdAt = now,
-            updatedAt = now,
-        )
-        val mskZone = DeliveryZoneEntity(
-            id = UUID.randomUUID(),
-            code = "MSK",
-            name = "Moscow",
-            city = "Moscow",
-            normalizedCity = "moscow",
-            postalCode = null,
-            isActive = true,
-            createdAt = now,
-            updatedAt = now,
-        )
-        deliveryZoneJpaRepository.saveAll(listOf(ekbZone, mskZone))
+        DeliveryMethodType.entries.forEach { method ->
+            deliveryMethodSettingRepository.save(
+                DeliveryMethodSetting(
+                    method = method,
+                    enabled = method.isActive,
+                    sortOrder = method.ordinal,
+                )
+            )
+        }
+    }
 
-        deliveryTariffJpaRepository.saveAll(
-            listOf(
-                DeliveryTariffEntity(
-                    id = UUID.randomUUID(),
-                    method = DeliveryMethodType.COURIER,
-                    zone = ekbZone,
-                    isAvailable = true,
-                    fixedPriceMinor = 29_900,
-                    freeFromAmountMinor = 300_000,
-                    currency = DEFAULT_CURRENCY,
-                    estimatedDays = 1,
-                    createdAt = now,
-                    updatedAt = now,
-                ),
-                DeliveryTariffEntity(
-                    id = UUID.randomUUID(),
-                    method = DeliveryMethodType.COURIER,
-                    zone = mskZone,
-                    isAvailable = true,
-                    fixedPriceMinor = 49_900,
-                    freeFromAmountMinor = 500_000,
-                    currency = DEFAULT_CURRENCY,
-                    estimatedDays = 2,
-                    createdAt = now,
-                    updatedAt = now,
-                ),
-                DeliveryTariffEntity(
-                    id = UUID.randomUUID(),
-                    method = DeliveryMethodType.PICKUP,
-                    zone = null,
-                    isAvailable = true,
-                    fixedPriceMinor = 0,
-                    freeFromAmountMinor = null,
-                    currency = DEFAULT_CURRENCY,
-                    estimatedDays = 0,
-                    createdAt = now,
-                    updatedAt = now,
-                ),
+    private fun seedZones(): Map<String, DeliveryZone> {
+        val existing = deliveryZoneRepository.findAll()
+        if (existing.isNotEmpty()) {
+            return existing.associateBy(DeliveryZone::code)
+        }
+
+        val ekbZone = deliveryZoneRepository.save(
+            DeliveryZone(
+                id = UUID.randomUUID(),
+                code = "EKB",
+                name = "Yekaterinburg",
+                city = "Yekaterinburg",
+                postalCode = null,
+                active = true,
             )
         )
+        val mskZone = deliveryZoneRepository.save(
+            DeliveryZone(
+                id = UUID.randomUUID(),
+                code = "MSK",
+                name = "Moscow",
+                city = "Moscow",
+                postalCode = null,
+                active = true,
+            )
+        )
+        return listOf(ekbZone, mskZone).associateBy(DeliveryZone::code)
+    }
 
-        pickupPointJpaRepository.save(
-            PickupPointEntity(
+    private fun seedTariffs(zonesByCode: Map<String, DeliveryZone>) {
+        if (deliveryTariffRepository.findAll().isNotEmpty()) {
+            return
+        }
+
+        deliveryTariffRepository.save(
+            DeliveryTariff(
+                id = UUID.randomUUID(),
+                method = DeliveryMethodType.COURIER,
+                zone = zonesByCode.getValue("EKB"),
+                available = true,
+                fixedPriceMinor = 29_900,
+                freeFromAmountMinor = 300_000,
+                currency = DEFAULT_CURRENCY,
+                estimatedDays = 1,
+            )
+        )
+        deliveryTariffRepository.save(
+            DeliveryTariff(
+                id = UUID.randomUUID(),
+                method = DeliveryMethodType.COURIER,
+                zone = zonesByCode.getValue("MSK"),
+                available = true,
+                fixedPriceMinor = 49_900,
+                freeFromAmountMinor = 500_000,
+                currency = DEFAULT_CURRENCY,
+                estimatedDays = 2,
+            )
+        )
+        deliveryTariffRepository.save(
+            DeliveryTariff(
+                id = UUID.randomUUID(),
+                method = DeliveryMethodType.PICKUP,
+                zone = null,
+                available = true,
+                fixedPriceMinor = 0,
+                freeFromAmountMinor = null,
+                currency = DEFAULT_CURRENCY,
+                estimatedDays = 0,
+            )
+        )
+    }
+
+    private fun seedPickupPoints() {
+        if (pickupPointRepository.findAll().isNotEmpty()) {
+            return
+        }
+
+        pickupPointRepository.save(
+            PickupPoint(
                 id = UUID.randomUUID(),
                 code = "main-showroom",
                 name = "Main Showroom",
-                address = DeliveryAddressEmbeddable(
+                address = DeliveryAddress(
                     country = "Russia",
                     region = "Sverdlovsk Oblast",
                     city = "Yekaterinburg",
@@ -113,11 +144,17 @@ class DeliveryBootstrapInitializer(
                     latitude = 56.8389,
                     longitude = 60.6057,
                 ),
-                isActive = true,
-                createdAt = now,
-                updatedAt = now,
+                active = true,
             )
         )
+    }
+
+    private fun seedCheckoutPaymentRules() {
+        if (checkoutPaymentMethodRuleRepository.findAll().isNotEmpty()) {
+            return
+        }
+
+        checkoutPaymentMethodRuleRepository.replaceAll(CheckoutPaymentRuleDefaults.defaultRules())
     }
 
     private companion object {

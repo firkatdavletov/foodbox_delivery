@@ -86,6 +86,11 @@ class CourierDeliveryCostCalculatorTest {
     private class StubDeliveryZoneRepository(
         private val zone: DeliveryZone?,
     ) : DeliveryZoneRepository {
+        override fun findAll(): List<DeliveryZone> = listOfNotNull(zone)
+        override fun findAllByIsActive(isActive: Boolean): List<DeliveryZone> = listOfNotNull(zone?.takeIf { it.active == isActive })
+        override fun findById(id: UUID): DeliveryZone? = zone?.takeIf { it.id == id }
+        override fun findByCode(code: String): DeliveryZone? = zone?.takeIf { it.code == code }
+        override fun save(zone: DeliveryZone): DeliveryZone = zone
         override fun findActiveByCity(city: String): DeliveryZone? = zone
         override fun findActiveByPostalCode(postalCode: String): DeliveryZone? = zone
     }
@@ -93,6 +98,9 @@ class CourierDeliveryCostCalculatorTest {
     private class StubDeliveryTariffRepository(
         private val tariff: DeliveryTariff?,
     ) : DeliveryTariffRepository {
+        override fun findAll(): List<DeliveryTariff> = listOfNotNull(tariff)
+        override fun findById(id: UUID): DeliveryTariff? = tariff?.takeIf { it.id == id }
+        override fun save(tariff: DeliveryTariff): DeliveryTariff = tariff
         override fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff? = tariff
         override fun findDefaultByMethod(method: DeliveryMethodType): DeliveryTariff? = tariff
     }

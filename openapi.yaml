@@ -20,6 +20,8 @@ tags:
     description: Public product and category catalog
   - name: Catalog Admin
     description: Admin catalog management
+  - name: Delivery Admin
+    description: Admin delivery and pickup configuration
   - name: Payments
     description: Payment methods and payment operations
   - name: Orders
@@ -1138,6 +1140,277 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/methods:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminDeliveryMethodSettings
+      summary: List delivery method settings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Delivery method settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryMethodSettingResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Delivery Admin]
+      operationId: upsertAdminDeliveryMethodSetting
+      summary: Create or update delivery method setting
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDeliveryMethodSettingRequest'
+      responses:
+        '200':
+          description: Saved delivery method setting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryMethodSettingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/zones:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminDeliveryZones
+      summary: List delivery zones
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: false
+          description: When provided, filters delivery zones by activity flag.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Delivery zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryZoneResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Delivery Admin]
+      operationId: upsertAdminDeliveryZone
+      summary: Create or update delivery zone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDeliveryZoneRequest'
+      responses:
+        '200':
+          description: Saved delivery zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZoneResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/tariffs:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminDeliveryTariffs
+      summary: List delivery tariffs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Delivery tariffs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryTariffResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Delivery Admin]
+      operationId: upsertAdminDeliveryTariff
+      summary: Create or update delivery tariff
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDeliveryTariffRequest'
+      responses:
+        '200':
+          description: Saved delivery tariff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryTariffResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/pickup-points:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminPickupPoints
+      summary: List internal pickup points
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: false
+          description: When provided, filters pickup points by activity flag.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Pickup points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminPickupPointResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Delivery Admin]
+      operationId: upsertAdminPickupPoint
+      summary: Create or update internal pickup point
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertPickupPointRequest'
+      responses:
+        '200':
+          description: Saved pickup point
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPickupPointResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/payment-rules:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminCheckoutPaymentRules
+      summary: List checkout payment rules by delivery method
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Checkout payment rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CheckoutPaymentRuleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/delivery/payment-rules/bulk:
+    post:
+      tags: [Delivery Admin]
+      operationId: replaceAdminCheckoutPaymentRules
+      summary: Replace checkout payment rules for static delivery methods
+      description: |
+        Replaces configured payment methods for delivery methods with static checkout rules.
+        Dynamic methods such as `YANDEX_PICKUP_POINT` are returned in responses but cannot be changed here.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceCheckoutPaymentRulesRequest'
+      responses:
+        '200':
+          description: Updated checkout payment rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CheckoutPaymentRuleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -2438,6 +2711,230 @@ components:
         pickupPointAddress:
           type: string
           nullable: true
+
+    DeliveryMethodSettingResponse:
+      type: object
+      required: [method, name, requiresAddress, requiresPickupPoint, isEnabled, sortOrder]
+      properties:
+        method:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        name:
+          type: string
+        requiresAddress:
+          type: boolean
+        requiresPickupPoint:
+          type: boolean
+        isEnabled:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+
+    UpsertDeliveryMethodSettingRequest:
+      type: object
+      required: [method, isEnabled, sortOrder]
+      properties:
+        method:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        isEnabled:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+
+    DeliveryZoneResponse:
+      type: object
+      required: [id, code, name, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    UpsertDeliveryZoneRequest:
+      type: object
+      required: [code, name, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        city:
+          type: string
+          nullable: true
+          maxLength: 255
+        postalCode:
+          type: string
+          nullable: true
+          maxLength: 64
+        isActive:
+          type: boolean
+
+    DeliveryTariffResponse:
+      type: object
+      required: [id, method, isAvailable, fixedPriceMinor, currency]
+      properties:
+        id:
+          type: string
+          format: uuid
+        method:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        zoneId:
+          type: string
+          format: uuid
+          nullable: true
+        zoneCode:
+          type: string
+          nullable: true
+        zoneName:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+        fixedPriceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        freeFromAmountMinor:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+        currency:
+          type: string
+        estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+
+    UpsertDeliveryTariffRequest:
+      type: object
+      required: [method, isAvailable, fixedPriceMinor, currency]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        method:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        zoneId:
+          type: string
+          format: uuid
+          nullable: true
+        isAvailable:
+          type: boolean
+        fixedPriceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        freeFromAmountMinor:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+
+    AdminPickupPointResponse:
+      type: object
+      required: [id, code, name, address, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        address:
+          $ref: '#/components/schemas/DeliveryAddressResponse'
+        isActive:
+          type: boolean
+
+    UpsertPickupPointRequest:
+      type: object
+      required: [code, name, address, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        address:
+          $ref: '#/components/schemas/DeliveryAddressRequest'
+        isActive:
+          type: boolean
+
+    CheckoutPaymentRuleResponse:
+      type: object
+      required: [deliveryMethod, deliveryMethodName, paymentMethods, isDynamic]
+      properties:
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        deliveryMethodName:
+          type: string
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodCode'
+        isDynamic:
+          type: boolean
+
+    ReplaceCheckoutPaymentRulesRequest:
+      type: object
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertCheckoutPaymentRuleRequest'
+
+    UpsertCheckoutPaymentRuleRequest:
+      type: object
+      required: [deliveryMethod]
+      properties:
+        deliveryMethod:
+          $ref: '#/components/schemas/DeliveryMethodType'
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodCode'
 
     CategoryResponse:
       type: object

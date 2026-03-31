@@ -60,7 +60,7 @@ class CheckoutServiceImpl(
         rulesByDeliveryMethod: Map<DeliveryMethodType, CheckoutPaymentMethodRule>,
     ): List<PaymentMethodInfo> {
         val rule = rulesByDeliveryMethod[deliveryMethod]
-            ?: throw IllegalStateException("Checkout payment rule is not configured for delivery method $deliveryMethod")
+            ?: return emptyList()
 
         return rule.paymentMethods.mapNotNull(availablePaymentMethods::get)
     }

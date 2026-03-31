@@ -18,7 +18,6 @@ import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodInfo
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class CheckoutServiceImplTest {
 
@@ -107,7 +106,7 @@ class CheckoutServiceImplTest {
     }
 
     @Test
-    fun `fails fast when available delivery method has no checkout payment rule`() {
+    fun `skips delivery method when checkout payment rule is missing`() {
         val service = CheckoutServiceImpl(
             deliveryService = StubDeliveryService(
                 methods = listOf(DeliveryMethodType.COURIER),
@@ -118,9 +117,7 @@ class CheckoutServiceImplTest {
             checkoutPaymentMethodRuleRepository = StubCheckoutPaymentMethodRuleRepository(emptyList()),
         )
 
-        assertFailsWith<IllegalStateException> {
-            service.getAvailableOptions()
-        }
+        assertEquals(emptyList(), service.getAvailableOptions())
     }
 
     private fun paymentMethodInfo(
@@ -140,6 +137,10 @@ class CheckoutServiceImplTest {
         private val rules: List<CheckoutPaymentMethodRule>,
     ) : CheckoutPaymentMethodRuleRepository {
         override fun findAll(): List<CheckoutPaymentMethodRule> = rules
+
+        override fun replaceAll(rules: List<CheckoutPaymentMethodRule>) {
+            throw UnsupportedOperationException("Not used in checkout tests")
+        }
     }
 
     private class StubDeliveryService(

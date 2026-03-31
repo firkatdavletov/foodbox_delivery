@@ -5,5 +5,8 @@ import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.Pi
 import java.util.UUID
 
 interface PickupPointJpaRepository : JpaRepository<PickupPointEntity, UUID> {
+    fun findByCode(code: String): PickupPointEntity?
+    fun findAllByOrderByNameAsc(): List<PickupPointEntity>
+    fun findAllByIsActiveOrderByNameAsc(isActive: Boolean): List<PickupPointEntity>
     fun findAllByIsActiveTrueOrderByNameAsc(): List<PickupPointEntity>
 }

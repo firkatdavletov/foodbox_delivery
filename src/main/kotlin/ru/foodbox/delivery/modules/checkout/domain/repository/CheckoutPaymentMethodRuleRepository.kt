@@ -4,4 +4,5 @@ import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentMethodRule
 
 interface CheckoutPaymentMethodRuleRepository {
     fun findAll(): List<CheckoutPaymentMethodRule>
+    fun replaceAll(rules: List<CheckoutPaymentMethodRule>)
 }

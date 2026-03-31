@@ -5,11 +5,13 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryValidationException
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.PickupPointRepository
 import ru.foodbox.delivery.modules.payments.application.PaymentService
 
 @Service
 class DeliveryServiceImpl(
+    private val deliveryMethodSettingRepository: DeliveryMethodSettingRepository,
     private val pickupPointRepository: PickupPointRepository,
     private val yandexDeliveryGateway: YandexDeliveryGateway,
     private val paymentService: PaymentService,
@@ -17,10 +19,12 @@ class DeliveryServiceImpl(
 ) : DeliveryService {
 
     override fun getAvailableMethods(): List<DeliveryMethodType> {
-        return DeliveryMethodType.entries.filter {
-            it.isActive
-                    && (it != DeliveryMethodType.YANDEX_PICKUP_POINT || yandexDeliveryGateway.isConfigured())
-        }
+        return deliveryMethodSettingRepository.findAll()
+            .filter { it.enabled }
+            .map { it.method }
+            .filter { method ->
+                method != DeliveryMethodType.YANDEX_PICKUP_POINT || yandexDeliveryGateway.isConfigured()
+            }
     }
 
     override fun getActivePickupPoints() = pickupPointRepository.findAllActive()
