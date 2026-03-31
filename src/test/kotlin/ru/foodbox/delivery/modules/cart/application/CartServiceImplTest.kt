@@ -15,6 +15,14 @@ import ru.foodbox.delivery.modules.cart.domain.CartOwner
 import ru.foodbox.delivery.modules.cart.domain.CartOwnerType
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
 import ru.foodbox.delivery.modules.cart.domain.repository.CartRepository
+import ru.foodbox.delivery.modules.catalog.modifier.application.CatalogProductModifiersService
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierGroup
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierOption
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ProductModifierGroup
+import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ModifierGroupRepository
+import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ModifierOptionRepository
+import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ProductModifierGroupRepository
+import ru.foodbox.delivery.modules.cart.modifier.application.CartItemModifierResolver
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -93,6 +101,7 @@ class CartServiceImplTest {
             cartRepository = cartRepository,
             productReadService = UnusedProductReadService(),
             cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
         )
 
@@ -179,6 +188,7 @@ class CartServiceImplTest {
             cartRepository = cartRepository,
             productReadService = UnusedProductReadService(),
             cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
         )
 
@@ -237,5 +247,38 @@ class CartServiceImplTest {
 
     private class PassthroughCartMergePolicy : CartMergePolicy {
         override fun merge(source: Cart, target: Cart): Cart = target
+    }
+
+    private fun unusedCartItemModifierResolver(): CartItemModifierResolver {
+        return CartItemModifierResolver(
+            catalogProductModifiersService = CatalogProductModifiersService(
+                productModifierGroupRepository = UnusedProductModifierGroupRepository(),
+                modifierGroupRepository = UnusedModifierGroupRepository(),
+                modifierOptionRepository = UnusedModifierOptionRepository(),
+            ),
+        )
+    }
+
+    private class UnusedProductModifierGroupRepository : ProductModifierGroupRepository {
+        override fun findAllByProductId(productId: UUID): List<ProductModifierGroup> = error("Not used")
+        override fun findAllByProductIds(productIds: Collection<UUID>): List<ProductModifierGroup> = error("Not used")
+        override fun deleteAllByProductId(productId: UUID) = error("Not used")
+        override fun saveAll(productModifierGroups: List<ProductModifierGroup>): List<ProductModifierGroup> = error("Not used")
+    }
+
+    private class UnusedModifierGroupRepository : ModifierGroupRepository {
+        override fun findAll(): List<ModifierGroup> = error("Not used")
+        override fun findAllByIsActive(isActive: Boolean): List<ModifierGroup> = error("Not used")
+        override fun findAllByCodes(codes: Collection<String>): List<ModifierGroup> = error("Not used")
+        override fun findAllByIds(ids: Collection<UUID>): List<ModifierGroup> = error("Not used")
+        override fun findById(id: UUID): ModifierGroup? = error("Not used")
+        override fun findByCode(code: String): ModifierGroup? = error("Not used")
+        override fun save(group: ModifierGroup): ModifierGroup = error("Not used")
+    }
+
+    private class UnusedModifierOptionRepository : ModifierOptionRepository {
+        override fun findAllByGroupIds(groupIds: Collection<UUID>): List<ModifierOption> = error("Not used")
+        override fun deleteAllByGroupId(groupId: UUID) = error("Not used")
+        override fun saveAll(options: List<ModifierOption>): List<ModifierOption> = error("Not used")
     }
 }

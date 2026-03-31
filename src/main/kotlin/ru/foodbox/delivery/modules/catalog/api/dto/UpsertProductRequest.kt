@@ -40,6 +40,9 @@ data class UpsertProductRequest(
     val optionGroups: List<UpsertProductOptionGroupRequest> = emptyList(),
 
     @field:Valid
+    val modifierGroups: List<UpsertProductModifierGroupLinkRequest> = emptyList(),
+
+    @field:Valid
     val variants: List<UpsertProductVariantRequest> = emptyList(),
 )
 
@@ -94,4 +97,11 @@ data class UpsertProductVariantOptionRequest(
 
     @field:NotBlank
     val optionValueCode: String,
+)
+
+data class UpsertProductModifierGroupLinkRequest(
+    @field:NotNull
+    val modifierGroupId: UUID,
+    val sortOrder: Int = 0,
+    val isActive: Boolean = true,
 )

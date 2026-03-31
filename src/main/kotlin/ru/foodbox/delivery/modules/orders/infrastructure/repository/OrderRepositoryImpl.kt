@@ -7,10 +7,12 @@ import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderDeliverySnapshotEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemEntity
+import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemModifierEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderJpaRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
 import java.util.UUID
@@ -72,7 +74,25 @@ class OrderRepositoryImpl(
                     quantity = item.quantity,
                     priceMinor = item.priceMinor,
                     totalMinor = item.totalMinor,
-                )
+                ).apply {
+                    modifiers.addAll(
+                        item.modifiers.map { modifier ->
+                            OrderItemModifierEntity(
+                                id = UUID.randomUUID(),
+                                orderItem = this,
+                                modifierGroupId = modifier.modifierGroupId,
+                                modifierOptionId = modifier.modifierOptionId,
+                                groupCodeSnapshot = modifier.groupCodeSnapshot,
+                                groupNameSnapshot = modifier.groupNameSnapshot,
+                                optionCodeSnapshot = modifier.optionCodeSnapshot,
+                                optionNameSnapshot = modifier.optionNameSnapshot,
+                                applicationScopeSnapshot = modifier.applicationScopeSnapshot,
+                                priceSnapshot = modifier.priceSnapshot,
+                                quantity = modifier.quantity,
+                            )
+                        }
+                    )
+                }
             }
         )
 
@@ -160,6 +180,19 @@ class OrderRepositoryImpl(
                     quantity = item.quantity,
                     priceMinor = item.priceMinor,
                     totalMinor = item.totalMinor,
+                    modifiers = item.modifiers.map { modifier ->
+                        OrderItemModifier(
+                            modifierGroupId = modifier.modifierGroupId,
+                            modifierOptionId = modifier.modifierOptionId,
+                            groupCodeSnapshot = modifier.groupCodeSnapshot,
+                            groupNameSnapshot = modifier.groupNameSnapshot,
+                            optionCodeSnapshot = modifier.optionCodeSnapshot,
+                            optionNameSnapshot = modifier.optionNameSnapshot,
+                            applicationScopeSnapshot = modifier.applicationScopeSnapshot,
+                            priceSnapshot = modifier.priceSnapshot,
+                            quantity = modifier.quantity,
+                        )
+                    },
                 )
             },
             subtotalMinor = entity.subtotalMinor,

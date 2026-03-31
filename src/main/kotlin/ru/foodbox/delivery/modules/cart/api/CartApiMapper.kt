@@ -1,10 +1,12 @@
 package ru.foodbox.delivery.modules.cart.api
 
 import ru.foodbox.delivery.modules.cart.api.dto.CartDeliveryDraftResponse
+import ru.foodbox.delivery.modules.cart.api.dto.CartItemModifierResponse
 import ru.foodbox.delivery.modules.cart.api.dto.CartItemResponse
 import ru.foodbox.delivery.modules.cart.api.dto.CartResponse
 import ru.foodbox.delivery.modules.cart.domain.Cart
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
+import ru.foodbox.delivery.modules.cart.pricing.domain.calculateCartItemPrice
 import ru.foodbox.delivery.modules.delivery.api.toResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
@@ -15,7 +17,13 @@ internal fun Cart.toResponse(): CartResponse {
         id = id,
         status = status,
         items = items.map {
+            val price = calculateCartItemPrice(
+                basePriceMinor = it.priceMinor,
+                lineQuantity = it.quantity,
+                modifiers = it.modifiers,
+            )
             CartItemResponse(
+                id = it.id,
                 productId = it.productId,
                 variantId = it.variantId,
                 title = it.title,
@@ -23,7 +31,22 @@ internal fun Cart.toResponse(): CartResponse {
                 countStep = it.countStep,
                 quantity = it.quantity,
                 priceMinor = it.priceMinor,
-                lineTotalMinor = it.lineTotalMinor(),
+                unitPriceMinor = price.unitPriceMinor,
+                modifiersTotalMinor = price.perItemModifiersMinor * it.quantity + price.perLineModifiersMinor,
+                lineTotalMinor = price.lineTotalMinor,
+                modifiers = it.modifiers.map { modifier ->
+                    CartItemModifierResponse(
+                        modifierGroupId = modifier.modifierGroupId,
+                        modifierOptionId = modifier.modifierOptionId,
+                        groupCode = modifier.groupCodeSnapshot,
+                        groupName = modifier.groupNameSnapshot,
+                        optionCode = modifier.optionCodeSnapshot,
+                        optionName = modifier.optionNameSnapshot,
+                        applicationScope = modifier.applicationScopeSnapshot,
+                        priceMinor = modifier.priceSnapshot,
+                        quantity = modifier.quantity,
+                    )
+                },
             )
         },
         totalPriceMinor = totalPriceMinor,

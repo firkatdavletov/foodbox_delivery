@@ -1,12 +1,14 @@
 package ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity
 
 import jakarta.persistence.Column
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import java.util.UUID
@@ -46,4 +48,11 @@ class OrderItemEntity(
 
     @Column(name = "total_minor", nullable = false)
     var totalMinor: Long,
+
+    @OneToMany(
+        mappedBy = "orderItem",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+    )
+    var modifiers: MutableList<OrderItemModifierEntity> = mutableListOf(),
 )

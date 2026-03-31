@@ -9,6 +9,7 @@ import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.application.policy.CartMergePolicy
+import ru.foodbox.delivery.modules.cart.modifier.application.CartItemModifierResolver
 import ru.foodbox.delivery.modules.cart.domain.Cart
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryQuote
@@ -31,6 +32,7 @@ class CartServiceImpl(
     private val cartRepository: CartRepository,
     private val productReadService: ProductReadService,
     private val cartMergePolicy: CartMergePolicy,
+    private val cartItemModifierResolver: CartItemModifierResolver,
     private val deliveryService: DeliveryService,
 ) : CartService {
 
@@ -44,6 +46,10 @@ class CartServiceImpl(
             productId = command.productId,
             variantId = command.variantId,
         ) ?: throw NotFoundException("Product not found")
+        val modifiers = cartItemModifierResolver.resolve(
+            productId = product.id,
+            commands = command.modifiers,
+        )
 
         val cart = loadOrCreateActiveCart(actor)
         cart.addItem(
@@ -55,6 +61,7 @@ class CartServiceImpl(
                 countStep = product.countStep,
                 quantity = command.quantity,
                 priceMinor = product.priceMinor,
+                modifiers = modifiers,
             )
         )
         return cartRepository.save(cart)
@@ -63,14 +70,14 @@ class CartServiceImpl(
     @Transactional
     override fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart {
         val cart = loadOrCreateActiveCart(actor)
-        cart.changeQuantity(command.productId, command.variantId, command.quantity)
+        cart.changeQuantity(command.itemId, command.quantity)
         return cartRepository.save(cart)
     }
 
     @Transactional
-    override fun removeItem(actor: CurrentActor, productId: UUID, variantId: UUID?): Cart {
+    override fun removeItem(actor: CurrentActor, itemId: UUID): Cart {
         val cart = loadOrCreateActiveCart(actor)
-        cart.removeItem(productId, variantId)
+        cart.removeItem(itemId)
         return cartRepository.save(cart)
     }
 

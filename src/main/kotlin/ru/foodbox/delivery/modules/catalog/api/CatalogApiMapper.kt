@@ -2,6 +2,8 @@ package ru.foodbox.delivery.modules.catalog.api
 
 import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductDetailsResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.ProductModifierGroupResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.ProductModifierOptionResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductVariantResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductOptionGroupResponse
@@ -70,6 +72,32 @@ internal fun CatalogProductDetails.toPublicDetailsResponse(): ProductDetailsResp
                 },
             )
         },
+        modifierGroups = modifierGroups.map { modifierGroup ->
+            ProductModifierGroupResponse(
+                id = modifierGroup.id,
+                code = modifierGroup.code,
+                name = modifierGroup.name,
+                minSelected = modifierGroup.minSelected,
+                maxSelected = modifierGroup.maxSelected,
+                isRequired = modifierGroup.isRequired,
+                isActive = modifierGroup.isActive,
+                sortOrder = modifierGroup.sortOrder,
+                options = modifierGroup.options.map { option ->
+                    ProductModifierOptionResponse(
+                        id = option.id,
+                        code = option.code,
+                        name = option.name,
+                        description = option.description,
+                        priceType = option.priceType,
+                        price = option.price,
+                        applicationScope = option.applicationScope,
+                        isDefault = option.isDefault,
+                        isActive = option.isActive,
+                        sortOrder = option.sortOrder,
+                    )
+                },
+            )
+        },
         defaultVariantId = defaultVariantId,
         variants = variants.map { variant ->
             ProductVariantResponse(
@@ -115,6 +143,32 @@ internal fun CatalogProductDetails.toAdminDetailsResponse(): AdminProductDetails
                         code = optionValue.code,
                         title = optionValue.title,
                         sortOrder = optionValue.sortOrder,
+                    )
+                },
+            )
+        },
+        modifierGroups = modifierGroups.map { modifierGroup ->
+            ProductModifierGroupResponse(
+                id = modifierGroup.id,
+                code = modifierGroup.code,
+                name = modifierGroup.name,
+                minSelected = modifierGroup.minSelected,
+                maxSelected = modifierGroup.maxSelected,
+                isRequired = modifierGroup.isRequired,
+                isActive = modifierGroup.isActive,
+                sortOrder = modifierGroup.sortOrder,
+                options = modifierGroup.options.map { option ->
+                    ProductModifierOptionResponse(
+                        id = option.id,
+                        code = option.code,
+                        name = option.name,
+                        description = option.description,
+                        priceType = option.priceType,
+                        price = option.price,
+                        applicationScope = option.applicationScope,
+                        isDefault = option.isDefault,
+                        isActive = option.isActive,
+                        sortOrder = option.sortOrder,
                     )
                 },
             )

@@ -10,6 +10,7 @@ import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
 import ru.foodbox.delivery.modules.catalog.domain.ProductSnapshot
+import ru.foodbox.delivery.modules.catalog.modifier.application.CatalogProductModifiersService
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
 import java.time.Instant
@@ -21,6 +22,7 @@ class CatalogServiceImpl(
     private val categoryRepository: CatalogCategoryRepository,
     private val productRepository: CatalogProductRepository,
     private val productVariantsService: CatalogProductVariantsService,
+    private val productModifiersService: CatalogProductModifiersService,
     private val imageService: CatalogImageService,
 ) : CatalogService, ProductReadService {
 
@@ -50,12 +52,12 @@ class CatalogServiceImpl(
             return null
         }
 
-        return buildProductDetails(product.id)
+        return buildProductDetails(product.id, activeOnly = true)
     }
 
     override fun getAdminProductDetails(productId: UUID): CatalogProductDetails? {
         val product = productRepository.findById(productId) ?: return null
-        return buildProductDetails(product.id)
+        return buildProductDetails(product.id, activeOnly = false)
     }
 
     override fun getActiveProductSnapshot(productId: UUID, variantId: UUID?): ProductSnapshot? {
@@ -121,7 +123,7 @@ class CatalogServiceImpl(
         return enrichCategories(listOf(saved)).first()
     }
 
-    private fun buildProductDetails(productId: UUID): CatalogProductDetails {
+    private fun buildProductDetails(productId: UUID, activeOnly: Boolean): CatalogProductDetails {
         val product = productRepository.findById(productId)
             ?: throw NotFoundException("Product not found")
         val variantDetails = productVariantsService.getDetails(product.id)
@@ -130,6 +132,10 @@ class CatalogServiceImpl(
             product = product.copy(imageUrls = productImages.map { it.url }),
             imageIds = productImages.map { it.id },
             optionGroups = variantDetails.optionGroups,
+            modifierGroups = productModifiersService.getProductModifierGroups(
+                productId = product.id,
+                activeOnly = activeOnly,
+            ),
             defaultVariantId = variantDetails.defaultVariantId,
             variants = variantDetails.variants,
         )
@@ -200,6 +206,10 @@ class CatalogServiceImpl(
                 variants = command.variants,
             ),
             now = now,
+        )
+        productModifiersService.replaceProductModifierGroups(
+            productId = saved.id,
+            commands = command.modifierGroups,
         )
         return enrichProducts(listOf(saved)).first()
     }

@@ -572,7 +572,7 @@ paths:
     post:
       tags: [Cart]
       operationId: addCartItem
-      summary: Add product (or product variant) to active cart
+      summary: Add product (or product variant) with optional modifiers to active cart
       security:
         - bearerAuth: []
         - installIdHeader: []
@@ -598,6 +598,7 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/cart/items/{itemId}:
     patch:
       tags: [Cart]
       operationId: changeCartItemQuantity
@@ -605,6 +606,8 @@ paths:
       security:
         - bearerAuth: []
         - installIdHeader: []
+      parameters:
+        - $ref: '#/components/parameters/CartItemIdPathParam'
       requestBody:
         required: true
         content:
@@ -624,24 +627,15 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
-  /api/v1/cart/items/{productId}:
     delete:
       tags: [Cart]
       operationId: removeCartItem
-      summary: Remove product (or specific product variant) from active cart
+      summary: Remove one configured cart item from active cart
       security:
         - bearerAuth: []
         - installIdHeader: []
       parameters:
-        - $ref: '#/components/parameters/ProductIdPathParam'
-        - name: variantId
-          in: query
-          required: false
-          description: Variant id to remove. When omitted, removes all cart items for the product.
-          schema:
-            type: string
-            format: uuid
+        - $ref: '#/components/parameters/CartItemIdPathParam'
       responses:
         '200':
           description: Updated cart
@@ -856,6 +850,63 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog/modifier-groups:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminModifierGroups
+      summary: List modifier groups
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isActive
+          in: query
+          required: false
+          description: When provided, filters modifier groups by activity flag.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Modifier groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModifierGroupResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertModifierGroup
+      summary: Create or update modifier group
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertModifierGroupRequest'
+      responses:
+        '200':
+          description: Saved modifier group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifierGroupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -1603,6 +1654,13 @@ components:
       schema:
         type: string
         format: uuid
+    CartItemIdPathParam:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     OrderIdPathParam:
       name: orderId
       in: path
@@ -2023,18 +2081,31 @@ components:
           type: integer
           format: int32
           minimum: 1
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddCartItemModifierRequest'
+
+    AddCartItemModifierRequest:
+      type: object
+      required: [modifierGroupId, modifierOptionId]
+      properties:
+        modifierGroupId:
+          type: string
+          format: uuid
+        modifierOptionId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 1
 
     ChangeCartItemQuantityRequest:
       type: object
-      required: [productId, quantity]
+      required: [quantity]
       properties:
-        productId:
-          type: string
-          format: uuid
-        variantId:
-          type: string
-          format: uuid
-          nullable: true
         quantity:
           type: integer
           format: int32
@@ -2117,8 +2188,11 @@ components:
     CartItemResponse:
       type: object
       required:
-        [productId, title, unit, countStep, quantity, priceMinor, lineTotalMinor]
+        [id, productId, title, unit, countStep, quantity, priceMinor, unitPriceMinor, modifiersTotalMinor, lineTotalMinor, modifiers]
       properties:
+        id:
+          type: string
+          format: uuid
         productId:
           type: string
           format: uuid
@@ -2139,9 +2213,46 @@ components:
         priceMinor:
           type: integer
           format: int64
+        unitPriceMinor:
+          type: integer
+          format: int64
+        modifiersTotalMinor:
+          type: integer
+          format: int64
         lineTotalMinor:
           type: integer
           format: int64
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemModifierResponse'
+
+    CartItemModifierResponse:
+      type: object
+      required: [modifierGroupId, modifierOptionId, groupCode, groupName, optionCode, optionName, applicationScope, priceMinor, quantity]
+      properties:
+        modifierGroupId:
+          type: string
+          format: uuid
+        modifierOptionId:
+          type: string
+          format: uuid
+        groupCode:
+          type: string
+        groupName:
+          type: string
+        optionCode:
+          type: string
+        optionName:
+          type: string
+        applicationScope:
+          $ref: '#/components/schemas/ModifierApplicationScope'
+        priceMinor:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
 
     DeliveryMethodsResponse:
       type: object
@@ -2402,6 +2513,7 @@ components:
           countStep,
           isActive,
           optionGroups,
+          modifierGroups,
           variants,
         ]
       properties:
@@ -2443,6 +2555,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductOptionGroupResponse'
+        modifierGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductModifierGroupResponse'
         defaultVariantId:
           type: string
           format: uuid
@@ -2467,6 +2583,7 @@ components:
           countStep,
           isActive,
           optionGroups,
+          modifierGroups,
           variants,
         ]
       properties:
@@ -2513,6 +2630,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductOptionGroupResponse'
+        modifierGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductModifierGroupResponse'
         defaultVariantId:
           type: string
           format: uuid
@@ -2540,6 +2661,122 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductOptionValueResponse'
+
+    ProductModifierGroupResponse:
+      type: object
+      required: [id, code, name, minSelected, maxSelected, isRequired, isActive, sortOrder, options]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        minSelected:
+          type: integer
+          format: int32
+        maxSelected:
+          type: integer
+          format: int32
+        isRequired:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductModifierOptionResponse'
+
+    ProductModifierOptionResponse:
+      type: object
+      required: [id, code, name, priceType, price, applicationScope, isDefault, isActive, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceType:
+          $ref: '#/components/schemas/ModifierPriceType'
+        price:
+          type: integer
+          format: int64
+        applicationScope:
+          $ref: '#/components/schemas/ModifierApplicationScope'
+        isDefault:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+
+    ModifierGroupResponse:
+      type: object
+      required: [id, code, name, minSelected, maxSelected, isRequired, isActive, sortOrder, options]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        minSelected:
+          type: integer
+          format: int32
+        maxSelected:
+          type: integer
+          format: int32
+        isRequired:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModifierOptionResponse'
+
+    ModifierOptionResponse:
+      type: object
+      required: [id, code, name, priceType, price, applicationScope, isDefault, isActive, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceType:
+          $ref: '#/components/schemas/ModifierPriceType'
+        price:
+          type: integer
+          format: int64
+        applicationScope:
+          $ref: '#/components/schemas/ModifierApplicationScope'
+        isDefault:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
 
     ProductOptionValueResponse:
       type: object
@@ -2710,10 +2947,98 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UpsertProductOptionGroupRequest'
+        modifierGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductModifierGroupLinkRequest'
         variants:
           type: array
           items:
             $ref: '#/components/schemas/UpsertProductVariantRequest'
+
+    UpsertModifierGroupRequest:
+      type: object
+      required: [code, name, minSelected, maxSelected]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        code:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        minSelected:
+          type: integer
+          format: int32
+          minimum: 0
+        maxSelected:
+          type: integer
+          format: int32
+          minimum: 1
+        isRequired:
+          type: boolean
+          default: false
+        isActive:
+          type: boolean
+          default: true
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertModifierOptionRequest'
+
+    UpsertModifierOptionRequest:
+      type: object
+      required: [code, name, priceType, applicationScope]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          nullable: true
+        priceType:
+          $ref: '#/components/schemas/ModifierPriceType'
+        price:
+          type: integer
+          format: int64
+          minimum: 0
+        applicationScope:
+          $ref: '#/components/schemas/ModifierApplicationScope'
+        isDefault:
+          type: boolean
+          default: false
+        isActive:
+          type: boolean
+          default: true
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+
+    UpsertProductModifierGroupLinkRequest:
+      type: object
+      required: [modifierGroupId]
+      properties:
+        modifierGroupId:
+          type: string
+          format: uuid
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        isActive:
+          type: boolean
+          default: true
 
     UpsertProductOptionGroupRequest:
       type: object
@@ -2807,7 +3132,7 @@ components:
         file:
           type: string
           format: binary
-          description: CSV file encoded in UTF-8 with comma delimiter.
+          description: Header-based CSV file encoded in UTF-8 with comma delimiter.
         importType:
           $ref: '#/components/schemas/CatalogImportType'
         importMode:
@@ -3038,7 +3363,7 @@ components:
 
     OrderItemResponse:
       type: object
-      required: [id, productId, title, unit, quantity, priceMinor, totalMinor]
+      required: [id, productId, title, unit, quantity, priceMinor, modifiersTotalMinor, totalMinor, modifiers]
       properties:
         id:
           type: string
@@ -3063,9 +3388,43 @@ components:
         priceMinor:
           type: integer
           format: int64
+        modifiersTotalMinor:
+          type: integer
+          format: int64
         totalMinor:
           type: integer
           format: int64
+        modifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemModifierResponse'
+
+    OrderItemModifierResponse:
+      type: object
+      required: [modifierGroupId, modifierOptionId, groupCode, groupName, optionCode, optionName, applicationScope, priceMinor, quantity]
+      properties:
+        modifierGroupId:
+          type: string
+          format: uuid
+        modifierOptionId:
+          type: string
+          format: uuid
+        groupCode:
+          type: string
+        groupName:
+          type: string
+        optionCode:
+          type: string
+        optionName:
+          type: string
+        applicationScope:
+          $ref: '#/components/schemas/ModifierApplicationScope'
+        priceMinor:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
 
     OrderPaymentResponse:
       type: object
@@ -3217,6 +3576,14 @@ components:
           type: number
           format: double
           nullable: true
+
+    ModifierPriceType:
+      type: string
+      enum: [FIXED, FREE]
+
+    ModifierApplicationScope:
+      type: string
+      enum: [PER_ITEM, PER_LINE]
 
     CreateUploadSessionRequest:
       type: object
@@ -3401,7 +3768,7 @@ components:
 
     CatalogImportType:
       type: string
-      enum: [CATEGORY, PRODUCT]
+      enum: [CATEGORY, PRODUCT, MODIFIER_GROUP, MODIFIER_OPTION, PRODUCT_MODIFIER_GROUP_LINK]
 
     CatalogImportMode:
       type: string
@@ -3414,9 +3781,14 @@ components:
           MISSING_REQUIRED_FIELD,
           INVALID_BOOLEAN,
           INVALID_NUMBER,
+          INVALID_ENUM,
           DUPLICATE_KEY_IN_FILE,
           CATEGORY_NOT_FOUND,
           PARENT_CATEGORY_NOT_FOUND,
+          MODIFIER_GROUP_NOT_FOUND,
+          PRODUCT_NOT_FOUND,
+          ENTITY_ALREADY_EXISTS,
+          INVALID_MIN_MAX_RULE,
           AMBIGUOUS_MATCH,
           INVALID_RELATION,
           PERSISTENCE_ERROR,

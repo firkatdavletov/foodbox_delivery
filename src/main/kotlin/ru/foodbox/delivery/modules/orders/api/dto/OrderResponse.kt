@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.modules.orders.api.dto
 
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierApplicationScope
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryAddressResponse
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
@@ -45,7 +46,21 @@ data class OrderItemResponse(
     val unit: ProductUnit,
     val quantity: Int,
     val priceMinor: Long,
+    val modifiersTotalMinor: Long,
     val totalMinor: Long,
+    val modifiers: List<OrderItemModifierResponse>,
+)
+
+data class OrderItemModifierResponse(
+    val modifierGroupId: UUID,
+    val modifierOptionId: UUID,
+    val groupCode: String,
+    val groupName: String,
+    val optionCode: String,
+    val optionName: String,
+    val applicationScope: ModifierApplicationScope,
+    val priceMinor: Long,
+    val quantity: Int,
 )
 
 data class OrderDeliveryResponse(

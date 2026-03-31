@@ -20,6 +20,7 @@ import ru.foodbox.delivery.modules.cart.api.dto.ChangeCartItemQuantityRequest
 import ru.foodbox.delivery.modules.cart.api.dto.PutCartDeliveryRequest
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
+import ru.foodbox.delivery.modules.cart.application.command.AddCartItemModifierCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
@@ -72,32 +73,38 @@ class CartController(
                 productId = request.productId,
                 variantId = request.variantId,
                 quantity = request.quantity,
+                modifiers = request.modifiers.map { modifier ->
+                    AddCartItemModifierCommand(
+                        modifierGroupId = modifier.modifierGroupId,
+                        modifierOptionId = modifier.modifierOptionId,
+                        quantity = modifier.quantity,
+                    )
+                },
             ),
         ).toResponse()
     }
 
-    @PatchMapping("/items")
+    @PatchMapping("/items/{itemId}")
     fun changeQuantity(
         @CurrentActorParam actor: CurrentActor,
+        @PathVariable itemId: UUID,
         @Valid @RequestBody request: ChangeCartItemQuantityRequest,
     ): CartResponse {
         return cartService.changeQuantity(
             actor = actor,
             command = ChangeCartItemQuantityCommand(
-                productId = request.productId,
-                variantId = request.variantId,
+                itemId = itemId,
                 quantity = request.quantity,
             ),
         ).toResponse()
     }
 
-    @DeleteMapping("/items/{productId}")
+    @DeleteMapping("/items/{itemId}")
     fun removeItem(
         @CurrentActorParam actor: CurrentActor,
-        @PathVariable productId: UUID,
-        @RequestParam(required = false) variantId: UUID?,
+        @PathVariable itemId: UUID,
     ): CartResponse {
-        return cartService.removeItem(actor = actor, productId = productId, variantId = variantId).toResponse()
+        return cartService.removeItem(actor = actor, itemId = itemId).toResponse()
     }
 
     @DeleteMapping

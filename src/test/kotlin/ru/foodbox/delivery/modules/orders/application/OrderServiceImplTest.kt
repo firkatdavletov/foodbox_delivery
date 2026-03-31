@@ -17,6 +17,9 @@ import ru.foodbox.delivery.modules.cart.domain.CartItem
 import ru.foodbox.delivery.modules.cart.domain.CartOwner
 import ru.foodbox.delivery.modules.cart.domain.CartOwnerType
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
+import ru.foodbox.delivery.modules.cart.modifier.domain.CartItemModifier
+import ru.foodbox.delivery.modules.cart.pricing.application.CartItemPricingService
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierApplicationScope
 import ru.foodbox.delivery.modules.checkout.application.CheckoutOptionsQuery
 import ru.foodbox.delivery.modules.checkout.application.CheckoutService
 import ru.foodbox.delivery.modules.checkout.domain.CheckoutDeliveryOption
@@ -96,6 +99,7 @@ class OrderServiceImplTest {
             ),
             userRepository = StubUserRepository(),
             deliveryService = deliveryService,
+            cartItemPricingService = CartItemPricingService(),
             checkoutService = StubCheckoutService(
                 options = listOf(
                     checkoutDeliveryOption(
@@ -201,6 +205,7 @@ class OrderServiceImplTest {
             ),
             userRepository = StubUserRepository(),
             deliveryService = deliveryService,
+            cartItemPricingService = CartItemPricingService(),
             checkoutService = StubCheckoutService(
                 options = listOf(
                     checkoutDeliveryOption(
@@ -247,6 +252,108 @@ class OrderServiceImplTest {
         assertEquals(OrderStatus.CONFIRMED, order.status)
         assertEquals(cart.id, cartService.markedOrderedCartId)
         assertEquals(1, eventPublisher.events.size)
+    }
+
+    @Test
+    fun `checkout copies cart item modifiers and includes them into subtotal`() {
+        val productId = UUID.randomUUID()
+        val cart = activeCart(
+            items = mutableListOf(
+                CartItem(
+                    productId = productId,
+                    variantId = null,
+                    title = "Coffee",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 2,
+                    priceMinor = 9_500,
+                    modifiers = listOf(
+                        CartItemModifier(
+                            modifierGroupId = UUID.randomUUID(),
+                            modifierOptionId = UUID.randomUUID(),
+                            groupCodeSnapshot = "extra_shot",
+                            groupNameSnapshot = "Extra shot",
+                            optionCodeSnapshot = "one_more",
+                            optionNameSnapshot = "One more shot",
+                            applicationScopeSnapshot = ModifierApplicationScope.PER_ITEM,
+                            priceSnapshot = 500,
+                            quantity = 1,
+                        ),
+                        CartItemModifier(
+                            modifierGroupId = UUID.randomUUID(),
+                            modifierOptionId = UUID.randomUUID(),
+                            groupCodeSnapshot = "gift",
+                            groupNameSnapshot = "Gift",
+                            optionCodeSnapshot = "card",
+                            optionNameSnapshot = "Card",
+                            applicationScopeSnapshot = ModifierApplicationScope.PER_LINE,
+                            priceSnapshot = 300,
+                            quantity = 1,
+                        ),
+                    ),
+                )
+            ),
+            deliveryDraft = courierDraft(),
+        )
+        val orderRepository = InMemoryOrderRepository()
+        val deliveryService = RecordingDeliveryService(
+            quote = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 1_000,
+                currency = "RUB",
+                zoneCode = "city",
+                zoneName = "City",
+                estimatedDays = 1,
+            ),
+        )
+        val service = OrderServiceImpl(
+            orderRepository = orderRepository,
+            cartService = StubCartService(cart),
+            productReadService = StubProductReadService(
+                snapshots = mapOf(
+                    productId to ProductSnapshot(
+                        id = productId,
+                        variantId = null,
+                        sku = "SKU-COFFEE-1",
+                        title = "Coffee",
+                        unit = ProductUnit.PIECE,
+                        countStep = 1,
+                        priceMinor = 10_000,
+                    )
+                ),
+            ),
+            userRepository = StubUserRepository(),
+            deliveryService = deliveryService,
+            cartItemPricingService = CartItemPricingService(),
+            checkoutService = StubCheckoutService(
+                options = listOf(
+                    checkoutDeliveryOption(
+                        deliveryMethod = DeliveryMethodType.COURIER,
+                        paymentMethods = listOf(PaymentMethodCode.CARD_ON_DELIVERY),
+                    )
+                )
+            ),
+            deliveryOrderRequestService = RecordingDeliveryOrderRequestService(),
+            applicationEventPublisher = RecordingApplicationEventPublisher(),
+        )
+
+        val order = service.checkout(
+            actor = CurrentActor.Guest("install-1"),
+            command = CheckoutCommand(
+                paymentMethodCode = PaymentMethodCode.CARD_ON_DELIVERY,
+                customerName = "Guest",
+                customerPhone = "+79990000000",
+                customerEmail = "guest@example.com",
+                comment = null,
+            ),
+        )
+
+        assertEquals(21_300L, order.subtotalMinor)
+        assertEquals(22_300L, order.totalMinor)
+        assertEquals(2, order.items.single().modifiers.size)
+        assertEquals("extra_shot", order.items.single().modifiers.first().groupCodeSnapshot)
+        assertEquals("card", order.items.single().modifiers.last().optionCodeSnapshot)
     }
 
     private fun activeCart(
@@ -354,7 +461,7 @@ class OrderServiceImplTest {
             throw UnsupportedOperationException("Not used in order service tests")
         }
 
-        override fun removeItem(actor: CurrentActor, productId: UUID, variantId: UUID?): Cart {
+        override fun removeItem(actor: CurrentActor, itemId: UUID): Cart {
             throw UnsupportedOperationException("Not used in order service tests")
         }
 
@@ -480,7 +587,9 @@ private fun Order.copyOrder(): Order {
         delivery = delivery.copy(
             address = delivery.address?.copy(),
         ),
-        items = items.map { it.copy() },
+        items = items.map { item ->
+            item.copy(modifiers = item.modifiers.map { it.copy() })
+        },
         payment = payment?.copy(),
     )
 }

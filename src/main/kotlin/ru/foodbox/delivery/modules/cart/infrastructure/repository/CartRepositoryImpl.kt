@@ -7,10 +7,12 @@ import ru.foodbox.delivery.modules.cart.domain.CartDeliveryQuote
 import ru.foodbox.delivery.modules.cart.domain.CartItem
 import ru.foodbox.delivery.modules.cart.domain.CartOwner
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
+import ru.foodbox.delivery.modules.cart.modifier.domain.CartItemModifier
 import ru.foodbox.delivery.modules.cart.domain.repository.CartRepository
 import ru.foodbox.delivery.modules.cart.infrastructure.persistence.entity.CartDeliveryDraftEntity
 import ru.foodbox.delivery.modules.cart.infrastructure.persistence.entity.CartEntity
 import ru.foodbox.delivery.modules.cart.infrastructure.persistence.entity.CartItemEntity
+import ru.foodbox.delivery.modules.cart.infrastructure.persistence.entity.CartItemModifierEntity
 import ru.foodbox.delivery.modules.cart.infrastructure.persistence.jpa.CartJpaRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
 import java.time.Instant
@@ -59,7 +61,7 @@ class CartRepositoryImpl(
         entity.items.addAll(
             cart.items.map { item ->
                 CartItemEntity(
-                    id = UUID.randomUUID(),
+                    id = item.id,
                     cart = entity,
                     productId = item.productId,
                     variantId = item.variantId,
@@ -68,8 +70,26 @@ class CartRepositoryImpl(
                     countStep = item.countStep,
                     quantity = item.quantity,
                     priceMinor = item.priceMinor,
-                    createdAt = Instant.now(),
-                )
+                    createdAt = item.createdAt,
+                ).apply {
+                    modifiers.addAll(
+                        item.modifiers.map { modifier ->
+                            CartItemModifierEntity(
+                                id = UUID.randomUUID(),
+                                cartItem = this,
+                                modifierGroupId = modifier.modifierGroupId,
+                                modifierOptionId = modifier.modifierOptionId,
+                                groupCodeSnapshot = modifier.groupCodeSnapshot,
+                                groupNameSnapshot = modifier.groupNameSnapshot,
+                                optionCodeSnapshot = modifier.optionCodeSnapshot,
+                                optionNameSnapshot = modifier.optionNameSnapshot,
+                                applicationScopeSnapshot = modifier.applicationScopeSnapshot,
+                                priceSnapshot = modifier.priceSnapshot,
+                                quantity = modifier.quantity,
+                            )
+                        }
+                    )
+                }
             }
         )
 
@@ -114,6 +134,7 @@ class CartRepositoryImpl(
             status = entity.status,
             items = entity.items.map { item ->
                 CartItem(
+                    id = item.id,
                     productId = item.productId,
                     variantId = item.variantId,
                     title = item.title,
@@ -121,6 +142,20 @@ class CartRepositoryImpl(
                     countStep = item.countStep,
                     quantity = item.quantity,
                     priceMinor = item.priceMinor,
+                    modifiers = item.modifiers.map { modifier ->
+                        CartItemModifier(
+                            modifierGroupId = modifier.modifierGroupId,
+                            modifierOptionId = modifier.modifierOptionId,
+                            groupCodeSnapshot = modifier.groupCodeSnapshot,
+                            groupNameSnapshot = modifier.groupNameSnapshot,
+                            optionCodeSnapshot = modifier.optionCodeSnapshot,
+                            optionNameSnapshot = modifier.optionNameSnapshot,
+                            applicationScopeSnapshot = modifier.applicationScopeSnapshot,
+                            priceSnapshot = modifier.priceSnapshot,
+                            quantity = modifier.quantity,
+                        )
+                    },
+                    createdAt = item.createdAt,
                 )
             }.toMutableList(),
             deliveryDraft = entity.deliveryDraft?.toDomain(),

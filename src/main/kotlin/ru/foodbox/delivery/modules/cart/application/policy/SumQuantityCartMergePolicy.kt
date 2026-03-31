@@ -9,7 +9,11 @@ class SumQuantityCartMergePolicy : CartMergePolicy {
     override fun merge(source: Cart, target: Cart): Cart {
         source.items.forEach { sourceItem ->
             val existing = target.items.firstOrNull {
-                it.productId == sourceItem.productId && it.variantId == sourceItem.variantId
+                it.hasSameConfiguration(
+                    productId = sourceItem.productId,
+                    variantId = sourceItem.variantId,
+                    modifiers = sourceItem.modifiers,
+                )
             }
             if (existing == null) {
                 target.items += sourceItem.copy()

@@ -52,6 +52,26 @@ class ImportValueParser {
         }
     }
 
+    fun <T : Enum<T>> parseEnum(
+        raw: String?,
+        rowNumber: Int,
+        rowKey: String?,
+        fieldName: String,
+        values: Array<T>,
+        errors: MutableList<CatalogImportRowError>,
+    ): T? {
+        val value = raw?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return values.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: run {
+            errors += CatalogImportRowError(
+                rowNumber = rowNumber,
+                rowKey = rowKey,
+                errorCode = CatalogImportErrorCode.INVALID_ENUM,
+                message = "Field '$fieldName' has unsupported value '$value'",
+            )
+            null
+        }
+    }
+
     fun parsePriceMinor(
         raw: String?,
         rowNumber: Int,

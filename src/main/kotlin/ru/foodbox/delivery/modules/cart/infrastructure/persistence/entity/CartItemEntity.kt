@@ -1,12 +1,14 @@
 package ru.foodbox.delivery.modules.cart.infrastructure.persistence.entity
 
 import jakarta.persistence.Column
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import java.time.Instant
@@ -47,4 +49,11 @@ class CartItemEntity(
 
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
+
+    @OneToMany(
+        mappedBy = "cartItem",
+        cascade = [CascadeType.ALL],
+        orphanRemoval = true,
+    )
+    var modifiers: MutableList<CartItemModifierEntity> = mutableListOf(),
 )

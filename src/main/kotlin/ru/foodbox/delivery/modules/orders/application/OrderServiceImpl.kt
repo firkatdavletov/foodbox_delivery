@@ -8,6 +8,7 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.CartService
+import ru.foodbox.delivery.modules.cart.pricing.application.CartItemPricingService
 import ru.foodbox.delivery.modules.checkout.application.CheckoutOptionsQuery
 import ru.foodbox.delivery.modules.checkout.application.CheckoutService
 import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestService
@@ -27,6 +28,7 @@ import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
@@ -40,6 +42,7 @@ class OrderServiceImpl(
     private val productReadService: ProductReadService,
     private val userRepository: UserRepository,
     private val deliveryService: DeliveryService,
+    private val cartItemPricingService: CartItemPricingService,
     private val checkoutService: CheckoutService,
     private val deliveryOrderRequestService: DeliveryOrderRequestService,
     private val applicationEventPublisher: ApplicationEventPublisher,
@@ -167,7 +170,11 @@ class OrderServiceImpl(
                 unit = product.unit,
                 quantity = item.quantity,
                 priceMinor = product.priceMinor,
-                totalMinor = product.priceMinor * item.quantity,
+                totalMinor = cartItemPricingService.calculate(
+                    basePriceMinor = product.priceMinor,
+                    lineQuantity = item.quantity,
+                    modifiers = emptyList(),
+                ).lineTotalMinor,
             )
         }
 
@@ -363,6 +370,24 @@ class OrderServiceImpl(
 
             require(item.quantity > 0) { "quantity must be greater than zero" }
             require(item.quantity % product.countStep == 0) { "quantity must match countStep" }
+            val modifiers = item.modifiers.map { modifier ->
+                OrderItemModifier(
+                    modifierGroupId = modifier.modifierGroupId,
+                    modifierOptionId = modifier.modifierOptionId,
+                    groupCodeSnapshot = modifier.groupCodeSnapshot,
+                    groupNameSnapshot = modifier.groupNameSnapshot,
+                    optionCodeSnapshot = modifier.optionCodeSnapshot,
+                    optionNameSnapshot = modifier.optionNameSnapshot,
+                    applicationScopeSnapshot = modifier.applicationScopeSnapshot,
+                    priceSnapshot = modifier.priceSnapshot,
+                    quantity = modifier.quantity,
+                )
+            }
+            val total = cartItemPricingService.calculate(
+                basePriceMinor = product.priceMinor,
+                lineQuantity = item.quantity,
+                modifiers = modifiers,
+            )
 
             OrderItem(
                 id = UUID.randomUUID(),
@@ -373,7 +398,8 @@ class OrderServiceImpl(
                 unit = product.unit,
                 quantity = item.quantity,
                 priceMinor = product.priceMinor,
-                totalMinor = product.priceMinor * item.quantity,
+                totalMinor = total.lineTotalMinor,
+                modifiers = modifiers,
             )
         }
     }

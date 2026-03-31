@@ -19,6 +19,7 @@ import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVar
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
+import ru.foodbox.delivery.modules.catalog.modifier.application.command.ReplaceProductModifierGroupCommand
 
 @RestController
 @RequestMapping("/api/v1/admin/catalog")
@@ -87,6 +88,13 @@ class CatalogAdminController(
                                 sortOrder = value.sortOrder,
                             )
                         },
+                    )
+                },
+                modifierGroups = request.modifierGroups.map { modifierGroup ->
+                    ReplaceProductModifierGroupCommand(
+                        modifierGroupId = modifierGroup.modifierGroupId,
+                        sortOrder = modifierGroup.sortOrder,
+                        isActive = modifierGroup.isActive,
                     )
                 },
                 variants = request.variants.map { variant ->

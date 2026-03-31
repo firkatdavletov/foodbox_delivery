@@ -1,11 +1,13 @@
 package ru.foodbox.delivery.modules.catalog.domain
 
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ProductModifierGroupDetails
 import java.util.UUID
 
 data class CatalogProductDetails(
     val product: CatalogProduct,
     val imageIds: List<UUID> = emptyList(),
     val optionGroups: List<CatalogProductOptionGroupDetails>,
+    val modifierGroups: List<ProductModifierGroupDetails> = emptyList(),
     val defaultVariantId: UUID?,
     val variants: List<CatalogProductVariantDetails>,
 )

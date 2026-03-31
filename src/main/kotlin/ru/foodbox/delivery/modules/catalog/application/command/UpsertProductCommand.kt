@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.modules.catalog.application.command
 
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
+import ru.foodbox.delivery.modules.catalog.modifier.application.command.ReplaceProductModifierGroupCommand
 import java.util.UUID
 
 data class UpsertProductCommand(
@@ -20,5 +21,6 @@ data class UpsertProductCommand(
     val brand: String? = null,
     val sortOrder: Int? = null,
     val optionGroups: List<ReplaceProductOptionGroupCommand> = emptyList(),
+    val modifierGroups: List<ReplaceProductModifierGroupCommand> = emptyList(),
     val variants: List<ReplaceProductVariantCommand> = emptyList(),
 )

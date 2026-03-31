@@ -25,6 +25,24 @@ class ClasspathCatalogImportExampleService : CatalogImportExampleService {
             "catalog-import/examples/product_create_only.csv",
         ExampleKey(CatalogImportType.PRODUCT, CatalogImportMode.UPSERT) to
             "catalog-import/examples/product_upsert.csv",
+        ExampleKey(CatalogImportType.MODIFIER_GROUP, CatalogImportMode.VALIDATE_ONLY) to
+            "catalog-import/examples/modifier_group_validate_only.csv",
+        ExampleKey(CatalogImportType.MODIFIER_GROUP, CatalogImportMode.CREATE_ONLY) to
+            "catalog-import/examples/modifier_group_create_only.csv",
+        ExampleKey(CatalogImportType.MODIFIER_GROUP, CatalogImportMode.UPSERT) to
+            "catalog-import/examples/modifier_group_upsert.csv",
+        ExampleKey(CatalogImportType.MODIFIER_OPTION, CatalogImportMode.VALIDATE_ONLY) to
+            "catalog-import/examples/modifier_option_validate_only.csv",
+        ExampleKey(CatalogImportType.MODIFIER_OPTION, CatalogImportMode.CREATE_ONLY) to
+            "catalog-import/examples/modifier_option_create_only.csv",
+        ExampleKey(CatalogImportType.MODIFIER_OPTION, CatalogImportMode.UPSERT) to
+            "catalog-import/examples/modifier_option_upsert.csv",
+        ExampleKey(CatalogImportType.PRODUCT_MODIFIER_GROUP_LINK, CatalogImportMode.VALIDATE_ONLY) to
+            "catalog-import/examples/product_modifier_group_link_validate_only.csv",
+        ExampleKey(CatalogImportType.PRODUCT_MODIFIER_GROUP_LINK, CatalogImportMode.CREATE_ONLY) to
+            "catalog-import/examples/product_modifier_group_link_create_only.csv",
+        ExampleKey(CatalogImportType.PRODUCT_MODIFIER_GROUP_LINK, CatalogImportMode.UPSERT) to
+            "catalog-import/examples/product_modifier_group_link_upsert.csv",
     )
 
     override fun listExamples(): List<CatalogImportExampleDescriptor> {

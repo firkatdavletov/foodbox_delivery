@@ -12,7 +12,7 @@ interface CartService {
     fun getOrCreateActiveCart(actor: CurrentActor): Cart
     fun addItem(actor: CurrentActor, command: AddCartItemCommand): Cart
     fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart
-    fun removeItem(actor: CurrentActor, productId: UUID, variantId: UUID?): Cart
+    fun removeItem(actor: CurrentActor, itemId: UUID): Cart
     fun clear(actor: CurrentActor): Cart
     fun getDeliveryDraft(actor: CurrentActor): CartDeliveryDraft?
     fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft

@@ -1,9 +1,13 @@
 package ru.foodbox.delivery.modules.cart.domain
 
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
+import ru.foodbox.delivery.modules.cart.modifier.domain.CartItemModifier
+import ru.foodbox.delivery.modules.cart.pricing.domain.calculateCartItemPrice
+import java.time.Instant
 import java.util.UUID
 
 data class CartItem(
+    val id: UUID = UUID.randomUUID(),
     val productId: UUID,
     val variantId: UUID?,
     val title: String,
@@ -11,6 +15,8 @@ data class CartItem(
     val countStep: Int,
     var quantity: Int,
     val priceMinor: Long,
+    val modifiers: List<CartItemModifier> = emptyList(),
+    val createdAt: Instant = Instant.now(),
 ) {
     init {
         require(countStep > 0) { "countStep must be greater than zero" }
@@ -30,5 +36,17 @@ data class CartItem(
         changeQuantity(quantity + delta)
     }
 
-    fun lineTotalMinor(): Long = priceMinor * quantity
+    fun lineTotalMinor(): Long = calculateCartItemPrice(priceMinor, quantity, modifiers).lineTotalMinor
+
+    fun hasSameConfiguration(productId: UUID, variantId: UUID?, modifiers: List<CartItemModifier>): Boolean {
+        return this.productId == productId &&
+            this.variantId == variantId &&
+            modifierSignature(this.modifiers) == modifierSignature(modifiers)
+    }
+
+    private fun modifierSignature(modifiers: List<CartItemModifier>): List<String> {
+        return modifiers.map {
+            "${it.modifierGroupId}:${it.modifierOptionId}:${it.quantity}"
+        }.sorted()
+    }
 }

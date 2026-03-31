@@ -18,12 +18,26 @@ data class Cart(
 
     fun addItem(item: CartItem) {
         ensureActive()
-        val existing = items.firstOrNull { it.productId == item.productId && it.variantId == item.variantId }
+        val existing = items.firstOrNull { existing ->
+            existing.hasSameConfiguration(
+                productId = item.productId,
+                variantId = item.variantId,
+                modifiers = item.modifiers,
+            )
+        }
         if (existing == null) {
             items += item
         } else {
             existing.increase(item.quantity)
         }
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
+    }
+
+    fun changeQuantity(itemId: UUID, quantity: Int) {
+        ensureActive()
+        val item = items.firstOrNull { it.id == itemId }
+            ?: throw IllegalArgumentException("Cart item not found")
+        item.changeQuantity(quantity)
         touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
@@ -45,6 +59,15 @@ data class Cart(
         val item = matchingItems.first()
 
         item.changeQuantity(quantity)
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
+    }
+
+    fun removeItem(itemId: UUID) {
+        ensureActive()
+        val removed = items.removeIf { it.id == itemId }
+        if (!removed) {
+            throw IllegalArgumentException("Cart item not found")
+        }
         touch(recalculateTotal = true, invalidateDeliveryQuote = false)
     }
 
