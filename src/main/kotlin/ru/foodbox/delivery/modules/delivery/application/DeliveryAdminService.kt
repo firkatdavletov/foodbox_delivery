@@ -2,6 +2,7 @@ package ru.foodbox.delivery.modules.delivery.application
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentMethodRule
 import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentRuleDefaults
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
@@ -9,6 +10,7 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
@@ -51,6 +53,11 @@ class DeliveryAdminService(
         }
     }
 
+    fun getZone(zoneId: java.util.UUID): DeliveryZone {
+        return deliveryZoneRepository.findById(zoneId)
+            ?: throw NotFoundException("Delivery zone not found: $zoneId")
+    }
+
     @Transactional
     fun upsertZone(zone: DeliveryZone): DeliveryZone {
         val code = zone.code.trim().takeIf { it.isNotBlank() }?.uppercase(Locale.ROOT)
@@ -59,9 +66,22 @@ class DeliveryAdminService(
             ?: throw IllegalArgumentException("Delivery zone name is required")
         val city = zone.city?.trim()?.takeIf { it.isNotBlank() }
         val postalCode = zone.postalCode?.trim()?.takeIf { it.isNotBlank() }
+        require(zone.priority >= 0) { "priority must be non-negative" }
 
-        require(city != null || postalCode != null) {
-            "Either city or postalCode must be provided for delivery zone"
+        when (zone.type) {
+            DeliveryZoneType.CITY -> require(city != null) {
+                "city is required for CITY delivery zone"
+            }
+            DeliveryZoneType.POSTAL_CODE -> require(postalCode != null) {
+                "postalCode is required for POSTAL_CODE delivery zone"
+            }
+            DeliveryZoneType.POLYGON -> require(zone.geometry != null) {
+                "geometry is required for POLYGON delivery zone"
+            }
+        }
+
+        require(zone.type == DeliveryZoneType.POLYGON || zone.geometry == null) {
+            "geometry is supported only for POLYGON delivery zones"
         }
 
         deliveryZoneRepository.findByCode(code)?.let { duplicate ->
@@ -73,8 +93,12 @@ class DeliveryAdminService(
                 id = zone.id,
                 code = code,
                 name = name,
+                type = zone.type,
                 city = city,
+                normalizedCity = null,
                 postalCode = postalCode,
+                geometry = zone.geometry,
+                priority = zone.priority,
                 active = zone.active,
             )
         )

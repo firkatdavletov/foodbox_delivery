@@ -81,7 +81,10 @@ class CourierDeliveryCostCalculator(
     }
 
     private fun resolveZone(address: DeliveryAddress) =
-        address.city?.let(deliveryZoneRepository::findActiveByCity)
+        address.latitude
+            ?.takeIf { address.longitude != null }
+            ?.let { latitude -> deliveryZoneRepository.findActiveByPoint(latitude, address.longitude!!) }
+            ?: address.city?.let(deliveryZoneRepository::findActiveByCity)
             ?: address.postalCode?.let(deliveryZoneRepository::findActiveByPostalCode)
 
     private companion object {

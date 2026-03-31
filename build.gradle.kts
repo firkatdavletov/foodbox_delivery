@@ -27,6 +27,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("org.hibernate.orm:hibernate-spatial")
+	implementation("org.locationtech.jts:jts-core")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.apache.commons:commons-csv:1.11.0")
 	implementation("software.amazon.awssdk:s3:2.25.0")

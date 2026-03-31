@@ -1,7 +1,9 @@
 package ru.foodbox.delivery.modules.delivery.infrastructure.repository
 
+import org.locationtech.jts.geom.MultiPolygon
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryZoneEntity
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryZoneJpaRepository
@@ -41,9 +43,12 @@ class DeliveryZoneRepositoryImpl(
             id = zone.id,
             code = zone.code,
             name = zone.name,
+            type = zone.type,
             city = zone.city,
             normalizedCity = normalizedCity,
             postalCode = normalizedPostalCode,
+            geometry = zone.geometry.copyGeometry(),
+            priority = zone.priority,
             isActive = zone.active,
             createdAt = now,
             updatedAt = now,
@@ -51,21 +56,34 @@ class DeliveryZoneRepositoryImpl(
 
         entity.code = zone.code
         entity.name = zone.name
+        entity.type = zone.type
         entity.city = zone.city?.trim()?.takeIf { it.isNotBlank() }
         entity.normalizedCity = normalizedCity
         entity.postalCode = normalizedPostalCode
+        entity.geometry = zone.geometry.copyGeometry()
+        entity.priority = zone.priority
         entity.isActive = zone.active
         entity.updatedAt = now
 
         return jpaRepository.save(entity).toDomain()
     }
 
+    override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? {
+        return jpaRepository.findActivePolygonContainingPoint(latitude = latitude, longitude = longitude)?.toDomain()
+    }
+
     override fun findActiveByCity(city: String): DeliveryZone? {
-        return jpaRepository.findByNormalizedCityAndIsActiveTrue(city.normalizeForLookup())?.toDomain()
+        return jpaRepository.findByNormalizedCityAndTypeAndIsActiveTrue(
+            normalizedCity = city.normalizeForLookup(),
+            type = DeliveryZoneType.CITY,
+        )?.toDomain()
     }
 
     override fun findActiveByPostalCode(postalCode: String): DeliveryZone? {
-        return jpaRepository.findByPostalCodeAndIsActiveTrue(postalCode.trim())?.toDomain()
+        return jpaRepository.findByPostalCodeAndTypeAndIsActiveTrue(
+            postalCode = postalCode.trim(),
+            type = DeliveryZoneType.POSTAL_CODE,
+        )?.toDomain()
     }
 
     private fun DeliveryZoneEntity.toDomain(): DeliveryZone {
@@ -73,10 +91,22 @@ class DeliveryZoneRepositoryImpl(
             id = id,
             code = code,
             name = name,
+            type = type,
             city = city,
+            normalizedCity = normalizedCity,
             postalCode = postalCode,
+            geometry = geometry.copyGeometry(),
+            priority = priority,
             active = isActive,
         )
+    }
+}
+
+private fun MultiPolygon?.copyGeometry(): MultiPolygon? {
+    return this?.copy()?.let { geometryCopy ->
+        (geometryCopy as MultiPolygon).also { copiedGeometry ->
+            copiedGeometry.srid = 4326
+        }
     }
 }
 

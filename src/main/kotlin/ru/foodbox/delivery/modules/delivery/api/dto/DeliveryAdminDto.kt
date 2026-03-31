@@ -11,6 +11,7 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import java.util.UUID
@@ -39,8 +40,12 @@ data class DeliveryZoneResponse(
     val id: UUID,
     val code: String,
     val name: String,
+    val type: DeliveryZoneType,
     val city: String?,
+    val normalizedCity: String?,
     val postalCode: String?,
+    val geometry: DeliveryZoneGeometryResponse?,
+    val priority: Int,
     val isActive: Boolean,
 )
 
@@ -55,11 +60,20 @@ data class UpsertDeliveryZoneRequest(
     @field:Size(max = 255)
     val name: String,
 
+    @field:NotNull
+    val type: DeliveryZoneType,
+
     @field:Size(max = 255)
     val city: String? = null,
 
     @field:Size(max = 64)
     val postalCode: String? = null,
+
+    @field:Valid
+    val geometry: DeliveryZoneGeometryRequest? = null,
+
+    @field:Min(0)
+    val priority: Int = 0,
 
     @field:NotNull
     val isActive: Boolean,
@@ -173,8 +187,12 @@ fun DeliveryZone.toResponse(): DeliveryZoneResponse {
         id = id,
         code = code,
         name = name,
+        type = type,
         city = city,
+        normalizedCity = normalizedCity,
         postalCode = postalCode,
+        geometry = geometry?.toGeometryResponse(),
+        priority = priority,
         isActive = active,
     )
 }
@@ -184,10 +202,18 @@ fun UpsertDeliveryZoneRequest.toDomain(): DeliveryZone {
         id = id ?: UUID.randomUUID(),
         code = code,
         name = name,
+        type = type,
         city = city,
+        normalizedCity = null,
         postalCode = postalCode,
+        geometry = geometry?.toMultiPolygon(),
+        priority = priority,
         active = isActive,
     )
+}
+
+fun UpsertDeliveryZoneRequest.withId(zoneId: UUID): UpsertDeliveryZoneRequest {
+    return copy(id = zoneId)
 }
 
 fun DeliveryTariff.toResponse(): DeliveryTariffResponse {

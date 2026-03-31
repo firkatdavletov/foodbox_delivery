@@ -2,7 +2,9 @@ package ru.foodbox.delivery.modules.delivery.api
 
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -20,8 +22,11 @@ import ru.foodbox.delivery.modules.delivery.api.dto.UpsertPickupPointRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.toAdminResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.withId
 import ru.foodbox.delivery.modules.delivery.application.DeliveryAdminService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/admin/delivery")
@@ -48,11 +53,29 @@ class DeliveryAdminController(
         return deliveryAdminService.getZones(isActive).map { it.toResponse() }
     }
 
+    @GetMapping("/zones/{zoneId}")
+    fun getZone(
+        @PathVariable zoneId: UUID,
+    ): DeliveryZoneResponse {
+        return deliveryAdminService.getZone(zoneId).toResponse()
+    }
+
     @PostMapping("/zones")
     fun upsertZone(
         @Valid @RequestBody request: UpsertDeliveryZoneRequest,
     ): DeliveryZoneResponse {
         return deliveryAdminService.upsertZone(request.toDomain()).toResponse()
+    }
+
+    @PutMapping("/zones/{zoneId}")
+    fun updateZone(
+        @PathVariable zoneId: UUID,
+        @Valid @RequestBody request: UpsertDeliveryZoneRequest,
+    ): DeliveryZoneResponse {
+        require(request.id == null || request.id == zoneId) {
+            "Delivery zone id in path and payload must match"
+        }
+        return deliveryAdminService.upsertZone(request.withId(zoneId).toDomain()).toResponse()
     }
 
     @GetMapping("/tariffs")
@@ -69,8 +92,12 @@ class DeliveryAdminController(
                 id = zoneId,
                 code = "",
                 name = "",
+                type = DeliveryZoneType.CITY,
                 city = null,
+                normalizedCity = null,
                 postalCode = null,
+                geometry = null,
+                priority = 0,
                 active = true,
             )
         }

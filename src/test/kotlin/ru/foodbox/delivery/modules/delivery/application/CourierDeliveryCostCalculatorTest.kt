@@ -6,6 +6,7 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
 import java.util.UUID
@@ -21,8 +22,12 @@ class CourierDeliveryCostCalculatorTest {
             id = UUID.randomUUID(),
             code = "EKB",
             name = "Yekaterinburg",
+            type = DeliveryZoneType.CITY,
             city = "Yekaterinburg",
+            normalizedCity = "yekaterinburg",
             postalCode = null,
+            geometry = null,
+            priority = 0,
             active = true,
         )
         val calculator = CourierDeliveryCostCalculator(
@@ -91,6 +96,7 @@ class CourierDeliveryCostCalculatorTest {
         override fun findById(id: UUID): DeliveryZone? = zone?.takeIf { it.id == id }
         override fun findByCode(code: String): DeliveryZone? = zone?.takeIf { it.code == code }
         override fun save(zone: DeliveryZone): DeliveryZone = zone
+        override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? = zone
         override fun findActiveByCity(city: String): DeliveryZone? = zone
         override fun findActiveByPostalCode(postalCode: String): DeliveryZone? = zone
     }

@@ -11,6 +11,7 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
@@ -63,8 +64,12 @@ class DeliveryBootstrapInitializer(
                 id = UUID.randomUUID(),
                 code = "EKB",
                 name = "Yekaterinburg",
+                type = DeliveryZoneType.CITY,
                 city = "Yekaterinburg",
+                normalizedCity = null,
                 postalCode = null,
+                geometry = null,
+                priority = 0,
                 active = true,
             )
         )
@@ -73,8 +78,12 @@ class DeliveryBootstrapInitializer(
                 id = UUID.randomUUID(),
                 code = "MSK",
                 name = "Moscow",
+                type = DeliveryZoneType.CITY,
                 city = "Moscow",
+                normalizedCity = null,
                 postalCode = null,
+                geometry = null,
+                priority = 0,
                 active = true,
             )
         )

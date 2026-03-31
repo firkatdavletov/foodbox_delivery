@@ -9,6 +9,7 @@ interface DeliveryZoneRepository {
     fun findById(id: UUID): DeliveryZone?
     fun findByCode(code: String): DeliveryZone?
     fun save(zone: DeliveryZone): DeliveryZone
+    fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone?
     fun findActiveByCity(city: String): DeliveryZone?
     fun findActiveByPostalCode(postalCode: String): DeliveryZone?
 }

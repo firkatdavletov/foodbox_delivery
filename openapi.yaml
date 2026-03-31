@@ -1250,6 +1250,72 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/delivery/zones/{zoneId}:
+    get:
+      tags: [Delivery Admin]
+      operationId: getAdminDeliveryZone
+      summary: Get delivery zone by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Delivery zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZoneResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Delivery Admin]
+      operationId: updateAdminDeliveryZone
+      summary: Update delivery zone
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertDeliveryZoneRequest'
+      responses:
+        '200':
+          description: Updated delivery zone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryZoneResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/delivery/tariffs:
     get:
       tags: [Delivery Admin]
@@ -2746,7 +2812,7 @@ components:
 
     DeliveryZoneResponse:
       type: object
-      required: [id, code, name, isActive]
+      required: [id, code, name, type, priority, isActive]
       properties:
         id:
           type: string
@@ -2755,18 +2821,31 @@ components:
           type: string
         name:
           type: string
+        type:
+          $ref: '#/components/schemas/DeliveryZoneType'
         city:
+          type: string
+          nullable: true
+        normalizedCity:
           type: string
           nullable: true
         postalCode:
           type: string
           nullable: true
+        geometry:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryZoneGeometry'
+          nullable: true
+        priority:
+          type: integer
+          format: int32
+          minimum: 0
         isActive:
           type: boolean
 
     UpsertDeliveryZoneRequest:
       type: object
-      required: [code, name, isActive]
+      required: [code, name, type, isActive]
       properties:
         id:
           type: string
@@ -2780,6 +2859,8 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        type:
+          $ref: '#/components/schemas/DeliveryZoneType'
         city:
           type: string
           nullable: true
@@ -2788,8 +2869,27 @@ components:
           type: string
           nullable: true
           maxLength: 64
+        geometry:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryZoneGeometry'
+          nullable: true
+        priority:
+          type: integer
+          format: int32
+          minimum: 0
         isActive:
           type: boolean
+
+    DeliveryZoneGeometry:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          $ref: '#/components/schemas/GeoJsonGeometryType'
+        coordinates:
+          type: array
+          description: GeoJSON-like coordinates. Request accepts Polygon or MultiPolygon nesting, response returns MultiPolygon nesting.
+          items: {}
 
     DeliveryTariffResponse:
       type: object
@@ -4298,6 +4398,14 @@ components:
     DeliveryMethodType:
       type: string
       enum: [PICKUP, COURIER, YANDEX_PICKUP_POINT]
+
+    DeliveryZoneType:
+      type: string
+      enum: [CITY, POSTAL_CODE, POLYGON]
+
+    GeoJsonGeometryType:
+      type: string
+      enum: [Polygon, MultiPolygon]
 
     PaymentMethodCode:
       type: string

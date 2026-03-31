@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.modules.delivery.infrastructure.repository
 
+import org.locationtech.jts.geom.MultiPolygon
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -90,9 +91,21 @@ class DeliveryTariffRepositoryImpl(
             id = id,
             code = code,
             name = name,
+            type = type,
             city = city,
+            normalizedCity = normalizedCity,
             postalCode = postalCode,
+            geometry = geometry.copyGeometry(),
+            priority = priority,
             active = isActive,
         )
+    }
+}
+
+private fun MultiPolygon?.copyGeometry(): MultiPolygon? {
+    return this?.copy()?.let { geometryCopy ->
+        (geometryCopy as MultiPolygon).also { copiedGeometry ->
+            copiedGeometry.srid = 4326
+        }
     }
 }
