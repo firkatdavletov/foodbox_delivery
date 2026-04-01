@@ -1633,6 +1633,21 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/delivery/pickup-points:
+    get:
+      tags: [Delivery]
+      operationId: getDeliveryPickupPoints
+      summary: Get active internal pickup points
+      responses:
+        '200':
+          description: Active internal pickup points
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupPointsResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/delivery/yandex/location-detect:
     post:
       tags: [Delivery]
@@ -2751,6 +2766,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliveryMethodResponse'
+        pickupPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickupPointResponse'
+
+    PickupPointsResponse:
+      type: object
+      required: [pickupPoints]
+      properties:
         pickupPoints:
           type: array
           items:

@@ -8,6 +8,10 @@ data class DeliveryMethodsResponse(
     val pickupPoints: List<PickupPointResponse>,
 )
 
+data class PickupPointsResponse(
+    val pickupPoints: List<PickupPointResponse>,
+)
+
 data class DeliveryMethodResponse(
     val code: DeliveryMethodType,
     val name: String,

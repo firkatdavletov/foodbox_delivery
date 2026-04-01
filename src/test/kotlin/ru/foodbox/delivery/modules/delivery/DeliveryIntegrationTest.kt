@@ -19,8 +19,11 @@ import ru.foodbox.delivery.modules.cart.domain.CartDeliveryQuote
 import ru.foodbox.delivery.modules.delivery.application.YandexDeliveryGateway
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
+import ru.foodbox.delivery.modules.delivery.domain.repository.PickupPointRepository
 import ru.foodbox.delivery.common.web.CurrentActor
 import java.time.Instant
+import java.util.UUID
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,6 +38,9 @@ class DeliveryIntegrationTest {
 
     @MockBean
     private lateinit var cartService: CartService
+
+    @MockBean
+    private lateinit var pickupPointRepository: PickupPointRepository
 
     @Test
     fun `returns public delivery methods without authentication`() {
@@ -55,6 +61,40 @@ class DeliveryIntegrationTest {
             .andExpect(jsonPath("$.methods.length()").value(1))
             .andExpect(jsonPath("$.methods[0].code").value("YANDEX_PICKUP_POINT"))
             .andExpect(jsonPath("$.pickupPoints.length()").value(0))
+    }
+
+    @Test
+    fun `returns active pickup points`() {
+        Mockito.`when`(pickupPointRepository.findAllActive()).thenReturn(
+            listOf(
+                PickupPoint(
+                    id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                    code = "pickup-1",
+                    name = "Main Pickup Point",
+                    address = DeliveryAddress(
+                        city = "Екатеринбург",
+                        street = "Ленина",
+                        house = "10",
+                        latitude = 56.8389,
+                        longitude = 60.6057,
+                    ),
+                    active = true,
+                )
+            )
+        )
+
+        mockMvc.perform(get("/api/v1/delivery/pickup-points"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.pickupPoints.length()").value(1))
+            .andExpect(jsonPath("$.pickupPoints[0].id").value("11111111-1111-1111-1111-111111111111"))
+            .andExpect(jsonPath("$.pickupPoints[0].code").value("pickup-1"))
+            .andExpect(jsonPath("$.pickupPoints[0].name").value("Main Pickup Point"))
+            .andExpect(jsonPath("$.pickupPoints[0].address.city").value("Екатеринбург"))
+            .andExpect(jsonPath("$.pickupPoints[0].address.street").value("Ленина"))
+            .andExpect(jsonPath("$.pickupPoints[0].address.house").value("10"))
+            .andExpect(jsonPath("$.pickupPoints[0].address.latitude").value(56.8389))
+            .andExpect(jsonPath("$.pickupPoints[0].address.longitude").value(60.6057))
+            .andExpect(jsonPath("$.pickupPoints[0].isActive").value(true))
     }
 
     @Test

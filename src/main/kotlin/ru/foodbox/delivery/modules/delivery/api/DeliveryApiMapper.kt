@@ -2,6 +2,7 @@ package ru.foodbox.delivery.modules.delivery.api
 
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectResponse
@@ -28,15 +29,15 @@ internal fun toMethodsResponse(
                 requiresPickupPoint = it.requiresPickupPoint,
             )
         },
-        pickupPoints = pickupPoints.map {
-            PickupPointResponse(
-                id = it.id,
-                code = it.code,
-                name = it.name,
-                address = it.address.toResponse(),
-                isActive = it.active,
-            )
-        },
+        pickupPoints = pickupPoints.map(PickupPoint::toResponse),
+    )
+}
+
+internal fun toPickupPointsResponse(
+    pickupPoints: List<PickupPoint>,
+): PickupPointsResponse {
+    return PickupPointsResponse(
+        pickupPoints = pickupPoints.map(PickupPoint::toResponse),
     )
 }
 
@@ -87,5 +88,15 @@ internal fun toYandexPickupPointsResponse(
                 isYandexBranded = it.isYandexBranded,
             )
         },
+    )
+}
+
+private fun PickupPoint.toResponse(): PickupPointResponse {
+    return PickupPointResponse(
+        id = id,
+        code = code,
+        name = name,
+        address = address.toResponse(),
+        isActive = active,
     )
 }

@@ -14,6 +14,7 @@ import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.delivery.api.dto.CalculateDeliveryQuoteRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.DetectCourierCartDeliveryDraftRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectResponse
@@ -42,6 +43,13 @@ class DeliveryController(
             } else {
                 emptyList()
             },
+        )
+    }
+
+    @GetMapping("/pickup-points")
+    fun getPickupPoints(): PickupPointsResponse {
+        return toPickupPointsResponse(
+            deliveryService.getActivePickupPoints(),
         )
     }
 
