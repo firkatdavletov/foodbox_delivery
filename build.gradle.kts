@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.compile.JavaCompile
+
 plugins {
 	kotlin("jvm") version "1.9.25"
 	kotlin("plugin.spring") version "1.9.25"
@@ -60,4 +62,70 @@ kotlin {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+val openApiSourceFile = layout.projectDirectory.file("openapi.yaml")
+val openApiToolSourceDir = layout.projectDirectory.dir("gradle/openapi")
+val openApiToolOutputDir = layout.buildDirectory.dir("openapi-tool/classes")
+val generatedOpenApiDir = layout.buildDirectory.dir("openapi")
+val snakeYamlClasspath = files(
+	fileTree(requireNotNull(gradle.gradleHomeDir).resolve("lib/plugins")) {
+		include("snakeyaml-*.jar")
+	},
+)
+
+val compileOpenApiSplitter = tasks.register<JavaCompile>("compileOpenApiSplitter") {
+	group = "documentation"
+	description = "Compiles the OpenAPI splitter helper"
+
+	source = fileTree(openApiToolSourceDir) {
+		include("**/*.java")
+	}
+	classpath = snakeYamlClasspath
+	destinationDirectory.set(openApiToolOutputDir)
+	options.release.set(17)
+}
+
+fun registerOpenApiSplitTask(
+	name: String,
+	outputFileName: String,
+	mode: String,
+) = tasks.register(name) {
+	group = "documentation"
+	description = "Generates $outputFileName from openapi.yaml"
+
+	dependsOn(compileOpenApiSplitter)
+	inputs.file(openApiSourceFile)
+	inputs.files(fileTree(openApiToolSourceDir) { include("**/*.java") })
+	outputs.file(generatedOpenApiDir.map { it.file(outputFileName) })
+
+	doLast {
+		javaexec {
+			classpath = files(openApiToolOutputDir.get().asFile, snakeYamlClasspath)
+			mainClass.set("OpenApiSplitter")
+			args(
+				mode,
+				openApiSourceFile.asFile.absolutePath,
+				generatedOpenApiDir.get().file(outputFileName).asFile.absolutePath,
+			)
+		}
+	}
+}
+
+val generatePublicOpenApi = registerOpenApiSplitTask(
+	name = "generatePublicOpenApi",
+	outputFileName = "public-openapi.yaml",
+	mode = "public",
+)
+
+val generateAdminOpenApi = registerOpenApiSplitTask(
+	name = "generateAdminOpenApi",
+	outputFileName = "admin-openapi.yaml",
+	mode = "admin",
+)
+
+tasks.register("generateOpenApiSpecs") {
+	group = "documentation"
+	description = "Generates public and admin OpenAPI specs into build/openapi"
+	dependsOn(generatePublicOpenApi, generateAdminOpenApi)
 }
