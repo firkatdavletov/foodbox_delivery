@@ -194,6 +194,8 @@ class DeliveryServiceImplTest {
 
         override fun save(point: PickupPoint): PickupPoint = point
 
+        override fun deleteById(id: UUID) = Unit
+
         override fun findActiveById(id: UUID): PickupPoint? = null
 
         override fun findAllActive(): List<PickupPoint> = emptyList()

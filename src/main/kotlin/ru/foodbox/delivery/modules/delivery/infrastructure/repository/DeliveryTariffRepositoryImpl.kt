@@ -62,6 +62,10 @@ class DeliveryTariffRepositoryImpl(
         return jpaRepository.save(entity).toDomain()
     }
 
+    override fun deleteById(id: UUID) {
+        jpaRepository.deleteById(id)
+    }
+
     override fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff? {
         if (zoneId == null) {
             return null
@@ -71,6 +75,10 @@ class DeliveryTariffRepositoryImpl(
 
     override fun findDefaultByMethod(method: DeliveryMethodType): DeliveryTariff? {
         return jpaRepository.findByMethodAndZoneIsNull(method)?.toDomain()
+    }
+
+    override fun existsByZoneId(zoneId: UUID): Boolean {
+        return jpaRepository.existsByZoneId(zoneId)
     }
 
     private fun DeliveryTariffEntity.toDomain(): DeliveryTariff {

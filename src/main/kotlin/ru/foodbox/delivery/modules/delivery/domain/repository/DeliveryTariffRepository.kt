@@ -8,6 +8,8 @@ interface DeliveryTariffRepository {
     fun findAll(): List<DeliveryTariff>
     fun findById(id: UUID): DeliveryTariff?
     fun save(tariff: DeliveryTariff): DeliveryTariff
+    fun deleteById(id: UUID)
     fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff?
     fun findDefaultByMethod(method: DeliveryMethodType): DeliveryTariff?
+    fun existsByZoneId(zoneId: UUID): Boolean
 }

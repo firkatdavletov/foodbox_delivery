@@ -61,6 +61,16 @@ class DeliveryAdminService(
     }
 
     @Transactional
+    fun deleteZone(zoneId: java.util.UUID) {
+        deliveryZoneRepository.findById(zoneId)
+            ?: throw NotFoundException("Delivery zone not found: $zoneId")
+        require(!deliveryTariffRepository.existsByZoneId(zoneId)) {
+            "Cannot delete delivery zone while tariffs are linked to it"
+        }
+        deliveryZoneRepository.deleteById(zoneId)
+    }
+
+    @Transactional
     fun upsertZone(zone: DeliveryZone): DeliveryZone {
         val code = zone.code.trim().takeIf { it.isNotBlank() }?.uppercase(Locale.ROOT)
             ?: throw IllegalArgumentException("Delivery zone code is required")
@@ -107,6 +117,13 @@ class DeliveryAdminService(
     }
 
     fun getTariffs(): List<DeliveryTariff> = deliveryTariffRepository.findAll()
+
+    @Transactional
+    fun deleteTariff(tariffId: java.util.UUID) {
+        deliveryTariffRepository.findById(tariffId)
+            ?: throw NotFoundException("Delivery tariff not found: $tariffId")
+        deliveryTariffRepository.deleteById(tariffId)
+    }
 
     @Transactional
     fun upsertTariff(tariff: DeliveryTariff): DeliveryTariff {
@@ -171,6 +188,13 @@ class DeliveryAdminService(
             null -> pickupPointRepository.findAll()
             else -> pickupPointRepository.findAllByIsActive(isActive)
         }
+    }
+
+    @Transactional
+    fun deletePickupPoint(pickupPointId: java.util.UUID) {
+        pickupPointRepository.findById(pickupPointId)
+            ?: throw NotFoundException("Pickup point not found: $pickupPointId")
+        pickupPointRepository.deleteById(pickupPointId)
     }
 
     fun detectPickupPointAddress(latitude: Double, longitude: Double): DeliveryAddress? {

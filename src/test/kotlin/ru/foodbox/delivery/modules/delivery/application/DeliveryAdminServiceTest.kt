@@ -8,10 +8,14 @@ import org.locationtech.jts.geom.PrecisionModel
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import ru.foodbox.delivery.common.error.NotFoundException
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryMethodSettingRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryTariffRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
@@ -45,6 +49,137 @@ class DeliveryAdminServiceTest {
 
         assertEquals(expectedAddress, actualAddress)
         verify(geocoder).reverseGeocode(56.8389, 60.6057)
+    }
+
+    @Test
+    fun `deletes delivery zone when it has no linked tariffs`() {
+        val zoneId = UUID.randomUUID()
+        val zoneRepository = InMemoryDeliveryZoneRepository().apply {
+            save(
+                DeliveryZone(
+                    id = zoneId,
+                    code = "EKB",
+                    name = "Yekaterinburg",
+                    type = DeliveryZoneType.CITY,
+                    city = "Yekaterinburg",
+                    normalizedCity = "yekaterinburg",
+                    postalCode = null,
+                    geometry = null,
+                    priority = 0,
+                    active = true,
+                )
+            )
+        }
+        val tariffRepository = InMemoryDeliveryTariffRepository()
+        val service = deliveryAdminService(
+            zoneRepository = zoneRepository,
+            tariffRepository = tariffRepository,
+        )
+
+        service.deleteZone(zoneId)
+
+        assertEquals(null, zoneRepository.findById(zoneId))
+    }
+
+    @Test
+    fun `rejects deleting delivery zone with linked tariffs`() {
+        val zoneId = UUID.randomUUID()
+        val zoneRepository = InMemoryDeliveryZoneRepository().apply {
+            save(
+                DeliveryZone(
+                    id = zoneId,
+                    code = "EKB",
+                    name = "Yekaterinburg",
+                    type = DeliveryZoneType.CITY,
+                    city = "Yekaterinburg",
+                    normalizedCity = "yekaterinburg",
+                    postalCode = null,
+                    geometry = null,
+                    priority = 0,
+                    active = true,
+                )
+            )
+        }
+        val tariffRepository = InMemoryDeliveryTariffRepository().apply {
+            save(
+                DeliveryTariff(
+                    id = UUID.randomUUID(),
+                    method = DeliveryMethodType.COURIER,
+                    zone = zoneRepository.findById(zoneId),
+                    available = true,
+                    fixedPriceMinor = 300,
+                    freeFromAmountMinor = null,
+                    currency = "RUB",
+                    estimatedDays = 1,
+                )
+            )
+        }
+        val service = deliveryAdminService(
+            zoneRepository = zoneRepository,
+            tariffRepository = tariffRepository,
+        )
+
+        val exception = assertFailsWith<IllegalArgumentException> {
+            service.deleteZone(zoneId)
+        }
+
+        assertEquals("Cannot delete delivery zone while tariffs are linked to it", exception.message)
+    }
+
+    @Test
+    fun `deletes tariff by id`() {
+        val tariff = DeliveryTariff(
+            id = UUID.randomUUID(),
+            method = DeliveryMethodType.PICKUP,
+            zone = null,
+            available = true,
+            fixedPriceMinor = 0,
+            freeFromAmountMinor = null,
+            currency = "RUB",
+            estimatedDays = 0,
+        )
+        val tariffRepository = InMemoryDeliveryTariffRepository().apply {
+            save(tariff)
+        }
+        val service = deliveryAdminService(
+            zoneRepository = InMemoryDeliveryZoneRepository(),
+            tariffRepository = tariffRepository,
+        )
+
+        service.deleteTariff(tariff.id)
+
+        assertEquals(null, tariffRepository.findById(tariff.id))
+    }
+
+    @Test
+    fun `deletes pickup point by id`() {
+        val pickupPoint = PickupPoint(
+            id = UUID.randomUUID(),
+            code = "pickup-1",
+            name = "Pickup 1",
+            address = DeliveryAddress(city = "Yekaterinburg", street = "Lenina", house = "1"),
+            active = true,
+        )
+        val pickupPointRepository = InMemoryPickupPointRepository().apply {
+            save(pickupPoint)
+        }
+        val service = deliveryAdminService(
+            zoneRepository = InMemoryDeliveryZoneRepository(),
+            pickupPointRepository = pickupPointRepository,
+        )
+
+        service.deletePickupPoint(pickupPoint.id)
+
+        assertEquals(null, pickupPointRepository.findById(pickupPoint.id))
+    }
+
+    @Test
+    fun `throws not found when deleting missing tariff`() {
+        val service = deliveryAdminService(InMemoryDeliveryZoneRepository())
+
+        assertFailsWith<NotFoundException> {
+            service.deleteTariff(UUID.randomUUID())
+        }
     }
 
     @Test
@@ -98,13 +233,15 @@ class DeliveryAdminServiceTest {
 
     private fun deliveryAdminService(
         zoneRepository: DeliveryZoneRepository,
+        tariffRepository: DeliveryTariffRepository = InMemoryDeliveryTariffRepository(),
+        pickupPointRepository: PickupPointRepository = InMemoryPickupPointRepository(),
         geocoder: DeliveryAddressGeocoder = mock(DeliveryAddressGeocoder::class.java),
     ): DeliveryAdminService {
         return DeliveryAdminService(
             deliveryMethodSettingRepository = mock(DeliveryMethodSettingRepository::class.java),
             deliveryZoneRepository = zoneRepository,
-            deliveryTariffRepository = mock(DeliveryTariffRepository::class.java),
-            pickupPointRepository = mock(PickupPointRepository::class.java),
+            deliveryTariffRepository = tariffRepository,
+            pickupPointRepository = pickupPointRepository,
             checkoutPaymentMethodRuleRepository = mock(CheckoutPaymentMethodRuleRepository::class.java),
             deliveryAddressGeocoder = geocoder,
         )
@@ -145,10 +282,70 @@ class DeliveryAdminServiceTest {
             return zone
         }
 
+        override fun deleteById(id: UUID) {
+            zonesById.remove(id)
+        }
+
         override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? = null
 
         override fun findActiveByCity(city: String): DeliveryZone? = null
 
         override fun findActiveByPostalCode(postalCode: String): DeliveryZone? = null
+    }
+
+    private class InMemoryDeliveryTariffRepository : DeliveryTariffRepository {
+        private val tariffsById = linkedMapOf<UUID, DeliveryTariff>()
+
+        override fun findAll(): List<DeliveryTariff> = tariffsById.values.toList()
+
+        override fun findById(id: UUID): DeliveryTariff? = tariffsById[id]
+
+        override fun save(tariff: DeliveryTariff): DeliveryTariff {
+            tariffsById[tariff.id] = tariff
+            return tariff
+        }
+
+        override fun deleteById(id: UUID) {
+            tariffsById.remove(id)
+        }
+
+        override fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff? {
+            return tariffsById.values.firstOrNull { it.method == method && it.zone?.id == zoneId }
+        }
+
+        override fun findDefaultByMethod(method: DeliveryMethodType): DeliveryTariff? {
+            return tariffsById.values.firstOrNull { it.method == method && it.zone == null }
+        }
+
+        override fun existsByZoneId(zoneId: UUID): Boolean {
+            return tariffsById.values.any { it.zone?.id == zoneId }
+        }
+    }
+
+    private class InMemoryPickupPointRepository : PickupPointRepository {
+        private val pickupPointsById = linkedMapOf<UUID, PickupPoint>()
+
+        override fun findAll(): List<PickupPoint> = pickupPointsById.values.toList()
+
+        override fun findAllByIsActive(isActive: Boolean): List<PickupPoint> {
+            return pickupPointsById.values.filter { it.active == isActive }
+        }
+
+        override fun findById(id: UUID): PickupPoint? = pickupPointsById[id]
+
+        override fun findByCode(code: String): PickupPoint? = pickupPointsById.values.firstOrNull { it.code == code }
+
+        override fun save(point: PickupPoint): PickupPoint {
+            pickupPointsById[point.id] = point
+            return point
+        }
+
+        override fun deleteById(id: UUID) {
+            pickupPointsById.remove(id)
+        }
+
+        override fun findActiveById(id: UUID): PickupPoint? = pickupPointsById[id]?.takeIf { it.active }
+
+        override fun findAllActive(): List<PickupPoint> = pickupPointsById.values.filter { it.active }
     }
 }

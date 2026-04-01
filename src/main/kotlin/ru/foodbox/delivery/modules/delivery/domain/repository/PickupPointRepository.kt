@@ -9,6 +9,7 @@ interface PickupPointRepository {
     fun findById(id: UUID): PickupPoint?
     fun findByCode(code: String): PickupPoint?
     fun save(point: PickupPoint): PickupPoint
+    fun deleteById(id: UUID)
     fun findActiveById(id: UUID): PickupPoint?
     fun findAllActive(): List<PickupPoint>
 }

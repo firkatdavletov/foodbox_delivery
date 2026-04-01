@@ -54,6 +54,10 @@ class PickupPointRepositoryImpl(
         return jpaRepository.save(entity).toDomain()
     }
 
+    override fun deleteById(id: java.util.UUID) {
+        jpaRepository.deleteById(id)
+    }
+
     override fun findActiveById(id: java.util.UUID): PickupPoint? {
         return findById(id)?.takeIf { it.active }
     }

@@ -143,6 +143,7 @@ class CourierDeliveryCostCalculatorTest {
         override fun findById(id: UUID): DeliveryZone? = zone?.takeIf { it.id == id }
         override fun findByCode(code: String): DeliveryZone? = zone?.takeIf { it.code == code }
         override fun save(zone: DeliveryZone): DeliveryZone = zone
+        override fun deleteById(id: UUID) = Unit
         override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? = zone
         override fun findActiveByCity(city: String): DeliveryZone? = zone
         override fun findActiveByPostalCode(postalCode: String): DeliveryZone? = zone
@@ -154,7 +155,9 @@ class CourierDeliveryCostCalculatorTest {
         override fun findAll(): List<DeliveryTariff> = listOfNotNull(tariff)
         override fun findById(id: UUID): DeliveryTariff? = tariff?.takeIf { it.id == id }
         override fun save(tariff: DeliveryTariff): DeliveryTariff = tariff
+        override fun deleteById(id: UUID) = Unit
         override fun findByMethodAndZone(method: DeliveryMethodType, zoneId: UUID?): DeliveryTariff? = tariff
         override fun findDefaultByMethod(method: DeliveryMethodType): DeliveryTariff? = tariff
+        override fun existsByZoneId(zoneId: UUID): Boolean = tariff?.zone?.id == zoneId
     }
 }

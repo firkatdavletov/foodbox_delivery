@@ -68,6 +68,10 @@ class DeliveryZoneRepositoryImpl(
         return jpaRepository.save(entity).toDomain()
     }
 
+    override fun deleteById(id: UUID) {
+        jpaRepository.deleteById(id)
+    }
+
     override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? {
         return jpaRepository.findActivePolygonContainingPoint(latitude = latitude, longitude = longitude)?.toDomain()
     }

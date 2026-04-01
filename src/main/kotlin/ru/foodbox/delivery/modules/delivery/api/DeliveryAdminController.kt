@@ -1,6 +1,8 @@
 package ru.foodbox.delivery.modules.delivery.api
 
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.ResponseStatus
 import ru.foodbox.delivery.modules.delivery.api.dto.AdminPickupPointResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.CheckoutPaymentRuleResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DetectPickupPointAddressRequest
@@ -81,6 +84,14 @@ class DeliveryAdminController(
         return deliveryAdminService.upsertZone(request.withId(zoneId).toDomain()).toResponse()
     }
 
+    @DeleteMapping("/zones/{zoneId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteZone(
+        @PathVariable zoneId: UUID,
+    ) {
+        deliveryAdminService.deleteZone(zoneId)
+    }
+
     @GetMapping("/tariffs")
     fun getTariffs(): List<DeliveryTariffResponse> {
         return deliveryAdminService.getTariffs().map { it.toResponse() }
@@ -108,6 +119,14 @@ class DeliveryAdminController(
         return deliveryAdminService.upsertTariff(request.toDomain(zone)).toResponse()
     }
 
+    @DeleteMapping("/tariffs/{tariffId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteTariff(
+        @PathVariable tariffId: UUID,
+    ) {
+        deliveryAdminService.deleteTariff(tariffId)
+    }
+
     @GetMapping("/pickup-points")
     fun getPickupPoints(
         @RequestParam(name = "isActive", required = false) isActive: Boolean?,
@@ -130,6 +149,14 @@ class DeliveryAdminController(
         @Valid @RequestBody request: UpsertPickupPointRequest,
     ): AdminPickupPointResponse {
         return deliveryAdminService.upsertPickupPoint(request.toDomain()).toAdminResponse()
+    }
+
+    @DeleteMapping("/pickup-points/{pickupPointId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deletePickupPoint(
+        @PathVariable pickupPointId: UUID,
+    ) {
+        deliveryAdminService.deletePickupPoint(pickupPointId)
     }
 
     @GetMapping("/payment-rules")

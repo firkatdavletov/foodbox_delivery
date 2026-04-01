@@ -8,4 +8,5 @@ import java.util.UUID
 interface DeliveryTariffJpaRepository : JpaRepository<DeliveryTariffEntity, UUID> {
     fun findByMethodAndZoneId(method: DeliveryMethodType, zoneId: UUID): DeliveryTariffEntity?
     fun findByMethodAndZoneIsNull(method: DeliveryMethodType): DeliveryTariffEntity?
+    fun existsByZoneId(zoneId: UUID): Boolean
 }
