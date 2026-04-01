@@ -22,6 +22,8 @@ telegram:
   enabled: false
 
 yandex:
+  geocoder:
+    enabled: false
   delivery:
     enabled: false
 
