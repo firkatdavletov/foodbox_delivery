@@ -40,7 +40,7 @@ class DeliveryServiceImpl(
 
     override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
         require(context.subtotalMinor >= 0) { "subtotalMinor must be greater than or equal to zero" }
-        require(context.itemCount > 0) { "itemCount must be greater than zero" }
+        require(context.itemCount >= 0) { "itemCount must be greater than or equal to zero" }
 
         val calculator = calculators.firstOrNull { it.supports(context.deliveryMethod) }
             ?: throw DeliveryValidationException("Unsupported delivery method: ${context.deliveryMethod}")

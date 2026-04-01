@@ -99,10 +99,6 @@ class CartServiceImpl(
         validateCoordinates(latitude = latitude, longitude = longitude)
 
         val cart = loadOrCreateActiveCart(actor)
-        if (cart.items.isEmpty()) {
-            throw IllegalArgumentException("Cannot select delivery for an empty cart")
-        }
-
         val now = Instant.now()
         val detectedAddress = (deliveryAddressGeocoder.reverseGeocode(latitude, longitude)
             ?: DeliveryAddress()).copy(
@@ -137,10 +133,6 @@ class CartServiceImpl(
     @Transactional
     override fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft {
         val cart = loadOrCreateActiveCart(actor)
-        if (cart.items.isEmpty()) {
-            throw IllegalArgumentException("Cannot select delivery for an empty cart")
-        }
-
         val deliveryAddress = if (command.deliveryMethod.requiresAddress) {
             command.deliveryAddress?.normalized()
         } else {
@@ -242,7 +234,7 @@ class CartServiceImpl(
         val quote = draft.quote ?: return cart
         val now = Instant.now()
 
-        if (!quote.isExpired(now) || cart.items.isEmpty()) {
+        if (!quote.isExpired(now)) {
             return cart
         }
 

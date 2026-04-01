@@ -2,8 +2,11 @@ package ru.foodbox.delivery.modules.delivery.application
 
 import org.junit.jupiter.api.Test
 import ru.foodbox.delivery.common.web.CurrentActor
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.YandexDeliveryLocationVariant
 import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
@@ -102,6 +105,42 @@ class DeliveryServiceImplTest {
         assertEquals(yandexDeliveryGateway.pickupPoints, result)
         assertEquals(54L, yandexDeliveryGateway.lastGeoId)
         assertEquals("card_on_receipt", yandexDeliveryGateway.lastPaymentMethod)
+    }
+
+    @Test
+    fun `allows zero item count when calculating quote`() {
+        val calculator = RecordingDeliveryCostCalculator(
+            supportedMethod = DeliveryMethodType.COURIER,
+            quote = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 500,
+                currency = "RUB",
+            ),
+        )
+        val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
+            pickupPointRepository = StubPickupPointRepository(),
+            yandexDeliveryGateway = RecordingYandexDeliveryGateway(),
+            paymentService = StubPaymentService(methods = emptyList()),
+            calculators = listOf(calculator),
+        )
+
+        val result = service.calculateQuote(
+            DeliveryQuoteContext(
+                subtotalMinor = 0,
+                itemCount = 0,
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                ),
+            )
+        )
+
+        assertEquals(0, calculator.lastContext?.itemCount)
+        assertEquals(500L, result.priceMinor)
     }
 
     private fun paymentMethodInfo(
@@ -212,6 +251,20 @@ class DeliveryServiceImplTest {
 
         override fun getPayment(actor: CurrentActor, paymentId: UUID): Payment {
             throw UnsupportedOperationException("Not used in delivery service tests")
+        }
+    }
+
+    private class RecordingDeliveryCostCalculator(
+        private val supportedMethod: DeliveryMethodType,
+        private val quote: DeliveryQuote,
+    ) : DeliveryCostCalculator {
+        var lastContext: DeliveryQuoteContext? = null
+
+        override fun supports(method: DeliveryMethodType): Boolean = method == supportedMethod
+
+        override fun calculate(context: DeliveryQuoteContext): DeliveryQuote {
+            lastContext = context
+            return quote
         }
     }
 }
