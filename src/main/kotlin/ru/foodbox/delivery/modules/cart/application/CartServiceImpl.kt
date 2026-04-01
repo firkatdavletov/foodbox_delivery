@@ -18,6 +18,7 @@ import ru.foodbox.delivery.modules.cart.domain.CartOwner
 import ru.foodbox.delivery.modules.cart.domain.CartOwnerType
 import ru.foodbox.delivery.modules.cart.domain.CartStatus
 import ru.foodbox.delivery.modules.cart.domain.repository.CartRepository
+import ru.foodbox.delivery.modules.delivery.application.DeliveryAddressGeocoder
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -34,6 +35,7 @@ class CartServiceImpl(
     private val cartMergePolicy: CartMergePolicy,
     private val cartItemModifierResolver: CartItemModifierResolver,
     private val deliveryService: DeliveryService,
+    private val deliveryAddressGeocoder: DeliveryAddressGeocoder,
 ) : CartService {
 
     override fun getOrCreateActiveCart(actor: CurrentActor): Cart {
@@ -90,6 +92,46 @@ class CartServiceImpl(
 
     override fun getDeliveryDraft(actor: CurrentActor): CartDeliveryDraft? {
         return getOrCreateActiveCart(actor).deliveryDraft
+    }
+
+    @Transactional
+    override fun detectCourierDeliveryDraft(actor: CurrentActor, latitude: Double, longitude: Double): CartDeliveryDraft {
+        validateCoordinates(latitude = latitude, longitude = longitude)
+
+        val cart = loadOrCreateActiveCart(actor)
+        if (cart.items.isEmpty()) {
+            throw IllegalArgumentException("Cannot select delivery for an empty cart")
+        }
+
+        val now = Instant.now()
+        val detectedAddress = (deliveryAddressGeocoder.reverseGeocode(latitude, longitude)
+            ?: DeliveryAddress()).copy(
+            latitude = latitude,
+            longitude = longitude,
+        ).normalized()
+        val quote = deliveryService.calculateQuote(
+            DeliveryQuoteContext(
+                cartId = cart.id,
+                subtotalMinor = cart.itemsSubtotalMinor(),
+                itemCount = cart.items.sumOf { it.quantity },
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = detectedAddress,
+            )
+        )
+        cart.upsertDeliveryDraft(
+            buildDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = detectedAddress,
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                quote = quote,
+                createdAt = cart.deliveryDraft?.createdAt,
+                now = now,
+            )
+        )
+
+        return cartRepository.save(cart).deliveryDraft
+            ?: throw IllegalStateException("Cart delivery draft was not saved")
     }
 
     @Transactional
@@ -298,6 +340,13 @@ class CartServiceImpl(
             is CurrentActor.User -> CartOwner(CartOwnerType.USER, actor.userId.toString())
             is CurrentActor.Guest -> CartOwner(CartOwnerType.INSTALLATION, actor.installId)
         }
+    }
+
+    private fun validateCoordinates(latitude: Double, longitude: Double) {
+        require(latitude.isFinite()) { "latitude must be finite" }
+        require(longitude.isFinite()) { "longitude must be finite" }
+        require(latitude in -90.0..90.0) { "latitude must be between -90 and 90" }
+        require(longitude in -180.0..180.0) { "longitude must be between -180 and 180" }
     }
 
     private companion object {

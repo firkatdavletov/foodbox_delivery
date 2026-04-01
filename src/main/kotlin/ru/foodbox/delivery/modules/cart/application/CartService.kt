@@ -15,6 +15,7 @@ interface CartService {
     fun removeItem(actor: CurrentActor, itemId: UUID): Cart
     fun clear(actor: CurrentActor): Cart
     fun getDeliveryDraft(actor: CurrentActor): CartDeliveryDraft?
+    fun detectCourierDeliveryDraft(actor: CurrentActor, latitude: Double, longitude: Double): CartDeliveryDraft
     fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft
     fun mergeGuestCartIntoUser(userId: UUID, installId: String): Cart
     fun markOrdered(cartId: UUID)

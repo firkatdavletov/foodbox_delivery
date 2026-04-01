@@ -88,6 +88,53 @@ class CourierDeliveryCostCalculatorTest {
         assertEquals(null, quote.priceMinor)
     }
 
+    @Test
+    fun `calculates courier quote by coordinates without requiring textual address fields`() {
+        val zone = DeliveryZone(
+            id = UUID.randomUUID(),
+            code = "EKB",
+            name = "Yekaterinburg",
+            type = DeliveryZoneType.POLYGON,
+            city = null,
+            normalizedCity = null,
+            postalCode = null,
+            geometry = null,
+            priority = 0,
+            active = true,
+        )
+        val calculator = CourierDeliveryCostCalculator(
+            deliveryZoneRepository = StubDeliveryZoneRepository(zone),
+            deliveryTariffRepository = StubDeliveryTariffRepository(
+                DeliveryTariff(
+                    id = UUID.randomUUID(),
+                    method = DeliveryMethodType.COURIER,
+                    zone = zone,
+                    available = true,
+                    fixedPriceMinor = 29_900,
+                    freeFromAmountMinor = null,
+                    currency = "RUB",
+                    estimatedDays = 1,
+                )
+            ),
+        )
+
+        val quote = calculator.calculate(
+            DeliveryQuoteContext(
+                subtotalMinor = 100_000,
+                itemCount = 1,
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    latitude = 56.8389,
+                    longitude = 60.6057,
+                ),
+            )
+        )
+
+        assertTrue(quote.available)
+        assertEquals(29_900L, quote.priceMinor)
+        assertEquals("EKB", quote.zoneCode)
+    }
+
     private class StubDeliveryZoneRepository(
         private val zone: DeliveryZone?,
     ) : DeliveryZoneRepository {

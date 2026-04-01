@@ -6,7 +6,13 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import ru.foodbox.delivery.common.web.CurrentActor
+import ru.foodbox.delivery.common.web.CurrentActorParam
+import ru.foodbox.delivery.modules.cart.api.dto.CartDeliveryDraftResponse
+import ru.foodbox.delivery.modules.cart.api.toResponse
+import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.delivery.api.dto.CalculateDeliveryQuoteRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.DetectCourierCartDeliveryDraftRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectRequest
@@ -22,6 +28,7 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 @RequestMapping("/api/v1/delivery")
 class DeliveryController(
     private val deliveryService: DeliveryService,
+    private val cartService: CartService,
 ) {
 
     @GetMapping("/methods")
@@ -54,6 +61,18 @@ class DeliveryController(
         return toYandexPickupPointsResponse(
             deliveryService.getYandexPickupPoints(request.geoId),
         )
+    }
+
+    @PostMapping("/courier/draft-detect")
+    fun detectCourierDeliveryDraft(
+        @CurrentActorParam actor: CurrentActor,
+        @Valid @RequestBody request: DetectCourierCartDeliveryDraftRequest,
+    ): CartDeliveryDraftResponse {
+        return cartService.detectCourierDeliveryDraft(
+            actor = actor,
+            latitude = request.latitude,
+            longitude = request.longitude,
+        ).toResponse()!!
     }
 
     @PostMapping("/quotes")

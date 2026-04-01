@@ -75,6 +75,9 @@ class CourierDeliveryCostCalculator(
     }
 
     private fun validateCourierAddress(address: DeliveryAddress) {
+        if (address.latitude != null && address.longitude != null) {
+            return
+        }
         requireNotNull(address.city) { "deliveryAddress.city is required for courier delivery" }
         requireNotNull(address.street) { "deliveryAddress.street is required for courier delivery" }
         requireNotNull(address.house) { "deliveryAddress.house is required for courier delivery" }

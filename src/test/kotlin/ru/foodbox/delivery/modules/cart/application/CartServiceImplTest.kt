@@ -23,6 +23,7 @@ import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ModifierGr
 import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ModifierOptionRepository
 import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ProductModifierGroupRepository
 import ru.foodbox.delivery.modules.cart.modifier.application.CartItemModifierResolver
+import ru.foodbox.delivery.modules.delivery.application.DeliveryAddressGeocoder
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -36,6 +37,77 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 class CartServiceImplTest {
+
+    @Test
+    fun `detects courier delivery draft by coordinates and uses geocoded address`() {
+        val actor = CurrentActor.Guest("install-1")
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, actor.installId),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = UUID.randomUUID(),
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 2,
+                    priceMinor = 1_000,
+                )
+            ),
+            deliveryDraft = null,
+            totalPriceMinor = 2_000,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val deliveryService = CapturingDeliveryService(
+            quoteToReturn = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 500,
+                currency = "RUB",
+                zoneCode = "EKB",
+                zoneName = "Yekaterinburg",
+                estimatedDays = 1,
+            )
+        )
+        val geocoder = StubDeliveryAddressGeocoder(
+            address = DeliveryAddress(
+                city = "Yekaterinburg",
+                street = "Lenina",
+                house = "1",
+            )
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = deliveryService,
+            deliveryAddressGeocoder = geocoder,
+        )
+
+        val draft = service.detectCourierDeliveryDraft(
+            actor = actor,
+            latitude = 56.8389,
+            longitude = 60.6057,
+        )
+
+        assertEquals(56.8389, geocoder.lastLatitude)
+        assertEquals(60.6057, geocoder.lastLongitude)
+        assertEquals(DeliveryMethodType.COURIER, draft.deliveryMethod)
+        assertEquals("Yekaterinburg", draft.deliveryAddress?.city)
+        assertEquals("Lenina", draft.deliveryAddress?.street)
+        assertEquals("1", draft.deliveryAddress?.house)
+        assertEquals(56.8389, draft.deliveryAddress?.latitude)
+        assertEquals(60.6057, draft.deliveryAddress?.longitude)
+        assertEquals(2_000L, deliveryService.lastContext?.subtotalMinor)
+        assertEquals(2, deliveryService.lastContext?.itemCount)
+        assertEquals(500L, draft.quote?.priceMinor)
+        assertEquals(2_500L, cartRepository.savedCart?.totalPriceMinor)
+    }
 
     @Test
     fun `uses items subtotal when recalculating delivery quote`() {
@@ -103,6 +175,7 @@ class CartServiceImplTest {
             cartMergePolicy = PassthroughCartMergePolicy(),
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
         )
 
         val deliveryDraft = service.updateDeliveryDraft(
@@ -190,6 +263,7 @@ class CartServiceImplTest {
             cartMergePolicy = PassthroughCartMergePolicy(),
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
         )
 
         val refreshedCart = service.getOrCreateActiveCart(actor)
@@ -236,6 +310,21 @@ class CartServiceImplTest {
         override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
             lastContext = context
             return quoteToReturn
+        }
+    }
+
+    private class StubDeliveryAddressGeocoder(
+        private val address: DeliveryAddress? = null,
+    ) : DeliveryAddressGeocoder {
+        var lastLatitude: Double? = null
+        var lastLongitude: Double? = null
+
+        override fun isConfigured(): Boolean = true
+
+        override fun reverseGeocode(latitude: Double, longitude: Double): DeliveryAddress? {
+            lastLatitude = latitude
+            lastLongitude = longitude
+            return address
         }
     }
 

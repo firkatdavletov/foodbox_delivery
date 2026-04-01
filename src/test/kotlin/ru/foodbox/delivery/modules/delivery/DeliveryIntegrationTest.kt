@@ -7,16 +7,20 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.MediaType
-import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import ru.foodbox.delivery.modules.delivery.application.DeliveryAddressGeocoder
+import ru.foodbox.delivery.modules.cart.application.CartService
+import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
+import ru.foodbox.delivery.modules.cart.domain.CartDeliveryQuote
 import ru.foodbox.delivery.modules.delivery.application.YandexDeliveryGateway
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.common.web.CurrentActor
+import java.time.Instant
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,7 +34,7 @@ class DeliveryIntegrationTest {
     private lateinit var yandexDeliveryGateway: YandexDeliveryGateway
 
     @MockBean
-    private lateinit var deliveryAddressGeocoder: DeliveryAddressGeocoder
+    private lateinit var cartService: CartService
 
     @Test
     fun `returns public delivery methods without authentication`() {
@@ -54,23 +58,49 @@ class DeliveryIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = ["ADMIN"])
-    fun `detects pickup point address for admin by coordinates`() {
-        Mockito.`when`(deliveryAddressGeocoder.reverseGeocode(56.8389, 60.6057)).thenReturn(
-            DeliveryAddress(
-                country = "Россия",
-                region = "Свердловская область",
-                city = "Екатеринбург",
-                street = "улица 8 Марта",
-                house = "10",
-                postalCode = "620014",
-                latitude = 56.839,
-                longitude = 60.606,
+    fun `detects courier cart delivery draft by coordinates`() {
+        Mockito.`when`(
+            cartService.detectCourierDeliveryDraft(
+                CurrentActor.Guest("install-1"),
+                56.8389,
+                60.6057,
+            )
+        ).thenReturn(
+            CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    country = "Россия",
+                    region = "Свердловская область",
+                    city = "Екатеринбург",
+                    street = "улица 8 Марта",
+                    house = "10",
+                    postalCode = "620014",
+                    latitude = 56.839,
+                    longitude = 60.606,
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 500,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = Instant.parse("2026-04-01T06:00:00Z"),
+                    expiresAt = Instant.parse("2026-04-01T06:15:00Z"),
+                ),
+                createdAt = Instant.parse("2026-04-01T06:00:00Z"),
+                updatedAt = Instant.parse("2026-04-01T06:00:00Z"),
             )
         )
 
         mockMvc.perform(
-            post("/api/v1/admin/delivery/pickup-points/address-detect")
+            post("/api/v1/delivery/courier/draft-detect")
+                .header("X-Install-Id", "install-1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"latitude":56.8389,"longitude":60.6057}""")
         )
@@ -83,5 +113,10 @@ class DeliveryIntegrationTest {
             .andExpect(jsonPath("$.address.postalCode").value("620014"))
             .andExpect(jsonPath("$.address.latitude").value(56.839))
             .andExpect(jsonPath("$.address.longitude").value(60.606))
+            .andExpect(jsonPath("$.deliveryMethod").value("COURIER"))
+            .andExpect(jsonPath("$.quote.available").value(true))
+            .andExpect(jsonPath("$.quote.priceMinor").value(500))
+            .andExpect(jsonPath("$.quote.zoneCode").value("EKB"))
+            .andExpect(jsonPath("$.quote.zoneName").value("Yekaterinburg"))
     }
 }

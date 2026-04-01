@@ -1601,6 +1601,34 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/delivery/courier/draft-detect:
+    post:
+      tags: [Delivery]
+      operationId: detectCourierCartDeliveryDraft
+      summary: Detect courier cart delivery draft by coordinates
+      security:
+        - bearerAuth: []
+        - installIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectCourierCartDeliveryDraftRequest'
+      responses:
+        '200':
+          description: Detected cart delivery draft with address and courier quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartDeliveryDraftResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/delivery/quotes:
     post:
       tags: [Delivery]
@@ -2552,6 +2580,21 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    DetectCourierCartDeliveryDraftRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
 
     CartItemResponse:
       type: object
