@@ -8,6 +8,7 @@ import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentRuleDefaults
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
@@ -25,6 +26,7 @@ class DeliveryAdminService(
     private val deliveryTariffRepository: DeliveryTariffRepository,
     private val pickupPointRepository: PickupPointRepository,
     private val checkoutPaymentMethodRuleRepository: CheckoutPaymentMethodRuleRepository,
+    private val deliveryAddressGeocoder: DeliveryAddressGeocoder,
 ) {
 
     fun getMethodSettings(): List<DeliveryMethodSetting> {
@@ -169,6 +171,13 @@ class DeliveryAdminService(
             null -> pickupPointRepository.findAll()
             else -> pickupPointRepository.findAllByIsActive(isActive)
         }
+    }
+
+    fun detectPickupPointAddress(latitude: Double, longitude: Double): DeliveryAddress? {
+        return deliveryAddressGeocoder.reverseGeocode(
+            latitude = latitude,
+            longitude = longitude,
+        )
     }
 
     @Transactional

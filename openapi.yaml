@@ -1423,6 +1423,35 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/delivery/pickup-points/address-detect:
+    post:
+      tags: [Delivery Admin]
+      operationId: detectAdminPickupPointAddress
+      summary: Detect pickup point address by coordinates
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DetectPickupPointAddressRequest'
+      responses:
+        '200':
+          description: Detected pickup point address or `null` when geocoder returned no result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetectPickupPointAddressResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/delivery/payment-rules:
     get:
       tags: [Delivery Admin]
@@ -3000,6 +3029,30 @@ components:
           $ref: '#/components/schemas/DeliveryAddressRequest'
         isActive:
           type: boolean
+
+    DetectPickupPointAddressRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+
+    DetectPickupPointAddressResponse:
+      type: object
+      required: [address]
+      properties:
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressResponse'
+          nullable: true
 
     CheckoutPaymentRuleResponse:
       type: object

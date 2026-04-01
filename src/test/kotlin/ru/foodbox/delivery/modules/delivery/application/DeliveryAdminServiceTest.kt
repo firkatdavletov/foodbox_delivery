@@ -6,6 +6,9 @@ import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.MultiPolygon
 import org.locationtech.jts.geom.PrecisionModel
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
@@ -18,6 +21,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DeliveryAdminServiceTest {
+
+    @Test
+    fun `detects pickup point address by coordinates using geocoder`() {
+        val geocoder = mock(DeliveryAddressGeocoder::class.java)
+        val service = deliveryAdminService(
+            zoneRepository = InMemoryDeliveryZoneRepository(),
+            geocoder = geocoder,
+        )
+        val expectedAddress = DeliveryAddress(
+            city = "Yekaterinburg",
+            street = "ulitsa 8 Marta",
+            house = "10",
+            latitude = 56.839,
+            longitude = 60.606,
+        )
+        `when`(geocoder.reverseGeocode(56.8389, 60.6057)).thenReturn(expectedAddress)
+
+        val actualAddress = service.detectPickupPointAddress(
+            latitude = 56.8389,
+            longitude = 60.6057,
+        )
+
+        assertEquals(expectedAddress, actualAddress)
+        verify(geocoder).reverseGeocode(56.8389, 60.6057)
+    }
 
     @Test
     fun `saves polygon zone without city and postal code`() {
@@ -68,13 +96,17 @@ class DeliveryAdminServiceTest {
         assertEquals("geometry is supported only for POLYGON delivery zones", exception.message)
     }
 
-    private fun deliveryAdminService(zoneRepository: DeliveryZoneRepository): DeliveryAdminService {
+    private fun deliveryAdminService(
+        zoneRepository: DeliveryZoneRepository,
+        geocoder: DeliveryAddressGeocoder = mock(DeliveryAddressGeocoder::class.java),
+    ): DeliveryAdminService {
         return DeliveryAdminService(
             deliveryMethodSettingRepository = mock(DeliveryMethodSettingRepository::class.java),
             deliveryZoneRepository = zoneRepository,
             deliveryTariffRepository = mock(DeliveryTariffRepository::class.java),
             pickupPointRepository = mock(PickupPointRepository::class.java),
             checkoutPaymentMethodRuleRepository = mock(CheckoutPaymentMethodRuleRepository::class.java),
+            deliveryAddressGeocoder = geocoder,
         )
     }
 

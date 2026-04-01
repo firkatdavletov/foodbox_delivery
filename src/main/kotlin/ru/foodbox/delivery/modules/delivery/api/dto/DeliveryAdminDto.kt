@@ -1,6 +1,8 @@
 package ru.foodbox.delivery.modules.delivery.api.dto
 
 import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMax
+import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -9,6 +11,7 @@ import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentMethodRule
 import ru.foodbox.delivery.modules.delivery.application.AdminCheckoutPaymentRule
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
@@ -144,6 +147,22 @@ data class UpsertPickupPointRequest(
     val isActive: Boolean,
 )
 
+data class DetectPickupPointAddressRequest(
+    @field:NotNull
+    @field:DecimalMin("-90.0")
+    @field:DecimalMax("90.0")
+    val latitude: Double,
+
+    @field:NotNull
+    @field:DecimalMin("-180.0")
+    @field:DecimalMax("180.0")
+    val longitude: Double,
+)
+
+data class DetectPickupPointAddressResponse(
+    val address: DeliveryAddressResponse?,
+)
+
 data class CheckoutPaymentRuleResponse(
     val deliveryMethod: DeliveryMethodType,
     val deliveryMethodName: String,
@@ -261,6 +280,12 @@ fun UpsertPickupPointRequest.toDomain(): PickupPoint {
         name = name,
         address = address.toDomain(),
         active = isActive,
+    )
+}
+
+fun DeliveryAddress?.toDetectPickupPointAddressResponse(): DetectPickupPointAddressResponse {
+    return DetectPickupPointAddressResponse(
+        address = this?.toResponse(),
     )
 }
 

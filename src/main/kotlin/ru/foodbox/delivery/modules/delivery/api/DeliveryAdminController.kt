@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.modules.delivery.api.dto.AdminPickupPointResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.CheckoutPaymentRuleResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.DetectPickupPointAddressRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.DetectPickupPointAddressResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodSettingResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryTariffResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryZoneResponse
@@ -20,6 +22,7 @@ import ru.foodbox.delivery.modules.delivery.api.dto.UpsertDeliveryTariffRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.UpsertDeliveryZoneRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.UpsertPickupPointRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.toAdminResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.toDetectPickupPointAddressResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.withId
@@ -110,6 +113,16 @@ class DeliveryAdminController(
         @RequestParam(name = "isActive", required = false) isActive: Boolean?,
     ): List<AdminPickupPointResponse> {
         return deliveryAdminService.getPickupPoints(isActive).map { it.toAdminResponse() }
+    }
+
+    @PostMapping("/pickup-points/address-detect")
+    fun detectPickupPointAddress(
+        @Valid @RequestBody request: DetectPickupPointAddressRequest,
+    ): DetectPickupPointAddressResponse {
+        return deliveryAdminService.detectPickupPointAddress(
+            latitude = request.latitude,
+            longitude = request.longitude,
+        ).toDetectPickupPointAddressResponse()
     }
 
     @PostMapping("/pickup-points")
