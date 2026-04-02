@@ -308,6 +308,7 @@ class OrderServiceImpl(
             zoneCode = quote.zoneCode,
             zoneName = quote.zoneName,
             estimatedDays = quote.estimatedDays,
+            estimatesMinutes = quote.estimatesMinutes,
             pickupPointId = quote.pickupPointId,
             pickupPointExternalId = quote.pickupPointExternalId,
             pickupPointName = quote.pickupPointName,

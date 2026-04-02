@@ -134,6 +134,9 @@ class DeliveryAdminService(
         require(tariff.estimatedDays == null || tariff.estimatedDays >= 0) {
             "estimatedDays must be non-negative"
         }
+        require(tariff.deliveryMinutes == null || tariff.deliveryMinutes >= 0) {
+            "deliveryMinutes must be non-negative"
+        }
 
         val currency = tariff.currency.trim().uppercase(Locale.ROOT)
         require(currency.length == 3) { "currency must contain 3 letters" }
@@ -179,6 +182,7 @@ class DeliveryAdminService(
                 freeFromAmountMinor = tariff.freeFromAmountMinor,
                 currency = currency,
                 estimatedDays = tariff.estimatedDays,
+                deliveryMinutes = tariff.deliveryMinutes,
             )
         )
     }

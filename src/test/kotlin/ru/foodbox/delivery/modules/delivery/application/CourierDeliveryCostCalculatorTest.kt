@@ -42,6 +42,7 @@ class CourierDeliveryCostCalculatorTest {
                     freeFromAmountMinor = 300_000,
                     currency = "RUB",
                     estimatedDays = 1,
+                    deliveryMinutes = 60,
                 )
             ),
         )
@@ -62,6 +63,7 @@ class CourierDeliveryCostCalculatorTest {
         assertTrue(quote.available)
         assertEquals(0L, quote.priceMinor)
         assertEquals("EKB", quote.zoneCode)
+        assertEquals(60, quote.estimatesMinutes)
     }
 
     @Test

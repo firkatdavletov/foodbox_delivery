@@ -63,6 +63,9 @@ class CartDeliveryDraftEntity(
     @Column(name = "quote_estimated_days")
     var quoteEstimatedDays: Int? = null,
 
+    @Column(name = "quote_estimates_minutes")
+    var quoteEstimatesMinutes: Int? = null,
+
     @Column(name = "quote_message", length = 500)
     var quoteMessage: String? = null,
 

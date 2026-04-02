@@ -104,6 +104,7 @@ class OrderRepositoryImpl(
             zoneCode = order.delivery.zoneCode
             zoneName = order.delivery.zoneName
             estimatedDays = order.delivery.estimatedDays
+            estimatesMinutes = order.delivery.estimatesMinutes
             pickupPointId = order.delivery.pickupPointId
             pickupPointExternalId = order.delivery.pickupPointExternalId
             pickupPointName = order.delivery.pickupPointName
@@ -119,6 +120,7 @@ class OrderRepositoryImpl(
             zoneCode = order.delivery.zoneCode,
             zoneName = order.delivery.zoneName,
             estimatedDays = order.delivery.estimatedDays,
+            estimatesMinutes = order.delivery.estimatesMinutes,
             pickupPointId = order.delivery.pickupPointId,
             pickupPointExternalId = order.delivery.pickupPointExternalId,
             pickupPointName = order.delivery.pickupPointName,
@@ -218,6 +220,7 @@ class OrderRepositoryImpl(
             zoneCode = zoneCode,
             zoneName = zoneName,
             estimatedDays = estimatedDays,
+            estimatesMinutes = estimatesMinutes,
             pickupPointId = pickupPointId,
             pickupPointExternalId = pickupPointExternalId,
             pickupPointName = pickupPointName,

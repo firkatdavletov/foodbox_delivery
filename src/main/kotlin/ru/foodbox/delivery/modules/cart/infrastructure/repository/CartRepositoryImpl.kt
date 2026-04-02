@@ -113,6 +113,7 @@ class CartRepositoryImpl(
             draftEntity.quoteZoneCode = draft.quote?.zoneCode
             draftEntity.quoteZoneName = draft.quote?.zoneName
             draftEntity.quoteEstimatedDays = draft.quote?.estimatedDays
+            draftEntity.quoteEstimatesMinutes = draft.quote?.estimatesMinutes
             draftEntity.quoteMessage = draft.quote?.message
             draftEntity.quoteCalculatedAt = draft.quote?.calculatedAt
             draftEntity.quoteExpiresAt = draft.quote?.expiresAt
@@ -183,6 +184,7 @@ class CartRepositoryImpl(
                     zoneCode = quoteZoneCode,
                     zoneName = quoteZoneName,
                     estimatedDays = quoteEstimatedDays,
+                    estimatesMinutes = quoteEstimatesMinutes,
                     message = quoteMessage,
                     calculatedAt = quoteCalculatedAt!!,
                     expiresAt = quoteExpiresAt!!,

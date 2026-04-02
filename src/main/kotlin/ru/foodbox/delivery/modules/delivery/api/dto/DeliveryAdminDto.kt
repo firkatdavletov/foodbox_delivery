@@ -93,6 +93,7 @@ data class DeliveryTariffResponse(
     val freeFromAmountMinor: Long?,
     val currency: String,
     val estimatedDays: Int?,
+    val deliveryMinutes: Int?,
 )
 
 data class UpsertDeliveryTariffRequest(
@@ -118,6 +119,9 @@ data class UpsertDeliveryTariffRequest(
 
     @field:Min(0)
     val estimatedDays: Int? = null,
+
+    @field:Min(0)
+    val deliveryMinutes: Int? = null,
 )
 
 data class AdminPickupPointResponse(
@@ -247,6 +251,7 @@ fun DeliveryTariff.toResponse(): DeliveryTariffResponse {
         freeFromAmountMinor = freeFromAmountMinor,
         currency = currency,
         estimatedDays = estimatedDays,
+        deliveryMinutes = deliveryMinutes,
     )
 }
 
@@ -260,6 +265,7 @@ fun UpsertDeliveryTariffRequest.toDomain(zone: DeliveryZone?): DeliveryTariff {
         freeFromAmountMinor = freeFromAmountMinor,
         currency = currency,
         estimatedDays = estimatedDays,
+        deliveryMinutes = deliveryMinutes,
     )
 }
 

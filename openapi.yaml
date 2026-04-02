@@ -2935,6 +2935,10 @@ components:
           type: integer
           format: int32
           nullable: true
+        estimatesMinutes:
+          type: integer
+          format: int32
+          nullable: true
         message:
           type: string
           nullable: true
@@ -3102,6 +3106,11 @@ components:
           format: int32
           nullable: true
           minimum: 0
+        deliveryMinutes:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
 
     UpsertDeliveryTariffRequest:
       type: object
@@ -3133,6 +3142,11 @@ components:
           minLength: 3
           maxLength: 3
         estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+          minimum: 0
+        deliveryMinutes:
           type: integer
           format: int32
           nullable: true
@@ -4250,6 +4264,10 @@ components:
           type: string
           nullable: true
         estimatedDays:
+          type: integer
+          format: int32
+          nullable: true
+        estimatesMinutes:
           type: integer
           format: int32
           nullable: true

@@ -71,6 +71,7 @@ class CourierDeliveryCostCalculator(
             zoneCode = zone.code,
             zoneName = zone.name,
             estimatedDays = tariff.estimatedDays,
+            estimatesMinutes = tariff.deliveryMinutes,
         )
     }
 

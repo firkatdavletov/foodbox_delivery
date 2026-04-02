@@ -40,6 +40,7 @@ class PickupDeliveryCostCalculator(
         val available = tariff?.available ?: true
         val priceMinor = tariff?.fixedPriceMinor ?: 0L
         val estimatedDays = tariff?.estimatedDays ?: 0
+        val estimatesMinutes = tariff?.deliveryMinutes
         val currency = tariff?.currency ?: DEFAULT_CURRENCY
 
         return DeliveryQuote(
@@ -48,6 +49,7 @@ class PickupDeliveryCostCalculator(
             priceMinor = if (available) priceMinor else null,
             currency = currency,
             estimatedDays = if (available) estimatedDays else null,
+            estimatesMinutes = if (available) estimatesMinutes else null,
             message = if (available) null else "Pickup is temporarily unavailable",
             pickupPointId = pickupPoint.id,
             pickupPointName = pickupPoint.name,

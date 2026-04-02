@@ -231,6 +231,44 @@ class DeliveryAdminServiceTest {
         assertEquals("geometry is supported only for POLYGON delivery zones", exception.message)
     }
 
+    @Test
+    fun `rejects negative tariff delivery minutes`() {
+        val zone = DeliveryZone(
+            id = UUID.randomUUID(),
+            code = "EKB",
+            name = "Yekaterinburg",
+            type = DeliveryZoneType.CITY,
+            city = "Yekaterinburg",
+            normalizedCity = "yekaterinburg",
+            postalCode = null,
+            geometry = null,
+            priority = 0,
+            active = true,
+        )
+        val zoneRepository = InMemoryDeliveryZoneRepository().apply {
+            save(zone)
+        }
+        val service = deliveryAdminService(zoneRepository = zoneRepository)
+
+        val exception = assertFailsWith<IllegalArgumentException> {
+            service.upsertTariff(
+                DeliveryTariff(
+                    id = UUID.randomUUID(),
+                    method = DeliveryMethodType.COURIER,
+                    zone = zone,
+                    available = true,
+                    fixedPriceMinor = 300,
+                    freeFromAmountMinor = null,
+                    currency = "RUB",
+                    estimatedDays = 0,
+                    deliveryMinutes = -1,
+                )
+            )
+        }
+
+        assertEquals("deliveryMinutes must be non-negative", exception.message)
+    }
+
     private fun deliveryAdminService(
         zoneRepository: DeliveryZoneRepository,
         tariffRepository: DeliveryTariffRepository = InMemoryDeliveryTariffRepository(),

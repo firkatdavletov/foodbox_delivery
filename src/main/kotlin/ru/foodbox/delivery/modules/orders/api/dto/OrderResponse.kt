@@ -71,6 +71,7 @@ data class OrderDeliveryResponse(
     val zoneCode: String?,
     val zoneName: String?,
     val estimatedDays: Int?,
+    val estimatesMinutes: Int?,
     val pickupPointId: UUID?,
     val pickupPointExternalId: String?,
     val pickupPointName: String?,

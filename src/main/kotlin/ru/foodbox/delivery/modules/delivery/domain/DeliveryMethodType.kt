@@ -11,14 +11,14 @@ enum class DeliveryMethodType(
 ) {
     PICKUP(
         apiCode = "pickup",
-        displayName = "Забрать из магазина",
+        displayName = "Самовывоз",
         requiresAddress = false,
         requiresPickupPoint = true,
         isActive = false,
     ),
     COURIER(
         apiCode = "courier",
-        displayName = "Курьером",
+        displayName = "Доставка",
         requiresAddress = true,
         requiresPickupPoint = false,
         isActive = false,

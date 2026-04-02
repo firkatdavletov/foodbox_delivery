@@ -76,6 +76,7 @@ class OrderServiceImplTest {
                 zoneCode = "city",
                 zoneName = "City",
                 estimatedDays = 1,
+                estimatesMinutes = 60,
             ),
         )
         val cartService = StubCartService(cart)
@@ -142,6 +143,7 @@ class OrderServiceImplTest {
         assertEquals(2, deliveryService.contexts.single().itemCount)
         assertNotNull(deliveryOrderRequestService.lastOrder)
         assertEquals(DeliveryMethodType.COURIER, deliveryOrderRequestService.lastOrder?.delivery?.method)
+        assertEquals(60, savedOrder.delivery.estimatesMinutes)
         assertEquals(cart.id, cartService.markedOrderedCartId)
         assertEquals(1, eventPublisher.events.size)
         assertEquals(order.id, (eventPublisher.events.single() as OrderCreatedEvent).order.id)

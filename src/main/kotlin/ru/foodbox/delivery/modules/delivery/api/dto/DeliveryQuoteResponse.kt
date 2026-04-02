@@ -11,6 +11,7 @@ data class DeliveryQuoteResponse(
     val zoneCode: String?,
     val zoneName: String?,
     val estimatedDays: Int?,
+    val estimatesMinutes: Int?,
     val message: String?,
     val pickupPointId: UUID?,
     val pickupPointExternalId: String?,

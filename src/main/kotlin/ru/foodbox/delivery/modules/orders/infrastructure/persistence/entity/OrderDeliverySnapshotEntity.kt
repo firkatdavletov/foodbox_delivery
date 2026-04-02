@@ -47,6 +47,9 @@ class OrderDeliverySnapshotEntity(
     @Column(name = "estimated_days")
     var estimatedDays: Int? = null,
 
+    @Column(name = "estimates_minutes")
+    var estimatesMinutes: Int? = null,
+
     @Column(name = "pickup_point_id")
     var pickupPointId: UUID? = null,
 

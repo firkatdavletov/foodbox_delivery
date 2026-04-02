@@ -43,6 +43,10 @@ class DeliveryZoneEntity(
     @Column(name = "geometry")
     var geometry: MultiPolygon? = null,
 
+    @JdbcTypeCode(SqlTypes.GEOMETRY)
+    @Column(name = "effective_geometry")
+    var effectiveGeometry: MultiPolygon? = null,
+
     @Column(nullable = false)
     var priority: Int = 0,
 

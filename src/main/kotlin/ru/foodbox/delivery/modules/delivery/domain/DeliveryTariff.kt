@@ -11,4 +11,5 @@ data class DeliveryTariff(
     val freeFromAmountMinor: Long?,
     val currency: String,
     val estimatedDays: Int?,
+    val deliveryMinutes: Int? = null,
 )

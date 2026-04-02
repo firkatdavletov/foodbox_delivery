@@ -105,6 +105,7 @@ class DeliveryBootstrapInitializer(
                 freeFromAmountMinor = 300_000,
                 currency = DEFAULT_CURRENCY,
                 estimatedDays = 1,
+                deliveryMinutes = 24 * 60,
             )
         )
         deliveryTariffRepository.save(
@@ -117,6 +118,7 @@ class DeliveryBootstrapInitializer(
                 freeFromAmountMinor = 500_000,
                 currency = DEFAULT_CURRENCY,
                 estimatedDays = 2,
+                deliveryMinutes = 48 * 60,
             )
         )
         deliveryTariffRepository.save(

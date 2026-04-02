@@ -50,6 +50,7 @@ fun DeliveryQuote.toResponse(): DeliveryQuoteResponse {
         zoneCode = zoneCode,
         zoneName = zoneName,
         estimatedDays = estimatedDays,
+        estimatesMinutes = estimatesMinutes,
         message = message,
         pickupPointId = pickupPointId,
         pickupPointExternalId = pickupPointExternalId,

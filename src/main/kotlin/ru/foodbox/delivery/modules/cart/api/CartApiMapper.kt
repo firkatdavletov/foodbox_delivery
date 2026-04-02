@@ -75,6 +75,7 @@ internal fun CartDeliveryDraft?.toResponse(now: Instant = Instant.now()): CartDe
                 zoneCode = it.zoneCode,
                 zoneName = it.zoneName,
                 estimatedDays = it.estimatedDays,
+                estimatesMinutes = it.estimatesMinutes,
                 message = it.message,
                 pickupPointId = pickupPointId,
                 pickupPointExternalId = pickupPointExternalId,

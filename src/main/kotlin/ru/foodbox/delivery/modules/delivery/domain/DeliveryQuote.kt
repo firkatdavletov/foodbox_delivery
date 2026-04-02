@@ -10,6 +10,7 @@ data class DeliveryQuote(
     val zoneCode: String? = null,
     val zoneName: String? = null,
     val estimatedDays: Int? = null,
+    val estimatesMinutes: Int? = null,
     val message: String? = null,
     val pickupPointId: UUID? = null,
     val pickupPointExternalId: String? = null,

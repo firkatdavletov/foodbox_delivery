@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class DeliveryZoneGeometryDtoTest {
     private val objectMapper = jacksonObjectMapper()
@@ -63,5 +64,39 @@ class DeliveryZoneGeometryDtoTest {
             "geometry.coordinates[0][0] longitude must be between -180 and 180",
             exception.message,
         )
+    }
+
+    @Test
+    fun `supports polygon holes for ring shaped zones`() {
+        val request = DeliveryZoneGeometryRequest(
+            type = GeoJsonGeometryType.POLYGON,
+            coordinates = objectMapper.readTree(
+                """
+                [
+                  [
+                    [60.6000, 56.8300],
+                    [60.7000, 56.8300],
+                    [60.7000, 56.9000],
+                    [60.6000, 56.9000],
+                    [60.6000, 56.8300]
+                  ],
+                  [
+                    [60.6200, 56.8450],
+                    [60.6800, 56.8450],
+                    [60.6800, 56.8850],
+                    [60.6200, 56.8850],
+                    [60.6200, 56.8450]
+                  ]
+                ]
+                """.trimIndent()
+            ),
+        )
+
+        val geometry = request.toMultiPolygon()
+        val polygon = geometry.getGeometryN(0) as org.locationtech.jts.geom.Polygon
+
+        assertEquals(1, geometry.numGeometries)
+        assertTrue(polygon.numInteriorRing > 0)
+        assertEquals(1, polygon.numInteriorRing)
     }
 }

@@ -46,6 +46,7 @@ class DeliveryTariffRepositoryImpl(
             freeFromAmountMinor = tariff.freeFromAmountMinor,
             currency = tariff.currency,
             estimatedDays = tariff.estimatedDays,
+            deliveryMinutes = tariff.deliveryMinutes,
             createdAt = now,
             updatedAt = now,
         )
@@ -57,6 +58,7 @@ class DeliveryTariffRepositoryImpl(
         entity.freeFromAmountMinor = tariff.freeFromAmountMinor
         entity.currency = tariff.currency
         entity.estimatedDays = tariff.estimatedDays
+        entity.deliveryMinutes = tariff.deliveryMinutes
         entity.updatedAt = now
 
         return jpaRepository.save(entity).toDomain()
@@ -91,6 +93,7 @@ class DeliveryTariffRepositoryImpl(
             freeFromAmountMinor = freeFromAmountMinor,
             currency = currency,
             estimatedDays = estimatedDays,
+            deliveryMinutes = deliveryMinutes,
         )
     }
 

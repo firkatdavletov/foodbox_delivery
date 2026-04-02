@@ -31,6 +31,7 @@ data class CartDeliveryQuote(
     val zoneCode: String?,
     val zoneName: String?,
     val estimatedDays: Int?,
+    val estimatesMinutes: Int? = null,
     val message: String?,
     val calculatedAt: Instant,
     val expiresAt: Instant,

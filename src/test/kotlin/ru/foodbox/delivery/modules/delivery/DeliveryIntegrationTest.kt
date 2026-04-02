@@ -129,6 +129,7 @@ class DeliveryIntegrationTest {
                     zoneCode = "EKB",
                     zoneName = "Yekaterinburg",
                     estimatedDays = 1,
+                    estimatesMinutes = 60,
                     message = null,
                     calculatedAt = Instant.parse("2026-04-01T06:00:00Z"),
                     expiresAt = Instant.parse("2026-04-01T06:15:00Z"),
@@ -158,5 +159,6 @@ class DeliveryIntegrationTest {
             .andExpect(jsonPath("$.quote.priceMinor").value(500))
             .andExpect(jsonPath("$.quote.zoneCode").value("EKB"))
             .andExpect(jsonPath("$.quote.zoneName").value("Yekaterinburg"))
+            .andExpect(jsonPath("$.quote.estimatesMinutes").value(60))
     }
 }

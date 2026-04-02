@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryZoneRepository
+import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.DeliveryZoneGeometryProjector
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.entity.DeliveryZoneEntity
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.jpa.DeliveryZoneJpaRepository
 import java.time.Instant
@@ -14,6 +15,7 @@ import kotlin.jvm.optionals.getOrNull
 @Repository
 class DeliveryZoneRepositoryImpl(
     private val jpaRepository: DeliveryZoneJpaRepository,
+    private val deliveryZoneGeometryProjector: DeliveryZoneGeometryProjector,
 ) : DeliveryZoneRepository {
 
     override fun findAll(): List<DeliveryZone> {
@@ -48,6 +50,7 @@ class DeliveryZoneRepositoryImpl(
             normalizedCity = normalizedCity,
             postalCode = normalizedPostalCode,
             geometry = zone.geometry.copyGeometry(),
+            effectiveGeometry = null,
             priority = zone.priority,
             isActive = zone.active,
             createdAt = now,
@@ -65,11 +68,20 @@ class DeliveryZoneRepositoryImpl(
         entity.isActive = zone.active
         entity.updatedAt = now
 
-        return jpaRepository.save(entity).toDomain()
+        val saved = jpaRepository.save(entity)
+        if (zone.type == DeliveryZoneType.POLYGON || existing?.type == DeliveryZoneType.POLYGON) {
+            deliveryZoneGeometryProjector.rebuildEffectiveGeometries()
+        }
+
+        return saved.toDomain()
     }
 
     override fun deleteById(id: UUID) {
+        val existing = jpaRepository.findById(id).getOrNull()
         jpaRepository.deleteById(id)
+        if (existing?.type == DeliveryZoneType.POLYGON) {
+            deliveryZoneGeometryProjector.rebuildEffectiveGeometries()
+        }
     }
 
     override fun findActiveByPoint(latitude: Double, longitude: Double): DeliveryZone? {

@@ -287,6 +287,7 @@ class CartServiceImpl(
                 zoneCode = quote.zoneCode,
                 zoneName = quote.zoneName,
                 estimatedDays = quote.estimatedDays,
+                estimatesMinutes = quote.estimatesMinutes,
                 message = quote.message,
                 calculatedAt = now,
                 expiresAt = now.plus(QUOTE_TTL_MINUTES, ChronoUnit.MINUTES),

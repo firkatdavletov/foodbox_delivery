@@ -35,6 +35,7 @@ internal fun Order.toResponse(): OrderResponse {
             zoneCode = delivery.zoneCode,
             zoneName = delivery.zoneName,
             estimatedDays = delivery.estimatedDays,
+            estimatesMinutes = delivery.estimatesMinutes,
             pickupPointId = delivery.pickupPointId,
             pickupPointExternalId = delivery.pickupPointExternalId,
             pickupPointName = delivery.pickupPointName,

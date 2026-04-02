@@ -43,6 +43,9 @@ class DeliveryTariffEntity(
     @Column(name = "estimated_days")
     var estimatedDays: Int? = null,
 
+    @Column(name = "delivery_minutes")
+    var deliveryMinutes: Int? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
 

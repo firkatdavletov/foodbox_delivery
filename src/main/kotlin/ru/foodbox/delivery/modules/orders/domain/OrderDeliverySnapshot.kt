@@ -12,6 +12,7 @@ data class OrderDeliverySnapshot(
     val zoneCode: String?,
     val zoneName: String?,
     val estimatedDays: Int?,
+    val estimatesMinutes: Int? = null,
     val pickupPointId: UUID?,
     val pickupPointExternalId: String?,
     val pickupPointName: String?,
