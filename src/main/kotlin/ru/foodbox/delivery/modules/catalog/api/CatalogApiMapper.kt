@@ -39,6 +39,7 @@ internal fun CatalogProduct.toResponse(): ProductResponse {
         unit = unit,
         countStep = countStep,
         isActive = isActive,
+        isConfigured = isConfigured,
     )
 }
 
@@ -56,6 +57,7 @@ internal fun CatalogProductDetails.toPublicDetailsResponse(): ProductDetailsResp
         unit = product.unit,
         countStep = product.countStep,
         isActive = product.isActive,
+        isConfigured = product.isConfigured,
         optionGroups = optionGroups.map { optionGroup ->
             ProductOptionGroupResponse(
                 id = optionGroup.id,
@@ -131,6 +133,7 @@ internal fun CatalogProductDetails.toAdminDetailsResponse(): AdminProductDetails
         unit = product.unit,
         countStep = product.countStep,
         isActive = product.isActive,
+        isConfigured = product.isConfigured,
         optionGroups = optionGroups.map { optionGroup ->
             ProductOptionGroupResponse(
                 id = optionGroup.id,

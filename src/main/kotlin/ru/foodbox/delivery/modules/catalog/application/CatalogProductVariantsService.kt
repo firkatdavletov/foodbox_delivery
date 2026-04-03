@@ -32,6 +32,11 @@ class CatalogProductVariantsService(
     private val imageService: CatalogImageService,
 ) {
 
+    fun findProductIdsWithVariants(productIds: Collection<UUID>): Set<UUID> {
+        return variantRepository.findAllByProductIds(productIds)
+            .mapTo(linkedSetOf()) { it.productId }
+    }
+
     fun getDetails(productId: UUID): ProductVariantsDetails {
         val optionGroups = optionGroupRepository.findAllByProductId(productId)
         val optionGroupIds = optionGroups.map { it.id }

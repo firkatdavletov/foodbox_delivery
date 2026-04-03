@@ -20,6 +20,14 @@ import ru.foodbox.delivery.modules.catalog.application.CatalogService
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
+import ru.foodbox.delivery.modules.catalog.modifier.application.CatalogModifierGroupService
+import ru.foodbox.delivery.modules.catalog.modifier.application.command.UpsertModifierGroupCommand
+import ru.foodbox.delivery.modules.catalog.modifier.application.command.UpsertModifierOptionCommand
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierApplicationScope
+import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierPriceType
+import ru.foodbox.delivery.modules.catalog.modifier.infrastructure.persistence.jpa.ModifierGroupJpaRepository
+import ru.foodbox.delivery.modules.catalog.modifier.infrastructure.persistence.jpa.ModifierOptionJpaRepository
+import ru.foodbox.delivery.modules.catalog.modifier.infrastructure.persistence.jpa.ProductModifierGroupJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogCategoryImageJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogCategoryJpaRepository
 import ru.foodbox.delivery.modules.catalog.infrastructure.persistence.jpa.CatalogProductImageJpaRepository
@@ -68,6 +76,18 @@ class CatalogVariantsIntegrationTest {
     private lateinit var catalogImportService: CatalogImportService
 
     @Autowired
+    private lateinit var catalogModifierGroupService: CatalogModifierGroupService
+
+    @Autowired
+    private lateinit var productModifierGroupJpaRepository: ProductModifierGroupJpaRepository
+
+    @Autowired
+    private lateinit var modifierOptionJpaRepository: ModifierOptionJpaRepository
+
+    @Autowired
+    private lateinit var modifierGroupJpaRepository: ModifierGroupJpaRepository
+
+    @Autowired
     private lateinit var variantOptionValueJpaRepository: CatalogProductVariantOptionValueJpaRepository
 
     @Autowired
@@ -111,6 +131,9 @@ class CatalogVariantsIntegrationTest {
         productImageJpaRepository.deleteAllInBatch()
         categoryImageJpaRepository.deleteAllInBatch()
         mediaImageJpaRepository.deleteAllInBatch()
+        productModifierGroupJpaRepository.deleteAllInBatch()
+        modifierOptionJpaRepository.deleteAllInBatch()
+        modifierGroupJpaRepository.deleteAllInBatch()
         variantOptionValueJpaRepository.deleteAllInBatch()
         optionValueJpaRepository.deleteAllInBatch()
         variantJpaRepository.deleteAllInBatch()
@@ -196,6 +219,7 @@ class CatalogVariantsIntegrationTest {
         )
 
         val upsertResponse = upsertProductAsAdmin(request)
+        assertEquals(true, upsertResponse["isConfigured"].asBoolean())
         val productId = UUID.fromString(upsertResponse.get("id").asText())
         val productImage = mediaImageJpaRepository.findById(productImageId).orElseThrow()
         assertEquals(productId, productImage.targetId)
@@ -203,6 +227,7 @@ class CatalogVariantsIntegrationTest {
         assertEquals("https://cdn.example.com/${productImage.objectKey}", upsertResponse["imageUrls"][0].asText())
 
         val details = getProductDetails(productId)
+        assertEquals(true, details["isConfigured"].asBoolean())
         assertEquals("https://cdn.example.com/${productImage.objectKey}", details["imageUrls"][0].asText())
         assertEquals(2, details.get("optionGroups").size())
         assertEquals(2, details.get("variants").size())
@@ -390,13 +415,75 @@ class CatalogVariantsIntegrationTest {
         )
 
         val created = upsertProductAsAdmin(request)
+        assertEquals(false, created["isConfigured"].asBoolean())
         val productId = UUID.fromString(created.get("id").asText())
 
         val details = getProductDetails(productId)
+        assertEquals(false, details["isConfigured"].asBoolean())
         assertEquals(0, details.get("optionGroups").size())
         assertEquals(0, details.get("variants").size())
         assertEquals(0, details.get("imageUrls").size())
         assertTrue(details.get("defaultVariantId").isNull)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `product with modifier groups is configured in list and details`() {
+        val categoryId = createCategory(externalId = "cat-modifiers", slug = "modifiers")
+        val modifierGroup = catalogModifierGroupService.upsert(
+            UpsertModifierGroupCommand(
+                id = null,
+                code = "extras",
+                name = "Допы",
+                minSelected = 0,
+                maxSelected = 2,
+                isRequired = false,
+                isActive = true,
+                sortOrder = 0,
+                options = listOf(
+                    UpsertModifierOptionCommand(
+                        code = "gift-wrap",
+                        name = "Подарочная упаковка",
+                        description = null,
+                        priceType = ModifierPriceType.FIXED,
+                        price = 200,
+                        applicationScope = ModifierApplicationScope.PER_LINE,
+                        isDefault = false,
+                        isActive = true,
+                        sortOrder = 0,
+                    )
+                ),
+            )
+        )
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Товар с модификаторами",
+                "priceMinor" to 1800,
+                "sku" to "MOD-ONLY-1",
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "modifierGroups" to listOf(
+                    mapOf(
+                        "modifierGroupId" to modifierGroup.group.id,
+                        "sortOrder" to 0,
+                        "isActive" to true,
+                    )
+                ),
+            )
+        )
+        assertEquals(true, created["isConfigured"].asBoolean())
+
+        val productId = UUID.fromString(created["id"].asText())
+        val details = getProductDetails(productId)
+        assertEquals(true, details["isConfigured"].asBoolean())
+        assertEquals(1, details["modifierGroups"].size())
+
+        val products = getProducts(categoryId)
+        val listItem = products.first { it["id"].asText() == productId.toString() }
+        assertEquals(true, listItem["isConfigured"].asBoolean())
     }
 
     @Test
@@ -710,6 +797,7 @@ class CatalogVariantsIntegrationTest {
         val adminDetails = getAdminProductDetails(productId)
         assertEquals(productId.toString(), adminDetails.get("id").asText())
         assertEquals(false, adminDetails.get("isActive").asBoolean())
+        assertEquals(false, adminDetails.get("isConfigured").asBoolean())
     }
 
     @Test
@@ -1073,6 +1161,22 @@ class CatalogVariantsIntegrationTest {
             get("/api/v1/catalog/products/{productId}", productId)
                 .accept(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
+    private fun getProducts(categoryId: UUID? = null): JsonNode {
+        val request = get("/api/v1/catalog/products")
+            .accept(MediaType.APPLICATION_JSON)
+        if (categoryId != null) {
+            request.param("categoryId", categoryId.toString())
+        }
+
+        val response = mockMvc.perform(request)
+            .andExpect(status().isOk)
             .andReturn()
             .response
             .contentAsString

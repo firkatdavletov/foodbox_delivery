@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class DeliveryZoneGeometryProjectorTest {
 
     @Test
-    fun `rebuilds effective geometries in postgres using priority order and ST difference`() {
+    fun `rebuilds effective geometries in postgres using descending priority order and ST difference`() {
         val dataSource = postgresDataSource()
         val jdbcTemplate = mock(JdbcTemplate::class.java)
         val projector = DeliveryZoneGeometryProjector(dataSource, jdbcTemplate)
@@ -26,7 +26,7 @@ class DeliveryZoneGeometryProjectorTest {
         verify(jdbcTemplate).execute(sqlCaptor.capture())
         assertTrue(sqlCaptor.value.contains("ST_Difference"))
         assertTrue(sqlCaptor.value.contains("effective_geometry"))
-        assertTrue(sqlCaptor.value.contains("ORDER BY priority ASC"))
+        assertTrue(sqlCaptor.value.contains("ORDER BY priority DESC"))
     }
 
     @Test

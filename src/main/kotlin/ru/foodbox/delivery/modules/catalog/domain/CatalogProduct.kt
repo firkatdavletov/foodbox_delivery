@@ -21,4 +21,5 @@ data class CatalogProduct(
     val externalId: String? = null,
     val brand: String? = null,
     val sortOrder: Int = 0,
+    val isConfigured: Boolean = false,
 )

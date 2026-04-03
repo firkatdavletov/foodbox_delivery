@@ -29,7 +29,7 @@ class CourierDeliveryCostCalculator(
                 available = false,
                 priceMinor = null,
                 currency = DEFAULT_CURRENCY,
-                message = "Courier delivery is unavailable for the selected address",
+                message = "Не можем доставить по этому адресу",
             )
 
         val tariff = deliveryTariffRepository.findByMethodAndZone(
@@ -87,7 +87,9 @@ class CourierDeliveryCostCalculator(
     private fun resolveZone(address: DeliveryAddress) =
         address.latitude
             ?.takeIf { address.longitude != null }
-            ?.let { latitude -> deliveryZoneRepository.findActiveByPoint(latitude, address.longitude!!) }
+            ?.let { latitude ->
+                deliveryZoneRepository.findActiveByPoint(latitude, address.longitude!!)
+            }
             ?: address.city?.let(deliveryZoneRepository::findActiveByCity)
             ?: address.postalCode?.let(deliveryZoneRepository::findActiveByPostalCode)
 

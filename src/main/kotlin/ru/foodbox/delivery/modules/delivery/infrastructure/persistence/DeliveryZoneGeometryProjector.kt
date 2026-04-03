@@ -87,7 +87,7 @@ class DeliveryZoneGeometryProjector(
                     WHERE is_active = true
                       AND type = 'POLYGON'
                       AND geometry IS NOT NULL
-                    ORDER BY priority ASC, updated_at DESC, id ASC
+                    ORDER BY priority DESC, updated_at DESC, id ASC
                 LOOP
                     candidate_geometry := CASE
                         WHEN claimed_geometry IS NULL THEN zone_record.geometry

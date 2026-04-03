@@ -35,7 +35,7 @@ class CatalogServiceImpl(
             categoryId = categoryId,
             query = query?.trim()?.takeIf { it.isNotBlank() },
         )
-        return enrichProducts(products)
+        return enrichProducts(products, modifierGroupsActiveOnly = true)
     }
 
     override fun getAdminCategories(isActive: Boolean): List<CatalogCategory> {
@@ -43,7 +43,7 @@ class CatalogServiceImpl(
     }
 
     override fun getAdminProducts(isActive: Boolean): List<CatalogProduct> {
-        return enrichProducts(productRepository.findAllByIsActive(isActive))
+        return enrichProducts(productRepository.findAllByIsActive(isActive), modifierGroupsActiveOnly = false)
     }
 
     override fun getProductDetails(productId: UUID): CatalogProductDetails? {
@@ -127,15 +127,19 @@ class CatalogServiceImpl(
         val product = productRepository.findById(productId)
             ?: throw NotFoundException("Product not found")
         val variantDetails = productVariantsService.getDetails(product.id)
+        val modifierGroups = productModifiersService.getProductModifierGroups(
+            productId = product.id,
+            activeOnly = activeOnly,
+        )
         val productImages = imageService.getProductImages(listOf(product.id))[product.id].orEmpty()
         return CatalogProductDetails(
-            product = product.copy(imageUrls = productImages.map { it.url }),
+            product = product.copy(
+                imageUrls = productImages.map { it.url },
+                isConfigured = variantDetails.variants.isNotEmpty() || modifierGroups.isNotEmpty(),
+            ),
             imageIds = productImages.map { it.id },
             optionGroups = variantDetails.optionGroups,
-            modifierGroups = productModifiersService.getProductModifierGroups(
-                productId = product.id,
-                activeOnly = activeOnly,
-            ),
+            modifierGroups = modifierGroups,
             defaultVariantId = variantDetails.defaultVariantId,
             variants = variantDetails.variants,
         )
@@ -211,7 +215,7 @@ class CatalogServiceImpl(
             productId = saved.id,
             commands = command.modifierGroups,
         )
-        return enrichProducts(listOf(saved)).first()
+        return enrichProducts(listOf(saved), modifierGroupsActiveOnly = false).first()
     }
 
     private fun enrichCategories(categories: List<CatalogCategory>): List<CatalogCategory> {
@@ -225,14 +229,27 @@ class CatalogServiceImpl(
         }
     }
 
-    private fun enrichProducts(products: List<CatalogProduct>): List<CatalogProduct> {
+    private fun enrichProducts(products: List<CatalogProduct>, modifierGroupsActiveOnly: Boolean): List<CatalogProduct> {
         if (products.isEmpty()) {
             return emptyList()
         }
 
+        val productIds = products.map { it.id }
         val imageUrlsByProductId = imageService.getProductImageUrls(products.map { it.id })
+        val configuredProductIds = buildSet {
+            addAll(productVariantsService.findProductIdsWithVariants(productIds))
+            addAll(
+                productModifiersService.findProductIdsWithModifierGroups(
+                    productIds = productIds,
+                    activeOnly = modifierGroupsActiveOnly,
+                )
+            )
+        }
         return products.map { product ->
-            product.copy(imageUrls = imageUrlsByProductId[product.id].orEmpty())
+            product.copy(
+                imageUrls = imageUrlsByProductId[product.id].orEmpty(),
+                isConfigured = product.id in configuredProductIds,
+            )
         }
     }
 

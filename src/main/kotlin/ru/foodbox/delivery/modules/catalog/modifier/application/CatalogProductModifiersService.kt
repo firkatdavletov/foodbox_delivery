@@ -20,6 +20,23 @@ class CatalogProductModifiersService(
     private val modifierOptionRepository: ModifierOptionRepository,
 ) {
 
+    fun findProductIdsWithModifierGroups(productIds: Collection<UUID>, activeOnly: Boolean): Set<UUID> {
+        val links = productModifierGroupRepository.findAllByProductIds(productIds)
+            .let { source -> if (activeOnly) source.filter { it.isActive } else source }
+        if (links.isEmpty()) {
+            return emptySet()
+        }
+
+        if (!activeOnly) {
+            return links.mapTo(linkedSetOf()) { it.productId }
+        }
+
+        val groupsById = modifierGroupRepository.findAllByIds(links.map { it.modifierGroupId }).associateBy { it.id }
+        return links.asSequence()
+            .filter { link -> groupsById[link.modifierGroupId]?.isActive == true }
+            .mapTo(linkedSetOf()) { it.productId }
+    }
+
     fun getProductModifierGroups(productId: UUID, activeOnly: Boolean): List<ProductModifierGroupDetails> {
         val links = productModifierGroupRepository.findAllByProductId(productId)
             .let { source -> if (activeOnly) source.filter { it.isActive } else source }

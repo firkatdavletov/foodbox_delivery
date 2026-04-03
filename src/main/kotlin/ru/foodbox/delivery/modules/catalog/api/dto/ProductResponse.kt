@@ -17,4 +17,5 @@ data class ProductResponse(
     val unit: ProductUnit,
     val countStep: Int,
     val isActive: Boolean,
+    val isConfigured: Boolean,
 )

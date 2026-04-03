@@ -21,7 +21,7 @@ interface DeliveryZoneJpaRepository : JpaRepository<DeliveryZoneEntity, UUID> {
               and dz.type = 'POLYGON'
               and dz.effective_geometry is not null
               and st_covers(dz.effective_geometry, st_setsrid(st_point(:longitude, :latitude), 4326))
-            order by dz.priority asc, dz.updated_at desc, dz.id asc
+            order by dz.priority desc, dz.updated_at desc, dz.id asc
             limit 1
         """,
         nativeQuery = true,
