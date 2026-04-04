@@ -203,25 +203,34 @@ class CartServiceImpl(
     override fun markOrdered(cartId: UUID) {
         val cart = cartRepository.findById(cartId) ?: return
         if (cart.status == CartStatus.ACTIVE) {
+            val now = Instant.now()
             cart.markOrdered()
             cartRepository.save(cart)
+            createNewActiveCart(
+                owner = cart.owner,
+                deliveryDraft = cart.deliveryDraft?.invalidateQuote(now),
+                now = now,
+            )
         }
     }
 
-    private fun createNewActiveCart(owner: CartOwner): Cart {
-        val now = Instant.now()
-        return cartRepository.save(
-            Cart(
-                id = UUID.randomUUID(),
-                owner = owner,
-                status = CartStatus.ACTIVE,
-                items = mutableListOf(),
-                deliveryDraft = null,
-                totalPriceMinor = 0,
-                createdAt = now,
-                updatedAt = now,
-            )
+    private fun createNewActiveCart(
+        owner: CartOwner,
+        deliveryDraft: CartDeliveryDraft? = null,
+        now: Instant = Instant.now(),
+    ): Cart {
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = owner,
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(),
+            deliveryDraft = deliveryDraft,
+            totalPriceMinor = 0,
+            createdAt = now,
+            updatedAt = now,
         )
+        cart.recalculateTotalPrice(now)
+        return cartRepository.save(cart)
     }
 
     private fun loadOrCreateActiveCart(actor: CurrentActor): Cart {

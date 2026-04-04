@@ -35,6 +35,9 @@ import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CartServiceImplTest {
 
@@ -449,19 +452,116 @@ class CartServiceImplTest {
         assertEquals(200L, cartRepository.savedCart?.totalPriceMinor)
     }
 
-    private class InMemoryCartRepository(
-        private var activeCart: Cart?,
-    ) : CartRepository {
-        var savedCart: Cart? = null
+    @Test
+    fun `markOrdered creates successor active cart with preserved delivery selection`() {
+        val now = Instant.now()
+        val actor = CurrentActor.Guest("install-1")
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, actor.installId),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = UUID.randomUUID(),
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 1_000,
+                )
+            ),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 450,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now,
+                    expiresAt = now.plusSeconds(900),
+                ),
+                createdAt = now,
+                updatedAt = now,
+            ),
+            totalPriceMinor = 1_450,
+            createdAt = now,
+            updatedAt = now,
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = CapturingDeliveryService(
+                quoteToReturn = DeliveryQuote(
+                    deliveryMethod = DeliveryMethodType.COURIER,
+                    available = true,
+                    priceMinor = 500,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                )
+            ),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+        )
 
-        override fun findById(cartId: UUID): Cart? = activeCart?.takeIf { it.id == cartId }
+        service.markOrdered(cart.id)
+
+        val orderedCart = cartRepository.findById(cart.id)
+        val activeCart = service.getOrCreateActiveCart(actor)
+
+        assertNotNull(orderedCart)
+        assertEquals(CartStatus.ORDERED, orderedCart.status)
+        assertNotEquals(cart.id, activeCart.id)
+        assertEquals(CartStatus.ACTIVE, activeCart.status)
+        assertEquals(cart.owner, activeCart.owner)
+        assertEquals(0, activeCart.items.size)
+        assertNotNull(activeCart.deliveryDraft)
+        assertEquals(DeliveryMethodType.COURIER, activeCart.deliveryDraft?.deliveryMethod)
+        assertEquals("Yekaterinburg", activeCart.deliveryDraft?.deliveryAddress?.city)
+        assertEquals("Lenina", activeCart.deliveryDraft?.deliveryAddress?.street)
+        assertEquals("1", activeCart.deliveryDraft?.deliveryAddress?.house)
+        assertNull(activeCart.deliveryDraft?.quote)
+        assertEquals(0L, activeCart.totalPriceMinor)
+        assertEquals(2, cartRepository.allCarts.size)
+    }
+
+    private class InMemoryCartRepository(
+        initialCart: Cart?,
+    ) : CartRepository {
+        private val carts = initialCart?.let { mutableListOf(it) } ?: mutableListOf()
+        var savedCart: Cart? = null
+        val allCarts: List<Cart>
+            get() = carts.toList()
+
+        override fun findById(cartId: UUID): Cart? = carts.firstOrNull { it.id == cartId }
 
         override fun findActiveByOwner(owner: CartOwner): Cart? {
-            return activeCart?.takeIf { it.owner == owner && it.status == CartStatus.ACTIVE }
+            return carts.firstOrNull { it.owner == owner && it.status == CartStatus.ACTIVE }
         }
 
         override fun save(cart: Cart): Cart {
-            activeCart = cart
+            val existingIndex = carts.indexOfFirst { it.id == cart.id }
+            if (existingIndex >= 0) {
+                carts[existingIndex] = cart
+            } else {
+                carts += cart
+            }
             savedCart = cart
             return cart
         }
