@@ -14,6 +14,7 @@ import ru.foodbox.delivery.common.security.UserPrincipal
 class CurrentActorArgumentResolver : HandlerMethodArgumentResolver {
 
     companion object {
+        private const val DEVICE_ID_HEADER = "X-Device-Id"
         private const val INSTALL_ID_HEADER = "X-Install-Id"
     }
 
@@ -38,11 +39,13 @@ class CurrentActorArgumentResolver : HandlerMethodArgumentResolver {
             )
         }
 
-        val installId = webRequest.getHeader(INSTALL_ID_HEADER)?.trim()
+        val installId = webRequest.getHeader(DEVICE_ID_HEADER)?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: webRequest.getHeader(INSTALL_ID_HEADER)?.trim()?.takeIf { it.isNotBlank() }
         if (!installId.isNullOrBlank()) {
             return CurrentActor.Guest(installId = installId)
         }
 
-        throw UnauthorizedException("Either bearer token or X-Install-Id header is required")
+        throw UnauthorizedException("Either bearer token or X-Device-Id header is required")
     }
 }

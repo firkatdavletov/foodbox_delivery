@@ -46,6 +46,7 @@ class OrderController(
     @PostMapping("/guest/checkout")
     fun guestCheckout(
         @Valid @RequestBody request: GuestCheckoutRequest,
+        @RequestHeader(name = "X-Device-Id", required = false) deviceId: String?,
         @RequestHeader(name = "X-Install-Id", required = false) installId: String?,
     ): OrderResponse {
         return orderService.guestCheckout(
@@ -61,7 +62,8 @@ class OrderController(
                 pickupPointExternalId = request.pickupPointExternalId,
                 comment = request.comment,
             ),
-            installId = installId?.trim()?.takeIf { it.isNotBlank() },
+            installId = deviceId?.trim()?.takeIf { it.isNotBlank() }
+                ?: installId?.trim()?.takeIf { it.isNotBlank() },
         ).toResponse()
     }
 
