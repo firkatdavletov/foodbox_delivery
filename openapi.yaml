@@ -109,16 +109,16 @@ paths:
       operationId: createVirtualTryOnSession
       summary: Start a virtual try-on session
       description: |
-        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        Requires either a bearer token for an authenticated user or `X-Device-Id` for a guest installation.
         The backend resolves the garment image from the active product or variant and submits the request to FASHN.
         The response includes websocket connection details for real-time status updates.
       parameters:
         - in: header
-          name: X-Install-Id
+          name: X-Device-Id
           required: false
           schema:
             type: string
-          description: Guest installation identifier used when no bearer token is provided.
+          description: Guest device identifier used when no bearer token is provided. Legacy `X-Install-Id` is also accepted.
       requestBody:
         required: true
         content:
@@ -147,7 +147,7 @@ paths:
       operationId: getVirtualTryOnSession
       summary: Get a virtual try-on session
       description: |
-        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        Requires either a bearer token for an authenticated user or `X-Device-Id` for a guest installation.
         Only the owner of the session can access it.
       parameters:
         - in: path
@@ -157,11 +157,11 @@ paths:
             type: string
             format: uuid
         - in: header
-          name: X-Install-Id
+          name: X-Device-Id
           required: false
           schema:
             type: string
-          description: Guest installation identifier used when no bearer token is provided.
+          description: Guest device identifier used when no bearer token is provided. Legacy `X-Install-Id` is also accepted.
       responses:
         '200':
           description: Virtual try-on session details
@@ -182,7 +182,7 @@ paths:
       operationId: syncVirtualTryOnSession
       summary: Force sync of a pending virtual try-on session with FASHN status API
       description: |
-        Requires either a bearer token for an authenticated user or `X-Install-Id` for a guest installation.
+        Requires either a bearer token for an authenticated user or `X-Device-Id` for a guest installation.
         If the session is still pending, the backend fetches the latest state from FASHN and pushes any update to websocket subscribers.
       parameters:
         - in: path
@@ -192,11 +192,11 @@ paths:
             type: string
             format: uuid
         - in: header
-          name: X-Install-Id
+          name: X-Device-Id
           required: false
           schema:
             type: string
-          description: Guest installation identifier used when no bearer token is provided.
+          description: Guest device identifier used when no bearer token is provided. Legacy `X-Install-Id` is also accepted.
       responses:
         '200':
           description: Synchronized virtual try-on session
@@ -487,7 +487,7 @@ paths:
       summary: Get or create active cart for current actor
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       responses:
         '200':
           description: Active cart
@@ -506,7 +506,7 @@ paths:
       summary: Remove all items from active cart
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       responses:
         '200':
           description: Cleared cart
@@ -526,7 +526,7 @@ paths:
       summary: Get current cart delivery draft
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       responses:
         '200':
           description: Current cart delivery draft or `null` when not selected
@@ -547,7 +547,7 @@ paths:
       summary: Create or replace current cart delivery draft
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       requestBody:
         required: true
         content:
@@ -577,7 +577,7 @@ paths:
       summary: Add product (or product variant) with optional modifiers to active cart
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       requestBody:
         required: true
         content:
@@ -607,7 +607,7 @@ paths:
       summary: Change quantity of a cart item
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       parameters:
         - $ref: '#/components/parameters/CartItemIdPathParam'
       requestBody:
@@ -635,7 +635,7 @@ paths:
       summary: Remove one configured cart item from active cart
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       parameters:
         - $ref: '#/components/parameters/CartItemIdPathParam'
       responses:
@@ -1701,7 +1701,7 @@ paths:
       summary: Detect courier cart delivery draft by coordinates
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       requestBody:
         required: true
         content:
@@ -1769,7 +1769,7 @@ paths:
       summary: Create payment for order visible to current actor
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       requestBody:
         required: true
         content:
@@ -1803,7 +1803,7 @@ paths:
       summary: Get payment visible to current actor
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       parameters:
         - name: paymentId
           in: path
@@ -1836,7 +1836,7 @@ paths:
       summary: Checkout current actor cart
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       requestBody:
         required: true
         content:
@@ -1863,10 +1863,10 @@ paths:
       operationId: guestCheckout
       summary: Create guest order from provided items
       parameters:
-        - name: X-Install-Id
+        - name: X-Device-Id
           in: header
           required: false
-          description: Optional guest installation id saved into order (`guestInstallId`).
+          description: Optional guest device id saved into order (`guestInstallId`). Legacy `X-Install-Id` is also accepted.
           schema:
             type: string
       requestBody:
@@ -1889,6 +1889,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/orders/current:
+    get:
+      tags: [Orders]
+      operationId: getCurrentOrders
+      summary: List current orders of current actor
+      description: Returns non-final orders of the current actor.
+      security:
+        - bearerAuth: []
+        - deviceIdHeader: []
+      responses:
+        '200':
+          description: Current actor orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/orders/{orderId}:
     get:
       tags: [Orders]
@@ -1896,7 +1919,7 @@ paths:
       summary: Get one order visible to current actor
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       parameters:
         - $ref: '#/components/parameters/OrderIdPathParam'
       responses:
@@ -1925,7 +1948,7 @@ paths:
       description: Returns orders sorted by `createdAt` descending.
       security:
         - bearerAuth: []
-        - installIdHeader: []
+        - deviceIdHeader: []
       responses:
         '200':
           description: Actor orders
@@ -2462,11 +2485,11 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: "JWT access token in `Authorization: Bearer <token>`"
-    installIdHeader:
+    deviceIdHeader:
       type: apiKey
       in: header
-      name: X-Install-Id
-      description: Guest actor identifier used by `CurrentActorArgumentResolver`
+      name: X-Device-Id
+      description: Preferred guest actor identifier used by `CurrentActorArgumentResolver`. Legacy `X-Install-Id` is also accepted for backward compatibility.
 
   parameters:
     ProductIdPathParam:
