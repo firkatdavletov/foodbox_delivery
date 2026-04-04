@@ -75,6 +75,13 @@ class OrderController(
         return orderService.getOrder(actor, orderId).toResponse()
     }
 
+    @GetMapping("/current")
+    fun getCurrentOrders(
+        @CurrentActorParam actor: CurrentActor,
+    ): List<OrderResponse> {
+        return orderService.getCurrentOrders(actor).map { it.toResponse() }
+    }
+
     @GetMapping("/my")
     fun getMyOrders(
         @CurrentActorParam actor: CurrentActor,

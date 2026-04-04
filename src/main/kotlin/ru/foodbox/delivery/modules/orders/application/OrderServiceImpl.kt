@@ -271,6 +271,10 @@ class OrderServiceImpl(
         }
     }
 
+    override fun getCurrentOrders(actor: CurrentActor): List<Order> {
+        return getMyOrders(actor).filterNot { it.currentStatus.isFinal }
+    }
+
     override fun getAdminOrders(): List<Order> {
         return orderRepository.findAllByCurrentStatusStateTypes(
             stateTypes = setOf(

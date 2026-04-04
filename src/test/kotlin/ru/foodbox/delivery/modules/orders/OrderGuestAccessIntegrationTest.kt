@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.modules.orders
 
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -76,6 +77,29 @@ class OrderGuestAccessIntegrationTest {
     }
 
     @Test
+    fun `guest current orders returns only non-final orders`() {
+        val pendingOrder = createGuestOrder(installId = "device-123", statusCode = "PENDING")
+        val confirmedOrder = createGuestOrder(installId = "device-123", statusCode = "CONFIRMED")
+        createGuestOrder(installId = "device-123", statusCode = "COMPLETED")
+        createGuestOrder(installId = "device-123", statusCode = "CANCELLED")
+        createGuestOrder(installId = "device-999", statusCode = "PENDING")
+
+        mockMvc.perform(
+            get("/api/v1/orders/current")
+                .header("X-Device-Id", "device-123")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(
+                jsonPath(
+                    "$[*].id",
+                    containsInAnyOrder(pendingOrder.id.toString(), confirmedOrder.id.toString())
+                )
+            )
+            .andExpect(jsonPath("$[*].status", containsInAnyOrder("PENDING", "CONFIRMED")))
+    }
+
+    @Test
     fun `guest cannot get another order by x-device-id`() {
         val ownOrder = createGuestOrder(installId = "device-123")
 
@@ -86,7 +110,10 @@ class OrderGuestAccessIntegrationTest {
             .andExpect(status().isForbidden)
     }
 
-    private fun createGuestOrder(installId: String): Order {
+    private fun createGuestOrder(
+        installId: String,
+        statusCode: String = "PENDING",
+    ): Order {
         val now = Instant.now()
         return orderRepository.save(
             Order(
@@ -98,7 +125,7 @@ class OrderGuestAccessIntegrationTest {
                 customerName = "Guest",
                 customerPhone = "+79990000000",
                 customerEmail = null,
-                currentStatus = OrderStatusWorkflowDefaults.statuses.first { it.code == "PENDING" },
+                currentStatus = OrderStatusWorkflowDefaults.statuses.first { it.code == statusCode },
                 delivery = OrderDeliverySnapshot(
                     method = DeliveryMethodType.COURIER,
                     methodName = DeliveryMethodType.COURIER.displayName,
