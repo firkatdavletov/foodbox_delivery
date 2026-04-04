@@ -4,7 +4,6 @@ import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutCommand
 import ru.foodbox.delivery.modules.orders.domain.Order
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import java.util.UUID
 
 interface OrderService {
@@ -14,5 +13,4 @@ interface OrderService {
     fun getMyOrders(actor: CurrentActor): List<Order>
     fun getAdminOrders(): List<Order>
     fun getAdminOrderByNumber(orderNumber: String): Order
-    fun updateStatus(orderId: UUID, status: OrderStatus): Order
 }

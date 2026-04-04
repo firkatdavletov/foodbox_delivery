@@ -11,12 +11,12 @@ import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
 import ru.foodbox.delivery.modules.delivery.domain.repository.DeliveryOfferRepository
 import ru.foodbox.delivery.modules.delivery.domain.repository.OrderDeliveryOfferRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.yandex.YandexDeliveryProperties
+import ru.foodbox.delivery.modules.orders.application.OrderStatusWorkflowDefaults
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import java.time.Instant
 import java.util.UUID
@@ -181,7 +181,7 @@ class DeliveryOrderRequestServiceImplTest {
             customerName = "Test User",
             customerPhone = "+79990000000",
             customerEmail = "test@example.com",
-            status = OrderStatus.PENDING,
+            currentStatus = OrderStatusWorkflowDefaults.statuses.first { it.code == "PENDING" },
             delivery = OrderDeliverySnapshot(
                 method = DeliveryMethodType.YANDEX_PICKUP_POINT,
                 methodName = DeliveryMethodType.YANDEX_PICKUP_POINT.displayName,
@@ -213,6 +213,7 @@ class DeliveryOrderRequestServiceImplTest {
             subtotalMinor = 399_800,
             deliveryFeeMinor = 40_000,
             totalMinor = 439_800,
+            statusChangedAt = now,
             createdAt = now,
             updatedAt = now,
             payment = OrderPaymentSnapshot(

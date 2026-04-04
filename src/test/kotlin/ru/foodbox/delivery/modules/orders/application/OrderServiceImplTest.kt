@@ -35,9 +35,15 @@ import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.event.OrderCreatedEvent
 import ru.foodbox.delivery.modules.orders.domain.Order
+import ru.foodbox.delivery.modules.orders.domain.OrderStateType
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusDefinition
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistory
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusTransition
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
+import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusDefinitionRepository
+import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusHistoryRepository
+import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusTransitionRepository
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodInfo
 import ru.foodbox.delivery.modules.user.domain.User
@@ -82,6 +88,7 @@ class OrderServiceImplTest {
         val cartService = StubCartService(cart)
         val deliveryOrderRequestService = RecordingDeliveryOrderRequestService()
         val eventPublisher = RecordingApplicationEventPublisher()
+        val orderStatusService = createOrderStatusService(orderRepository, eventPublisher)
         val service = OrderServiceImpl(
             orderRepository = orderRepository,
             cartService = cartService,
@@ -111,6 +118,7 @@ class OrderServiceImplTest {
             ),
             deliveryOrderRequestService = deliveryOrderRequestService,
             applicationEventPublisher = eventPublisher,
+            orderStatusService = orderStatusService,
         )
 
         val order = service.checkout(
@@ -131,7 +139,7 @@ class OrderServiceImplTest {
         assertEquals("Fresh title", savedOrder.items.single().title)
         assertEquals("SKU-COURIER-1", savedOrder.items.single().sku)
         assertEquals(12_500L, savedOrder.items.single().priceMinor)
-        assertEquals(OrderStatus.PENDING, savedOrder.status)
+        assertEquals("PENDING", savedOrder.currentStatus.code)
         assertEquals(
             OrderPaymentSnapshot(
                 methodCode = PaymentMethodCode.CARD_ON_DELIVERY,
@@ -189,6 +197,7 @@ class OrderServiceImplTest {
         )
         val cartService = StubCartService(cart)
         val eventPublisher = RecordingApplicationEventPublisher()
+        val orderStatusService = createOrderStatusService(orderRepository, eventPublisher)
         val service = OrderServiceImpl(
             orderRepository = orderRepository,
             cartService = cartService,
@@ -218,6 +227,7 @@ class OrderServiceImplTest {
             ),
             deliveryOrderRequestService = deliveryOrderRequestService,
             applicationEventPublisher = eventPublisher,
+            orderStatusService = orderStatusService,
         )
 
         val order = service.checkout(
@@ -231,12 +241,16 @@ class OrderServiceImplTest {
             ),
         )
 
-        assertEquals(2, orderRepository.savedOrders.size)
+        assertEquals(3, orderRepository.savedOrders.size)
         val firstSave = orderRepository.savedOrders[0]
         val secondSave = orderRepository.savedOrders[1]
-        assertEquals(OrderStatus.PENDING, firstSave.status)
+        val thirdSave = orderRepository.savedOrders[2]
+        assertEquals("PENDING", firstSave.currentStatus.code)
         assertEquals(4_000L, firstSave.deliveryFeeMinor)
         assertEquals(22_000L, firstSave.totalMinor)
+        assertEquals("PENDING", secondSave.currentStatus.code)
+        assertEquals(5_500L, secondSave.deliveryFeeMinor)
+        assertEquals(23_500L, secondSave.totalMinor)
         assertNotNull(deliveryOrderRequestService.lastOrder)
         assertEquals(firstSave.id, deliveryOrderRequestService.lastOrder?.id)
         assertEquals("SKU-YANDEX-1", deliveryOrderRequestService.lastOrder?.items?.single()?.sku)
@@ -247,13 +261,13 @@ class OrderServiceImplTest {
             ),
             deliveryOrderRequestService.lastOrder?.payment,
         )
-        assertEquals(OrderStatus.CONFIRMED, secondSave.status)
-        assertEquals(5_500L, secondSave.deliveryFeeMinor)
-        assertEquals(23_500L, secondSave.totalMinor)
-        assertEquals("RUB", secondSave.delivery.currency)
-        assertEquals(OrderStatus.CONFIRMED, order.status)
+        assertEquals("CONFIRMED", thirdSave.currentStatus.code)
+        assertEquals(5_500L, thirdSave.deliveryFeeMinor)
+        assertEquals(23_500L, thirdSave.totalMinor)
+        assertEquals("RUB", thirdSave.delivery.currency)
+        assertEquals("CONFIRMED", order.currentStatus.code)
         assertEquals(cart.id, cartService.markedOrderedCartId)
-        assertEquals(1, eventPublisher.events.size)
+        assertEquals(2, eventPublisher.events.size)
     }
 
     @Test
@@ -309,6 +323,8 @@ class OrderServiceImplTest {
                 estimatedDays = 1,
             ),
         )
+        val eventPublisher = RecordingApplicationEventPublisher()
+        val orderStatusService = createOrderStatusService(orderRepository, eventPublisher)
         val service = OrderServiceImpl(
             orderRepository = orderRepository,
             cartService = StubCartService(cart),
@@ -337,7 +353,8 @@ class OrderServiceImplTest {
                 )
             ),
             deliveryOrderRequestService = RecordingDeliveryOrderRequestService(),
-            applicationEventPublisher = RecordingApplicationEventPublisher(),
+            applicationEventPublisher = eventPublisher,
+            orderStatusService = orderStatusService,
         )
 
         val order = service.checkout(
@@ -570,8 +587,8 @@ class OrderServiceImplTest {
 
         override fun findById(orderId: UUID): Order? = storedOrders[orderId]?.copyOrder()
 
-        override fun findAllByStatuses(statuses: Set<OrderStatus>): List<Order> {
-            return storedOrders.values.filter { it.status in statuses }.map(Order::copyOrder)
+        override fun findAllByCurrentStatusStateTypes(stateTypes: Set<OrderStateType>): List<Order> {
+            return storedOrders.values.filter { it.currentStatus.stateType in stateTypes }.map(Order::copyOrder)
         }
 
         override fun findByOrderNumber(orderNumber: String): Order? {
@@ -585,7 +602,107 @@ class OrderServiceImplTest {
         override fun findByGuestInstallId(installId: String): List<Order> {
             return storedOrders.values.filter { it.guestInstallId == installId }.map(Order::copyOrder)
         }
+
+        override fun existsByCurrentStatusId(statusId: UUID): Boolean {
+            return storedOrders.values.any { it.currentStatus.id == statusId }
+        }
     }
+
+    class InMemoryOrderStatusDefinitionRepository : OrderStatusDefinitionRepository {
+        private val definitions = linkedMapOf<UUID, OrderStatusDefinition>()
+
+        override fun findAll(includeInactive: Boolean): List<OrderStatusDefinition> {
+            return definitions.values.filter { includeInactive || it.isActive }
+        }
+
+        override fun findById(id: UUID): OrderStatusDefinition? = definitions[id]
+
+        override fun findByCode(code: String): OrderStatusDefinition? {
+            return definitions.values.firstOrNull { it.code == code.trim().uppercase() }
+        }
+
+        override fun findByStateType(stateType: OrderStateType): List<OrderStatusDefinition> {
+            return definitions.values.filter { it.stateType == stateType }
+        }
+
+        override fun findInitial(): OrderStatusDefinition? {
+            return definitions.values.firstOrNull { it.isInitial && it.isActive }
+        }
+
+        override fun save(status: OrderStatusDefinition): OrderStatusDefinition {
+            definitions[status.id] = status
+            return status
+        }
+    }
+
+    class InMemoryOrderStatusTransitionRepository : OrderStatusTransitionRepository {
+        private val transitions = linkedMapOf<UUID, OrderStatusTransition>()
+
+        override fun findAll(includeInactive: Boolean): List<OrderStatusTransition> {
+            return transitions.values.filter { includeInactive || it.isActive }
+        }
+
+        override fun findById(id: UUID): OrderStatusTransition? = transitions[id]
+
+        override fun findAllByFromStatusId(fromStatusId: UUID, includeInactive: Boolean): List<OrderStatusTransition> {
+            return transitions.values.filter { it.fromStatus.id == fromStatusId && (includeInactive || it.isActive) }
+        }
+
+        override fun findAllByStatusId(statusId: UUID, includeInactive: Boolean): List<OrderStatusTransition> {
+            return transitions.values.filter {
+                (it.fromStatus.id == statusId || it.toStatus.id == statusId) &&
+                    (includeInactive || it.isActive)
+            }
+        }
+
+        override fun findTransition(fromStatusId: UUID, toStatusId: UUID): OrderStatusTransition? {
+            return transitions.values.firstOrNull { it.fromStatus.id == fromStatusId && it.toStatus.id == toStatusId }
+        }
+
+        override fun save(transition: OrderStatusTransition): OrderStatusTransition {
+            transitions[transition.id] = transition
+            return transition
+        }
+
+        override fun deleteById(id: UUID) {
+            transitions.remove(id)
+        }
+    }
+
+    class InMemoryOrderStatusHistoryRepository : OrderStatusHistoryRepository {
+        private val histories = mutableListOf<OrderStatusHistory>()
+
+        override fun save(history: OrderStatusHistory): OrderStatusHistory {
+            histories += history
+            return history
+        }
+
+        override fun findAllByOrderId(orderId: UUID): List<OrderStatusHistory> {
+            return histories.filter { it.orderId == orderId }.sortedBy(OrderStatusHistory::changedAt)
+        }
+
+        override fun existsByOrderId(orderId: UUID): Boolean {
+            return histories.any { it.orderId == orderId }
+        }
+    }
+}
+
+private fun createOrderStatusService(
+    orderRepository: OrderRepository,
+    eventPublisher: ApplicationEventPublisher,
+): OrderStatusService {
+    val definitionRepository = OrderServiceImplTest.InMemoryOrderStatusDefinitionRepository()
+    val transitionRepository = OrderServiceImplTest.InMemoryOrderStatusTransitionRepository()
+    val historyRepository = OrderServiceImplTest.InMemoryOrderStatusHistoryRepository()
+    OrderStatusWorkflowDefaults.statuses.forEach(definitionRepository::save)
+    OrderStatusWorkflowDefaults.transitions.forEach(transitionRepository::save)
+    return OrderStatusServiceImpl(
+        orderRepository = orderRepository,
+        orderStatusDefinitionRepository = definitionRepository,
+        orderStatusTransitionRepository = transitionRepository,
+        orderStatusHistoryRepository = historyRepository,
+        applicationEventPublisher = eventPublisher,
+    )
 }
 
 private fun Order.copyOrder(): Order {

@@ -19,15 +19,15 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryValidationException
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
+import ru.foodbox.delivery.modules.orders.application.command.ChangeOrderStatusCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.event.OrderCreatedEvent
-import ru.foodbox.delivery.modules.orders.application.event.OrderStatusChangedEvent
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.domain.OrderStateType
 import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
@@ -46,6 +46,7 @@ class OrderServiceImpl(
     private val checkoutService: CheckoutService,
     private val deliveryOrderRequestService: DeliveryOrderRequestService,
     private val applicationEventPublisher: ApplicationEventPublisher,
+    private val orderStatusService: OrderStatusService,
 ) : OrderService {
 
     private val phoneRegex = Regex("^\\+?[1-9]\\d{9,14}$")
@@ -73,6 +74,7 @@ class OrderServiceImpl(
 
         val normalizedPhone = customerPhone?.let(::normalizePhone)
         val now = Instant.now()
+        val initialStatus = orderStatusService.getInitialStatus()
         validatePaymentMethod(
             deliveryMethod = deliveryDraft.deliveryMethod,
             pickupPointExternalId = deliveryDraft.pickupPointExternalId,
@@ -108,13 +110,14 @@ class OrderServiceImpl(
             customerName = customerName,
             customerPhone = normalizedPhone,
             customerEmail = customerEmail,
-            status = OrderStatus.PENDING,
+            currentStatus = initialStatus,
             delivery = deliverySnapshot,
             comment = command.comment?.trim()?.takeIf { it.isNotBlank() },
             items = items,
             subtotalMinor = subtotal,
             deliveryFeeMinor = deliverySnapshot.priceMinor,
             totalMinor = subtotal + deliverySnapshot.priceMinor,
+            statusChangedAt = now,
             createdAt = now,
             updatedAt = now,
             payment = OrderPaymentSnapshot(
@@ -124,13 +127,20 @@ class OrderServiceImpl(
         )
 
         var saved = orderRepository.save(order)
+        orderStatusService.recordInitialStatus(saved, OrderStatusChangeActor.system())
         deliveryOrderRequestService.createAndConfirm(saved)?.let { confirmation ->
             saved.updateDeliveryPricing(
                 priceMinor = confirmation.deliveryFeeMinor,
                 currency = confirmation.currency,
             )
-            saved.updateStatus(OrderStatus.CONFIRMED)
             saved = orderRepository.save(saved)
+            saved = orderStatusService.changeStatus(
+                orderId = saved.id,
+                command = ChangeOrderStatusCommand(
+                    targetStateType = OrderStateType.CONFIRMED,
+                ),
+                actor = OrderStatusChangeActor.system(),
+            )
         }
         cartService.markOrdered(cart.id)
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
@@ -145,6 +155,7 @@ class OrderServiceImpl(
 
         val normalizedPhone = normalizePhone(command.customerPhone)
         val now = Instant.now()
+        val initialStatus = orderStatusService.getInitialStatus()
 
         validatePaymentMethod(
             deliveryMethod = command.deliveryMethod,
@@ -206,13 +217,14 @@ class OrderServiceImpl(
             customerName = command.customerName.trim(),
             customerPhone = normalizedPhone,
             customerEmail = command.customerEmail?.trim()?.lowercase()?.takeIf { it.isNotBlank() },
-            status = OrderStatus.PENDING,
+            currentStatus = initialStatus,
             delivery = deliverySnapshot,
             comment = command.comment?.trim()?.takeIf { it.isNotBlank() },
             items = orderItems,
             subtotalMinor = subtotal,
             deliveryFeeMinor = deliverySnapshot.priceMinor,
             totalMinor = subtotal + deliverySnapshot.priceMinor,
+            statusChangedAt = now,
             createdAt = now,
             updatedAt = now,
             payment = OrderPaymentSnapshot(
@@ -222,13 +234,20 @@ class OrderServiceImpl(
         )
 
         var saved = orderRepository.save(order)
+        orderStatusService.recordInitialStatus(saved, OrderStatusChangeActor.system())
         deliveryOrderRequestService.createAndConfirm(saved)?.let { confirmation ->
             saved.updateDeliveryPricing(
                 priceMinor = confirmation.deliveryFeeMinor,
                 currency = confirmation.currency,
             )
-            saved.updateStatus(OrderStatus.CONFIRMED)
             saved = orderRepository.save(saved)
+            saved = orderStatusService.changeStatus(
+                orderId = saved.id,
+                command = ChangeOrderStatusCommand(
+                    targetStateType = OrderStateType.CONFIRMED,
+                ),
+                actor = OrderStatusChangeActor.system(),
+            )
         }
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
@@ -253,8 +272,16 @@ class OrderServiceImpl(
     }
 
     override fun getAdminOrders(): List<Order> {
-        return orderRepository.findAllByStatuses(
-            statuses = setOf(OrderStatus.PENDING, OrderStatus.CONFIRMED),
+        return orderRepository.findAllByCurrentStatusStateTypes(
+            stateTypes = setOf(
+                OrderStateType.CREATED,
+                OrderStateType.AWAITING_CONFIRMATION,
+                OrderStateType.CONFIRMED,
+                OrderStateType.PREPARING,
+                OrderStateType.READY_FOR_PICKUP,
+                OrderStateType.OUT_FOR_DELIVERY,
+                OrderStateType.ON_HOLD,
+            ),
         )
     }
 
@@ -264,25 +291,6 @@ class OrderServiceImpl(
 
         return orderRepository.findByOrderNumber(normalizedOrderNumber)
             ?: throw NotFoundException("Order not found")
-    }
-
-    @Transactional
-    override fun updateStatus(orderId: UUID, status: OrderStatus): Order {
-        val order = orderRepository.findById(orderId)
-            ?: throw NotFoundException("Order not found")
-
-        val previousStatus = order.status
-        order.updateStatus(status)
-        val saved = orderRepository.save(order)
-        if (previousStatus != status) {
-            applicationEventPublisher.publishEvent(
-                OrderStatusChangedEvent(
-                    order = saved,
-                    previousStatus = previousStatus,
-                )
-            )
-        }
-        return saved
     }
 
     private fun canAccessOrder(actor: CurrentActor, order: Order): Boolean {

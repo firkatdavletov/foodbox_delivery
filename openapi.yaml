@@ -1940,12 +1940,256 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/order-statuses:
+    get:
+      tags: [Order Statuses Admin]
+      operationId: getOrderStatuses
+      summary: List configurable order statuses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: includeInactive
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Order status definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderStatusResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Order Statuses Admin]
+      operationId: createOrderStatus
+      summary: Create order status definition
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertOrderStatusRequest'
+      responses:
+        '200':
+          description: Created order status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/order-statuses/{statusId}:
+    get:
+      tags: [Order Statuses Admin]
+      operationId: getOrderStatus
+      summary: Get one order status definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: statusId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order status definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Order Statuses Admin]
+      operationId: updateOrderStatusDefinition
+      summary: Update order status definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: statusId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertOrderStatusRequest'
+      responses:
+        '200':
+          description: Updated order status definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Order Statuses Admin]
+      operationId: deactivateOrderStatus
+      summary: Deactivate order status definition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: statusId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deactivated order status definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/order-status-transitions:
+    get:
+      tags: [Order Statuses Admin]
+      operationId: getOrderStatusTransitions
+      summary: List order status transitions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: statusId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order status transitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderStatusTransitionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Order Statuses Admin]
+      operationId: createOrderStatusTransition
+      summary: Create order status transition
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderStatusTransitionRequest'
+      responses:
+        '200':
+          description: Created order status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusTransitionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/order-status-transitions/{transitionId}:
+    delete:
+      tags: [Order Statuses Admin]
+      operationId: deleteOrderStatusTransition
+      summary: Delete order status transition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transitionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Transition deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/orders:
     get:
       tags: [Orders Admin]
       operationId: getAdminOrders
       summary: List admin queue orders
-      description: Returns orders with statuses `PENDING` and `CONFIRMED`, sorted by `createdAt` descending.
+      description: Returns orders in active non-final workflow states, sorted by `createdAt` descending.
       security:
         - bearerAuth: []
       responses:
@@ -1999,7 +2243,94 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/orders/{orderId}/available-status-transitions:
+    get:
+      tags: [Orders Admin]
+      operationId: getAvailableOrderStatusTransitions
+      summary: List available transitions for order
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      responses:
+        '200':
+          description: Available transitions for order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderStatusTransitionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/orders/{orderId}/status-history:
+    get:
+      tags: [Orders Admin]
+      operationId: getOrderStatusHistory
+      summary: List order status history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      responses:
+        '200':
+          description: Order status history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderStatusHistoryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/orders/{orderId}/status:
+    post:
+      tags: [Orders Admin]
+      operationId: changeOrderStatus
+      summary: Change order status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [Orders Admin]
       operationId: updateOrderStatus
@@ -2029,6 +2360,8 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -4101,10 +4434,208 @@ components:
 
     UpdateOrderStatusRequest:
       type: object
-      required: [status]
       properties:
+        statusId:
+          type: string
+          format: uuid
+          nullable: true
+        statusCode:
+          type: string
+          nullable: true
         status:
-          $ref: '#/components/schemas/OrderStatus'
+          type: string
+          nullable: true
+          description: Legacy alias for `statusCode`.
+        comment:
+          type: string
+          nullable: true
+
+    OrderStatusSummaryResponse:
+      type: object
+      required: [id, code, name, stateType, isFinal, isCancellable, visibleToCustomer]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        stateType:
+          $ref: '#/components/schemas/OrderStateType'
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        isFinal:
+          type: boolean
+        isCancellable:
+          type: boolean
+        visibleToCustomer:
+          type: boolean
+
+    OrderStatusResponse:
+      type: object
+      required:
+        [id, code, name, stateType, isInitial, isFinal, isCancellable, isActive, visibleToCustomer, notifyCustomer, notifyStaff, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        stateType:
+          $ref: '#/components/schemas/OrderStateType'
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        isInitial:
+          type: boolean
+        isFinal:
+          type: boolean
+        isCancellable:
+          type: boolean
+        isActive:
+          type: boolean
+        visibleToCustomer:
+          type: boolean
+        notifyCustomer:
+          type: boolean
+        notifyStaff:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+
+    UpsertOrderStatusRequest:
+      type: object
+      required: [code, name, stateType]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        stateType:
+          $ref: '#/components/schemas/OrderStateType'
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        isInitial:
+          type: boolean
+          default: false
+        isFinal:
+          type: boolean
+          default: false
+        isCancellable:
+          type: boolean
+          default: false
+        isActive:
+          type: boolean
+          default: true
+        visibleToCustomer:
+          type: boolean
+          default: true
+        notifyCustomer:
+          type: boolean
+          default: false
+        notifyStaff:
+          type: boolean
+          default: true
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+
+    OrderStatusTransitionResponse:
+      type: object
+      required: [id, fromStatus, toStatus, isAutomatic, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fromStatus:
+          $ref: '#/components/schemas/OrderStatusSummaryResponse'
+        toStatus:
+          $ref: '#/components/schemas/OrderStatusSummaryResponse'
+        requiredRole:
+          $ref: '#/components/schemas/UserRole'
+          nullable: true
+        isAutomatic:
+          type: boolean
+        guardCode:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+
+    CreateOrderStatusTransitionRequest:
+      type: object
+      required: [fromStatusId, toStatusId]
+      properties:
+        fromStatusId:
+          type: string
+          format: uuid
+        toStatusId:
+          type: string
+          format: uuid
+        requiredRole:
+          $ref: '#/components/schemas/UserRole'
+          nullable: true
+        isAutomatic:
+          type: boolean
+          default: false
+        guardCode:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+          default: true
+
+    OrderStatusHistoryResponse:
+      type: object
+      required: [id, currentStatus, changeSourceType, changedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          allOf:
+            - $ref: '#/components/schemas/OrderStatusSummaryResponse'
+          nullable: true
+        currentStatus:
+          $ref: '#/components/schemas/OrderStatusSummaryResponse'
+        changeSourceType:
+          $ref: '#/components/schemas/OrderStatusChangeSourceType'
+        changedByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        changedAt:
+          type: string
+          format: date-time
 
     OrderResponse:
       type: object
@@ -4114,12 +4645,16 @@ components:
           orderNumber,
           customerType,
           status,
+          statusName,
+          stateType,
+          currentStatus,
           deliveryMethod,
           delivery,
           items,
           subtotalMinor,
           deliveryFeeMinor,
           totalMinor,
+          statusChangedAt,
           createdAt,
           updatedAt,
         ]
@@ -4148,7 +4683,13 @@ components:
           type: string
           nullable: true
         status:
-          $ref: '#/components/schemas/OrderStatus'
+          type: string
+        statusName:
+          type: string
+        stateType:
+          $ref: '#/components/schemas/OrderStateType'
+        currentStatus:
+          $ref: '#/components/schemas/OrderStatusSummaryResponse'
         payment:
           allOf:
             - $ref: '#/components/schemas/OrderPaymentResponse'
@@ -4173,6 +4714,9 @@ components:
         totalMinor:
           type: integer
           format: int64
+        statusChangedAt:
+          type: string
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -4649,9 +5193,18 @@ components:
       type: string
       enum: [USER, GUEST]
 
-    OrderStatus:
+    UserRole:
       type: string
-      enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+      enum: [CUSTOMER, WHOLESALE, MANAGER, ADMIN]
+
+    OrderStateType:
+      type: string
+      enum:
+        [CREATED, AWAITING_CONFIRMATION, CONFIRMED, PREPARING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, COMPLETED, CANCELED, ON_HOLD]
+
+    OrderStatusChangeSourceType:
+      type: string
+      enum: [SYSTEM, ADMIN, CUSTOMER]
 
     MediaTargetType:
       type: string

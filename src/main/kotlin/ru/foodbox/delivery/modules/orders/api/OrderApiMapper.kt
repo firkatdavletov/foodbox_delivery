@@ -2,12 +2,19 @@ package ru.foodbox.delivery.modules.orders.api
 
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderDeliveryResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusHistoryResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusSummaryResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusTransitionResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderItemModifierResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderItemResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderPaymentResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
 import ru.foodbox.delivery.modules.cart.pricing.domain.calculateCartItemPrice
 import ru.foodbox.delivery.modules.orders.domain.Order
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusDefinition
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistory
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusTransition
 
 internal fun Order.toResponse(): OrderResponse {
     return OrderResponse(
@@ -19,7 +26,10 @@ internal fun Order.toResponse(): OrderResponse {
         customerName = customerName,
         customerPhone = customerPhone,
         customerEmail = customerEmail,
-        status = status,
+        status = currentStatus.code,
+        statusName = currentStatus.name,
+        stateType = currentStatus.stateType,
+        currentStatus = currentStatus.toSummaryResponse(),
         payment = payment?.let {
             OrderPaymentResponse(
                 code = it.methodCode,
@@ -78,7 +88,66 @@ internal fun Order.toResponse(): OrderResponse {
         subtotalMinor = subtotalMinor,
         deliveryFeeMinor = deliveryFeeMinor,
         totalMinor = totalMinor,
+        statusChangedAt = statusChangedAt,
         createdAt = createdAt,
         updatedAt = updatedAt,
+    )
+}
+
+internal fun OrderStatusDefinition.toSummaryResponse(): OrderStatusSummaryResponse {
+    return OrderStatusSummaryResponse(
+        id = id,
+        code = code,
+        name = name,
+        stateType = stateType,
+        color = color,
+        icon = icon,
+        isFinal = isFinal,
+        isCancellable = isCancellable,
+        visibleToCustomer = visibleToCustomer,
+    )
+}
+
+internal fun OrderStatusDefinition.toResponse(): OrderStatusResponse {
+    return OrderStatusResponse(
+        id = id,
+        code = code,
+        name = name,
+        description = description,
+        stateType = stateType,
+        color = color,
+        icon = icon,
+        isInitial = isInitial,
+        isFinal = isFinal,
+        isCancellable = isCancellable,
+        isActive = isActive,
+        visibleToCustomer = visibleToCustomer,
+        notifyCustomer = notifyCustomer,
+        notifyStaff = notifyStaff,
+        sortOrder = sortOrder,
+    )
+}
+
+internal fun OrderStatusTransition.toResponse(): OrderStatusTransitionResponse {
+    return OrderStatusTransitionResponse(
+        id = id,
+        fromStatus = fromStatus.toSummaryResponse(),
+        toStatus = toStatus.toSummaryResponse(),
+        requiredRole = requiredRole,
+        isAutomatic = isAutomatic,
+        guardCode = guardCode,
+        isActive = isActive,
+    )
+}
+
+internal fun OrderStatusHistory.toResponse(): OrderStatusHistoryResponse {
+    return OrderStatusHistoryResponse(
+        id = id,
+        previousStatus = previousStatus?.toSummaryResponse(),
+        currentStatus = currentStatus.toSummaryResponse(),
+        changeSourceType = changeSourceType,
+        changedByUserId = changedByUserId,
+        comment = comment,
+        changedAt = changedAt,
     )
 }

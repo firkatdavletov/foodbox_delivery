@@ -1,6 +1,5 @@
-package ru.foodbox.delivery.modules.payments
+package ru.foodbox.delivery.modules.orders
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -9,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -16,21 +16,23 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.orders.application.OrderStatusChangeActor
+import ru.foodbox.delivery.modules.orders.application.OrderStatusService
 import ru.foodbox.delivery.modules.orders.application.OrderStatusWorkflowDefaults
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusChangeSourceType
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class PaymentsIntegrationTest {
+class OrderStatusAdminIntegrationTest {
 
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -44,43 +46,48 @@ class PaymentsIntegrationTest {
     @Autowired
     private lateinit var orderRepository: OrderRepository
 
+    @Autowired
+    private lateinit var orderStatusService: OrderStatusService
+
     @BeforeEach
     fun cleanup() {
-        jdbcTemplate.execute("delete from payments")
         jdbcTemplate.execute("delete from order_status_history")
-        jdbcTemplate.execute("delete from order_delivery_snapshots")
         jdbcTemplate.execute("delete from order_items")
+        jdbcTemplate.execute("delete from order_delivery_snapshots")
         jdbcTemplate.execute("delete from orders")
+        jdbcTemplate.execute(
+            "delete from order_status_transitions where id not in ('00000000-0000-0000-0000-000000000201'," +
+                "'00000000-0000-0000-0000-000000000202'," +
+                "'00000000-0000-0000-0000-000000000203'," +
+                "'00000000-0000-0000-0000-000000000204')"
+        )
+        jdbcTemplate.execute(
+            "delete from order_status_definitions where id not in ('00000000-0000-0000-0000-000000000101'," +
+                "'00000000-0000-0000-0000-000000000102'," +
+                "'00000000-0000-0000-0000-000000000103'," +
+                "'00000000-0000-0000-0000-000000000104')"
+        )
     }
 
     @Test
-    fun `list available payment methods returns offline methods`() {
-        val response = mockMvc.perform(get("/api/v1/payments/methods"))
-            .andExpect(status().isOk)
-            .andReturn()
-
-        val body = objectMapper.readTree(response.response.contentAsByteArray)
-        assertEquals(2, body.size())
-        assertEquals("CASH", body[0]["code"].asText())
-        assertEquals("CARD_ON_DELIVERY", body[1]["code"].asText())
-        assertEquals(false, body[0]["isOnline"].asBoolean())
-        assertEquals(true, body[0]["isActive"].asBoolean())
-    }
-
-    @Test
-    fun `create payment stores record and updates order snapshot`() {
-        val orderId = createGuestOrder(installId = "install-123")
-
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin can create order status and retrieve it`() {
         val response = mockMvc.perform(
-            post("/api/v1/payments")
-                .header("X-Install-Id", "install-123")
+            post("/api/v1/admin/order-statuses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
                     {
-                      "orderId": "$orderId",
-                      "paymentMethodCode": "CASH",
-                      "details": "Оплата наличными курьеру"
+                      "code": "READY_PICKUP",
+                      "name": "Ready for pickup",
+                      "stateType": "READY_FOR_PICKUP",
+                      "color": "#111827",
+                      "icon": "package",
+                      "isActive": true,
+                      "visibleToCustomer": true,
+                      "notifyCustomer": true,
+                      "notifyStaff": true,
+                      "sortOrder": 30
                     }
                     """.trimIndent()
                 )
@@ -89,33 +96,27 @@ class PaymentsIntegrationTest {
             .andReturn()
 
         val body = objectMapper.readTree(response.response.contentAsByteArray)
-        assertEquals(orderId.toString(), body["orderId"].asText())
-        assertEquals("CASH", body["paymentMethodCode"].asText())
-        assertEquals("AWAITING_PAYMENT", body["status"].asText())
-        assertEquals(1_450, body["amountMinor"].asLong())
-        assertEquals("RUB", body["currency"].asText())
-        assertEquals(false, body["isOnline"].asBoolean())
+        assertEquals("READY_PICKUP", body["code"].asText())
 
-        val order = orderRepository.findById(orderId)
-        assertNotNull(order)
-        assertEquals("CASH", order.payment?.methodCode?.name)
-        assertEquals("Наличными при получении", order.payment?.methodName)
+        mockMvc.perform(get("/api/v1/admin/order-statuses/{statusId}", body["id"].asText()))
+            .andExpect(status().isOk)
     }
 
     @Test
-    fun `creating second active payment for order returns conflict`() {
-        val orderId = createGuestOrder(installId = "install-123")
-        createPayment(orderId, installId = "install-123")
-
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin cannot create second initial status`() {
         mockMvc.perform(
-            post("/api/v1/payments")
-                .header("X-Install-Id", "install-123")
+            post("/api/v1/admin/order-statuses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
                     {
-                      "orderId": "$orderId",
-                      "paymentMethodCode": "CARD_ON_DELIVERY"
+                      "code": "QUEUE",
+                      "name": "Queue",
+                      "stateType": "CREATED",
+                      "isInitial": true,
+                      "isActive": true,
+                      "sortOrder": 5
                     }
                     """.trimIndent()
                 )
@@ -124,46 +125,37 @@ class PaymentsIntegrationTest {
     }
 
     @Test
-    fun `payment details endpoint respects order ownership`() {
-        val orderId = createGuestOrder(installId = "install-123")
-        val payment = createPayment(orderId, installId = "install-123")
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin changes order status and reads history`() {
+        val orderId = createPendingOrder()
 
         mockMvc.perform(
-            get("/api/v1/payments/{paymentId}", payment["id"].asText())
-                .header("X-Install-Id", "install-999")
-        )
-            .andExpect(status().isForbidden)
-    }
-
-    private fun createPayment(orderId: UUID, installId: String): JsonNode {
-        val response = mockMvc.perform(
-            post("/api/v1/payments")
-                .header("X-Install-Id", installId)
+            post("/api/v1/admin/orders/{orderId}/status", orderId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "orderId": "$orderId",
-                      "paymentMethodCode": "CASH"
-                    }
-                    """.trimIndent()
-                )
+                .content("""{"statusCode":"CONFIRMED","comment":"Approved by admin"}""")
         )
+            .andExpect(status().isOk)
+
+        val historyResponse = mockMvc.perform(get("/api/v1/admin/orders/{orderId}/status-history", orderId))
             .andExpect(status().isOk)
             .andReturn()
 
-        return objectMapper.readTree(response.response.contentAsByteArray)
+        val history = objectMapper.readTree(historyResponse.response.contentAsByteArray)
+        assertEquals(2, history.size())
+        assertEquals("PENDING", history[0]["currentStatus"]["code"].asText())
+        assertEquals("CONFIRMED", history[1]["currentStatus"]["code"].asText())
+        assertEquals("Approved by admin", history[1]["comment"].asText())
     }
 
-    private fun createGuestOrder(installId: String): UUID {
+    private fun createPendingOrder(): UUID {
         val now = Instant.now()
-        return orderRepository.save(
+        val order = orderRepository.save(
             Order(
                 id = UUID.randomUUID(),
                 orderNumber = "ORD-${System.nanoTime()}",
                 customerType = OrderCustomerType.GUEST,
                 userId = null,
-                guestInstallId = installId,
+                guestInstallId = "install-1",
                 customerName = "Guest",
                 customerPhone = "+79990000000",
                 customerEmail = null,
@@ -171,7 +163,7 @@ class PaymentsIntegrationTest {
                 delivery = OrderDeliverySnapshot(
                     method = DeliveryMethodType.COURIER,
                     methodName = DeliveryMethodType.COURIER.displayName,
-                    priceMinor = 450,
+                    priceMinor = 500,
                     currency = "RUB",
                     zoneCode = "city",
                     zoneName = "City",
@@ -188,7 +180,7 @@ class PaymentsIntegrationTest {
                         id = UUID.randomUUID(),
                         productId = UUID.randomUUID(),
                         variantId = null,
-                        sku = "PAYMENT-ORDER-1",
+                        sku = "TEST-1",
                         title = "Test product",
                         unit = ProductUnit.PIECE,
                         quantity = 1,
@@ -197,12 +189,18 @@ class PaymentsIntegrationTest {
                     )
                 ),
                 subtotalMinor = 1_000,
-                deliveryFeeMinor = 450,
-                totalMinor = 1_450,
+                deliveryFeeMinor = 500,
+                totalMinor = 1_500,
                 statusChangedAt = now,
                 createdAt = now,
                 updatedAt = now,
             )
-        ).id
+        )
+
+        orderStatusService.recordInitialStatus(
+            order = order,
+            actor = OrderStatusChangeActor(sourceType = OrderStatusChangeSourceType.SYSTEM),
+        )
+        return order.id
     }
 }

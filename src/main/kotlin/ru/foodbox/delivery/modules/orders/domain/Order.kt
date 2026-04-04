@@ -12,20 +12,25 @@ data class Order(
     val customerName: String?,
     val customerPhone: String?,
     val customerEmail: String?,
-    var status: OrderStatus,
+    var currentStatus: OrderStatusDefinition,
     var delivery: OrderDeliverySnapshot,
     val comment: String?,
     val items: List<OrderItem>,
     val subtotalMinor: Long,
     var deliveryFeeMinor: Long,
     var totalMinor: Long,
+    var statusChangedAt: Instant,
     val createdAt: Instant,
     var updatedAt: Instant,
     var payment: OrderPaymentSnapshot? = null,
 ) {
-    fun updateStatus(newStatus: OrderStatus) {
-        status = newStatus
-        updatedAt = Instant.now()
+    fun updateStatus(
+        newStatus: OrderStatusDefinition,
+        changedAt: Instant = Instant.now(),
+    ) {
+        currentStatus = newStatus
+        statusChangedAt = changedAt
+        updatedAt = changedAt
     }
 
     fun updatePaymentSnapshot(snapshot: OrderPaymentSnapshot?) {

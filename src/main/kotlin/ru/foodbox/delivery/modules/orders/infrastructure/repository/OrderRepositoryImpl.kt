@@ -6,7 +6,7 @@ import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.domain.OrderStateType
 import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderDeliverySnapshotEntity
@@ -14,6 +14,7 @@ import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.Orde
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemModifierEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderJpaRepository
+import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderStatusDefinitionJpaRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
@@ -21,8 +22,10 @@ import kotlin.jvm.optionals.getOrNull
 @Repository
 class OrderRepositoryImpl(
     private val jpaRepository: OrderJpaRepository,
+    private val orderStatusDefinitionJpaRepository: OrderStatusDefinitionJpaRepository,
 ) : OrderRepository {
 
+    @Transactional
     override fun save(order: Order): Order {
         val existing = jpaRepository.findById(order.id).getOrNull()
         val entity = existing ?: OrderEntity(
@@ -34,13 +37,14 @@ class OrderRepositoryImpl(
             customerName = order.customerName,
             customerPhone = order.customerPhone,
             customerEmail = order.customerEmail,
-            status = order.status,
+            currentStatus = orderStatusDefinitionJpaRepository.getReferenceById(order.currentStatus.id),
             comment = order.comment,
             paymentMethodCode = order.payment?.methodCode,
             paymentMethodName = order.payment?.methodName,
             subtotalMinor = order.subtotalMinor,
             deliveryFeeMinor = order.deliveryFeeMinor,
             totalMinor = order.totalMinor,
+            statusChangedAt = order.statusChangedAt,
             createdAt = order.createdAt,
             updatedAt = order.updatedAt,
         )
@@ -51,13 +55,14 @@ class OrderRepositoryImpl(
         entity.customerName = order.customerName
         entity.customerPhone = order.customerPhone
         entity.customerEmail = order.customerEmail
-        entity.status = order.status
+        entity.currentStatus = orderStatusDefinitionJpaRepository.getReferenceById(order.currentStatus.id)
         entity.comment = order.comment
         entity.paymentMethodCode = order.payment?.methodCode
         entity.paymentMethodName = order.payment?.methodName
         entity.subtotalMinor = order.subtotalMinor
         entity.deliveryFeeMinor = order.deliveryFeeMinor
         entity.totalMinor = order.totalMinor
+        entity.statusChangedAt = order.statusChangedAt
         entity.updatedAt = order.updatedAt
 
         entity.items.clear()
@@ -138,8 +143,8 @@ class OrderRepositoryImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun findAllByStatuses(statuses: Set<OrderStatus>): List<Order> {
-        return jpaRepository.findAllByStatusInOrderByCreatedAtDesc(statuses).map(::toDomain)
+    override fun findAllByCurrentStatusStateTypes(stateTypes: Set<OrderStateType>): List<Order> {
+        return jpaRepository.findAllByCurrentStatusStateTypeInOrderByCreatedAtDesc(stateTypes).map(::toDomain)
     }
 
     @Transactional(readOnly = true)
@@ -157,6 +162,11 @@ class OrderRepositoryImpl(
         return jpaRepository.findAllByGuestInstallIdOrderByCreatedAtDesc(installId).map(::toDomain)
     }
 
+    @Transactional(readOnly = true)
+    override fun existsByCurrentStatusId(statusId: UUID): Boolean {
+        return jpaRepository.existsByCurrentStatusId(statusId)
+    }
+
     private fun toDomain(entity: OrderEntity): Order {
         return Order(
             id = entity.id,
@@ -167,7 +177,7 @@ class OrderRepositoryImpl(
             customerName = entity.customerName,
             customerPhone = entity.customerPhone,
             customerEmail = entity.customerEmail,
-            status = entity.status,
+            currentStatus = entity.currentStatus.toDomain(),
             delivery = entity.delivery?.toDomain()
                 ?: error("Order delivery snapshot is missing for order ${entity.id}"),
             comment = entity.comment,
@@ -200,6 +210,7 @@ class OrderRepositoryImpl(
             subtotalMinor = entity.subtotalMinor,
             deliveryFeeMinor = entity.deliveryFeeMinor,
             totalMinor = entity.totalMinor,
+            statusChangedAt = entity.statusChangedAt,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
             payment = entity.paymentMethodCode?.let { methodCode ->

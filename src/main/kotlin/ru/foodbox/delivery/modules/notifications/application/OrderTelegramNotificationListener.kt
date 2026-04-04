@@ -17,6 +17,9 @@ class OrderTelegramNotificationListener(
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onOrderCreated(event: OrderCreatedEvent) {
+        if (!event.order.currentStatus.notifyStaff) {
+            return
+        }
         try {
             val message = formatter.formatOrderCreated(event.order)
             telegramNotificationService.sendToDefaultChats(message)
@@ -31,6 +34,9 @@ class OrderTelegramNotificationListener(
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onOrderStatusChanged(event: OrderStatusChangedEvent) {
+        if (!event.currentStatus.notifyStaff) {
+            return
+        }
         try {
             val message = formatter.formatOrderStatusChanged(
                 order = event.order,

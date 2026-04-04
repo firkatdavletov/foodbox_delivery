@@ -2,7 +2,7 @@ package ru.foodbox.delivery.modules.notifications.application
 
 import org.springframework.stereotype.Component
 import ru.foodbox.delivery.modules.orders.domain.Order
-import ru.foodbox.delivery.modules.orders.domain.OrderStatus
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusDefinition
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -13,7 +13,7 @@ class TelegramOrderMessageFormatter {
         return buildString {
             appendLine("Получен новый заказ")
             appendLine("Номер: ${order.orderNumber}")
-            appendLine("Статус: ${order.status}")
+            appendLine("Статус: ${order.currentStatus.name} (${order.currentStatus.code})")
             appendLine("Способ доставки: ${order.delivery.methodName}")
             appendLine("Сумма: ${formatMoney(order.totalMinor)}")
             appendLine("Покупатель: ${order.customerName ?: "N/A"}")
@@ -26,11 +26,11 @@ class TelegramOrderMessageFormatter {
         }
     }
 
-    fun formatOrderStatusChanged(order: Order, previousStatus: OrderStatus): String {
+    fun formatOrderStatusChanged(order: Order, previousStatus: OrderStatusDefinition): String {
         return buildString {
             appendLine("Статус заказа изменен")
             appendLine("Номер: ${order.orderNumber}")
-            appendLine("Статус: $previousStatus -> ${order.status}")
+            appendLine("Статус: ${previousStatus.name} (${previousStatus.code}) -> ${order.currentStatus.name} (${order.currentStatus.code})")
             appendLine("Способ доставки: ${order.delivery.methodName}")
             appendLine("Сумма: ${formatMoney(order.totalMinor)}")
             appendLine("Покупатель: ${order.customerName ?: "N/A"}")
