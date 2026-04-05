@@ -134,7 +134,10 @@ class CartServiceImpl(
     override fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft {
         val cart = loadOrCreateActiveCart(actor)
         val deliveryAddress = if (command.deliveryMethod.requiresAddress) {
-            command.deliveryAddress?.normalized()
+            sanitizeDeliveryAddress(
+                current = cart.deliveryDraft?.deliveryAddress,
+                requested = command.deliveryAddress?.normalized(),
+            )
         } else {
             null
         }
@@ -335,6 +338,19 @@ class CartServiceImpl(
                 message = ex.message ?: "Delivery is unavailable",
             )
         }
+    }
+
+    private fun sanitizeDeliveryAddress(
+        current: DeliveryAddress?,
+        requested: DeliveryAddress?,
+    ): DeliveryAddress? {
+        if (requested == null) {
+            return null
+        }
+        if (current == null || current.hasSameLocationAs(requested)) {
+            return requested
+        }
+        return requested.clearCheckoutDetails()
     }
 
     private fun toOwner(actor: CurrentActor): CartOwner {

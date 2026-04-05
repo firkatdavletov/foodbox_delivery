@@ -39,6 +39,7 @@ class OrderController(
                 customerName = request.customerName,
                 customerPhone = request.customerPhone,
                 customerEmail = request.customerEmail,
+                deliveryAddress = request.address?.toDomain(),
                 comment = request.comment,
             ),
         ).toResponse()

@@ -26,6 +26,7 @@ import ru.foodbox.delivery.modules.checkout.domain.CheckoutDeliveryOption
 import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestConfirmation
 import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestService
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
@@ -128,6 +129,7 @@ class OrderServiceImplTest {
                 customerName = "Guest",
                 customerPhone = "+79990000000",
                 customerEmail = "guest@example.com",
+                deliveryAddress = null,
                 comment = "Comment",
             ),
         )
@@ -237,6 +239,7 @@ class OrderServiceImplTest {
                 customerName = "Guest",
                 customerPhone = "+79990000000",
                 customerEmail = "guest@example.com",
+                deliveryAddress = null,
                 comment = null,
             ),
         )
@@ -364,6 +367,7 @@ class OrderServiceImplTest {
                 customerName = "Guest",
                 customerPhone = "+79990000000",
                 customerEmail = "guest@example.com",
+                deliveryAddress = null,
                 comment = null,
             ),
         )
@@ -373,6 +377,114 @@ class OrderServiceImplTest {
         assertEquals(2, order.items.single().modifiers.size)
         assertEquals("extra_shot", order.items.single().modifiers.first().groupCodeSnapshot)
         assertEquals("card", order.items.single().modifiers.last().optionCodeSnapshot)
+    }
+
+    @Test
+    fun `checkout saves delivery address details into cart draft and order`() {
+        val productId = UUID.randomUUID()
+        val cart = activeCart(
+            items = mutableListOf(
+                CartItem(
+                    productId = productId,
+                    variantId = null,
+                    title = "Pizza",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 15_000,
+                )
+            ),
+            deliveryDraft = courierDraft().copy(
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                    apartment = "12",
+                ),
+            ),
+        )
+        val orderRepository = InMemoryOrderRepository()
+        val deliveryService = RecordingDeliveryService(
+            quote = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 1_500,
+                currency = "RUB",
+                zoneCode = "city",
+                zoneName = "City",
+                estimatedDays = 1,
+                estimatesMinutes = 45,
+            ),
+        )
+        val cartService = StubCartService(cart)
+        val eventPublisher = RecordingApplicationEventPublisher()
+        val orderStatusService = createOrderStatusService(orderRepository, eventPublisher)
+        val service = OrderServiceImpl(
+            orderRepository = orderRepository,
+            cartService = cartService,
+            productReadService = StubProductReadService(
+                snapshots = mapOf(
+                    productId to ProductSnapshot(
+                        id = productId,
+                        variantId = null,
+                        sku = "SKU-PIZZA-1",
+                        title = "Pizza",
+                        unit = ProductUnit.PIECE,
+                        countStep = 1,
+                        priceMinor = 15_000,
+                    )
+                )
+            ),
+            userRepository = StubUserRepository(),
+            deliveryService = deliveryService,
+            cartItemPricingService = CartItemPricingService(),
+            checkoutService = StubCheckoutService(
+                options = listOf(
+                    checkoutDeliveryOption(
+                        deliveryMethod = DeliveryMethodType.COURIER,
+                        paymentMethods = listOf(PaymentMethodCode.CARD_ON_DELIVERY),
+                    )
+                )
+            ),
+            deliveryOrderRequestService = RecordingDeliveryOrderRequestService(),
+            applicationEventPublisher = eventPublisher,
+            orderStatusService = orderStatusService,
+        )
+
+        val order = service.checkout(
+            actor = CurrentActor.Guest("install-1"),
+            command = CheckoutCommand(
+                paymentMethodCode = PaymentMethodCode.CARD_ON_DELIVERY,
+                customerName = "Guest",
+                customerPhone = "+79990000000",
+                customerEmail = "guest@example.com",
+                deliveryAddress = DeliveryAddress(
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
+                ),
+                comment = null,
+            ),
+        )
+
+        assertEquals(1, cartService.updatedDeliveryCommands.size)
+        assertEquals("2", cartService.updatedDeliveryCommands.single().deliveryAddress?.entrance)
+        assertEquals("4", cartService.updatedDeliveryCommands.single().deliveryAddress?.floor)
+        assertEquals("45K", cartService.updatedDeliveryCommands.single().deliveryAddress?.intercom)
+        assertEquals("Call before arrival", cartService.updatedDeliveryCommands.single().deliveryAddress?.comment)
+        assertEquals("2", cart.deliveryDraft?.deliveryAddress?.entrance)
+        assertEquals("4", cart.deliveryDraft?.deliveryAddress?.floor)
+        assertEquals("45K", cart.deliveryDraft?.deliveryAddress?.intercom)
+        assertEquals("Call before arrival", cart.deliveryDraft?.deliveryAddress?.comment)
+        assertEquals("2", deliveryService.contexts.single().deliveryAddress?.entrance)
+        assertEquals("4", deliveryService.contexts.single().deliveryAddress?.floor)
+        assertEquals("45K", deliveryService.contexts.single().deliveryAddress?.intercom)
+        assertEquals("Call before arrival", deliveryService.contexts.single().deliveryAddress?.comment)
+        assertEquals("2", order.delivery.address?.entrance)
+        assertEquals("4", order.delivery.address?.floor)
+        assertEquals("45K", order.delivery.address?.intercom)
+        assertEquals("Call before arrival", order.delivery.address?.comment)
     }
 
     private fun activeCart(
@@ -469,6 +581,7 @@ class OrderServiceImplTest {
         private val cart: Cart,
     ) : CartService {
         var markedOrderedCartId: UUID? = null
+        val updatedDeliveryCommands = mutableListOf<UpdateCartDeliveryCommand>()
 
         override fun getOrCreateActiveCart(actor: CurrentActor): Cart = cart
 
@@ -495,7 +608,18 @@ class OrderServiceImplTest {
         }
 
         override fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft {
-            throw UnsupportedOperationException("Not used in order service tests")
+            updatedDeliveryCommands += command
+            val existingDraft = cart.deliveryDraft
+                ?: throw IllegalStateException("Cart delivery draft is not selected")
+            val updatedDraft = existingDraft.copy(
+                deliveryMethod = command.deliveryMethod,
+                deliveryAddress = command.deliveryAddress,
+                pickupPointId = command.pickupPointId,
+                pickupPointExternalId = command.pickupPointExternalId,
+                updatedAt = Instant.now(),
+            )
+            cart.upsertDeliveryDraft(updatedDraft)
+            return updatedDraft
         }
 
         override fun mergeGuestCartIntoUser(userId: UUID, installId: String): Cart {

@@ -190,6 +190,11 @@ class CartServiceImplTest {
                     city = "Yekaterinburg",
                     street = "Lenina",
                     house = "1",
+                    apartment = "12",
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
                 ),
                 pickupPointId = null,
                 pickupPointExternalId = null,
@@ -308,6 +313,98 @@ class CartServiceImplTest {
     }
 
     @Test
+    fun `clears checkout details when delivery address changes`() {
+        val now = Instant.now()
+        val actor = CurrentActor.Guest("install-1")
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.INSTALLATION, actor.installId),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                    apartment = "12",
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 450,
+                    currency = "RUB",
+                    zoneCode = "EKB",
+                    zoneName = "Yekaterinburg",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now,
+                    expiresAt = now.plusSeconds(900),
+                ),
+                createdAt = now,
+                updatedAt = now,
+            ),
+            totalPriceMinor = 450,
+            createdAt = now,
+            updatedAt = now,
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val deliveryService = CapturingDeliveryService(
+            quoteToReturn = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 600,
+                currency = "RUB",
+                zoneCode = "EKB",
+                zoneName = "Yekaterinburg",
+                estimatedDays = 1,
+            )
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = deliveryService,
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+        )
+
+        val deliveryDraft = service.updateDeliveryDraft(
+            actor = actor,
+            command = UpdateCartDeliveryCommand(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Malysheva",
+                    house = "10",
+                    apartment = "55",
+                    entrance = "old",
+                    floor = "old",
+                    intercom = "old",
+                    comment = "old",
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+            ),
+        )
+
+        assertEquals("Malysheva", deliveryDraft.deliveryAddress?.street)
+        assertEquals("10", deliveryDraft.deliveryAddress?.house)
+        assertEquals("55", deliveryDraft.deliveryAddress?.apartment)
+        assertNull(deliveryDraft.deliveryAddress?.entrance)
+        assertNull(deliveryDraft.deliveryAddress?.floor)
+        assertNull(deliveryDraft.deliveryAddress?.intercom)
+        assertNull(deliveryDraft.deliveryAddress?.comment)
+    }
+
+    @Test
     fun `refreshes expired delivery quote when getting cart`() {
         val now = Instant.now()
         val actor = CurrentActor.Guest("install-1")
@@ -332,6 +429,11 @@ class CartServiceImplTest {
                     city = "Yekaterinburg",
                     street = "Lenina",
                     house = "1",
+                    apartment = "12",
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
                 ),
                 pickupPointId = null,
                 pickupPointExternalId = null,
@@ -399,6 +501,11 @@ class CartServiceImplTest {
                     city = "Yekaterinburg",
                     street = "Lenina",
                     house = "1",
+                    apartment = "12",
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
                 ),
                 pickupPointId = null,
                 pickupPointExternalId = null,
@@ -477,6 +584,11 @@ class CartServiceImplTest {
                     city = "Yekaterinburg",
                     street = "Lenina",
                     house = "1",
+                    apartment = "12",
+                    entrance = "2",
+                    floor = "4",
+                    intercom = "45K",
+                    comment = "Call before arrival",
                 ),
                 pickupPointId = null,
                 pickupPointExternalId = null,
@@ -536,6 +648,11 @@ class CartServiceImplTest {
         assertEquals("Yekaterinburg", activeCart.deliveryDraft?.deliveryAddress?.city)
         assertEquals("Lenina", activeCart.deliveryDraft?.deliveryAddress?.street)
         assertEquals("1", activeCart.deliveryDraft?.deliveryAddress?.house)
+        assertEquals("12", activeCart.deliveryDraft?.deliveryAddress?.apartment)
+        assertEquals("2", activeCart.deliveryDraft?.deliveryAddress?.entrance)
+        assertEquals("4", activeCart.deliveryDraft?.deliveryAddress?.floor)
+        assertEquals("45K", activeCart.deliveryDraft?.deliveryAddress?.intercom)
+        assertEquals("Call before arrival", activeCart.deliveryDraft?.deliveryAddress?.comment)
         assertNull(activeCart.deliveryDraft?.quote)
         assertEquals(0L, activeCart.totalPriceMinor)
         assertEquals(2, cartRepository.allCarts.size)

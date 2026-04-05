@@ -31,6 +31,37 @@ data class DeliveryAddress(
         )
     }
 
+    fun patchWith(update: DeliveryAddress): DeliveryAddress {
+        return copy(
+            country = update.country ?: country,
+            region = update.region ?: region,
+            city = update.city ?: city,
+            street = update.street ?: street,
+            house = update.house ?: house,
+            apartment = update.apartment ?: apartment,
+            postalCode = update.postalCode ?: postalCode,
+            entrance = update.entrance ?: entrance,
+            floor = update.floor ?: floor,
+            intercom = update.intercom ?: intercom,
+            comment = update.comment ?: comment,
+            latitude = update.latitude ?: latitude,
+            longitude = update.longitude ?: longitude,
+        )
+    }
+
+    fun clearCheckoutDetails(): DeliveryAddress {
+        return copy(
+            entrance = null,
+            floor = null,
+            intercom = null,
+            comment = null,
+        )
+    }
+
+    fun hasSameLocationAs(other: DeliveryAddress?): Boolean {
+        return other != null && locationIdentity() == other.locationIdentity()
+    }
+
     fun isEmpty(): Boolean {
         return listOf(
             country,
@@ -71,6 +102,15 @@ data class DeliveryAddress(
             normalizedHouse == null -> normalizedStreet
             else -> "$normalizedStreet, house $normalizedHouse"
         }
+    }
+
+    private fun locationIdentity(): DeliveryAddress {
+        return copy(
+            entrance = null,
+            floor = null,
+            intercom = null,
+            comment = null,
+        )
     }
 }
 

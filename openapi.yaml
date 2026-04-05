@@ -4437,6 +4437,10 @@ components:
         customerEmail:
           type: string
           nullable: true
+        address:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryAddressRequest'
+          nullable: true
         comment:
           type: string
           nullable: true

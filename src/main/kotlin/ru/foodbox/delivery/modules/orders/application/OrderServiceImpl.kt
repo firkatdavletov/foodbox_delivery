@@ -8,6 +8,8 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.CartService
+import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
+import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
 import ru.foodbox.delivery.modules.cart.pricing.application.CartItemPricingService
 import ru.foodbox.delivery.modules.checkout.application.CheckoutOptionsQuery
 import ru.foodbox.delivery.modules.checkout.application.CheckoutService
@@ -58,8 +60,13 @@ class OrderServiceImpl(
             throw IllegalArgumentException("Cart is empty")
         }
 
-        val deliveryDraft = cart.deliveryDraft
+        val selectedDeliveryDraft = cart.deliveryDraft
             ?: throw DeliveryValidationException("Cart delivery draft is not selected")
+        val deliveryDraft = persistCheckoutDeliveryAddress(
+            actor = actor,
+            command = command,
+            deliveryDraft = selectedDeliveryDraft,
+        )
 
         val user = (actor as? CurrentActor.User)?.let { userRepository.findById(it.userId) }
 
@@ -316,6 +323,33 @@ class OrderServiceImpl(
             is CurrentActor.User -> order.userId == actor.userId
             is CurrentActor.Guest -> order.guestInstallId == actor.installId
         }
+    }
+
+    private fun persistCheckoutDeliveryAddress(
+        actor: CurrentActor,
+        command: CheckoutCommand,
+        deliveryDraft: CartDeliveryDraft,
+    ): CartDeliveryDraft {
+        val addressPatch = command.deliveryAddress?.normalized() ?: return deliveryDraft
+        val currentAddress = deliveryDraft.deliveryAddress ?: return deliveryDraft
+        val mergedAddress = currentAddress.patchWith(addressPatch).normalized()
+        val sanitizedAddress = if (currentAddress.hasSameLocationAs(mergedAddress)) {
+            mergedAddress
+        } else {
+            mergedAddress.copy(apartment = addressPatch.apartment).clearCheckoutDetails()
+        }
+        if (sanitizedAddress == currentAddress) {
+            return deliveryDraft
+        }
+        return cartService.updateDeliveryDraft(
+            actor = actor,
+            command = UpdateCartDeliveryCommand(
+                deliveryMethod = deliveryDraft.deliveryMethod,
+                deliveryAddress = sanitizedAddress,
+                pickupPointId = deliveryDraft.pickupPointId,
+                pickupPointExternalId = deliveryDraft.pickupPointExternalId,
+            ),
+        )
     }
 
     private fun buildDeliverySnapshot(
