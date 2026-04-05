@@ -1940,6 +1940,45 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/orders/{orderId}/cancel:
+    post:
+      tags: [Orders]
+      operationId: cancelOrder
+      summary: Cancel order visible to current actor
+      description: |
+        Cancels an order for the current authenticated user or guest installation.
+        Requires either a bearer token or `X-Device-Id`. Optional request body can include a cancellation comment.
+      security:
+        - bearerAuth: []
+        - deviceIdHeader: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPathParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/orders/my:
     get:
       tags: [Orders]
@@ -4398,6 +4437,13 @@ components:
         customerEmail:
           type: string
           nullable: true
+        comment:
+          type: string
+          nullable: true
+
+    CancelOrderRequest:
+      type: object
+      properties:
         comment:
           type: string
           nullable: true

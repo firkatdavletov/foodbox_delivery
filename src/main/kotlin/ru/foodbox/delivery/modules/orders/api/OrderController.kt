@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
+import ru.foodbox.delivery.modules.orders.api.dto.CancelOrderRequest
 import ru.foodbox.delivery.modules.orders.api.dto.CheckoutRequest
 import ru.foodbox.delivery.modules.orders.api.dto.GuestCheckoutRequest
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
@@ -64,6 +65,19 @@ class OrderController(
             ),
             installId = deviceId?.trim()?.takeIf { it.isNotBlank() }
                 ?: installId?.trim()?.takeIf { it.isNotBlank() },
+        ).toResponse()
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    fun cancelOrder(
+        @CurrentActorParam actor: CurrentActor,
+        @PathVariable orderId: UUID,
+        @RequestBody(required = false) request: CancelOrderRequest?,
+    ): OrderResponse {
+        return orderService.cancelOrder(
+            actor = actor,
+            orderId = orderId,
+            comment = request?.comment,
         ).toResponse()
     }
 

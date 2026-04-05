@@ -1,5 +1,6 @@
 package ru.foodbox.delivery.modules.orders
 
+import org.springframework.http.MediaType
 import org.hamcrest.Matchers.containsInAnyOrder
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -10,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
@@ -117,6 +119,45 @@ class OrderGuestAccessIntegrationTest {
                 .header("X-Device-Id", "device-999")
         )
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `guest can cancel own order by x-device-id`() {
+        val ownOrder = createGuestOrder(installId = "device-123", statusCode = "PENDING")
+
+        mockMvc.perform(
+            post("/api/v1/orders/{orderId}/cancel", ownOrder.id)
+                .header("X-Device-Id", "device-123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"comment":"Changed my mind"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(ownOrder.id.toString()))
+            .andExpect(jsonPath("$.status").value("CANCELLED"))
+            .andExpect(jsonPath("$.statusHistory.length()").value(2))
+            .andExpect(jsonPath("$.statusHistory[1].code").value("CANCELLED"))
+    }
+
+    @Test
+    fun `guest cannot cancel another order by x-device-id`() {
+        val ownOrder = createGuestOrder(installId = "device-123", statusCode = "PENDING")
+
+        mockMvc.perform(
+            post("/api/v1/orders/{orderId}/cancel", ownOrder.id)
+                .header("X-Device-Id", "device-999")
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `guest cannot cancel completed order`() {
+        val ownOrder = createGuestOrder(installId = "device-123", statusCode = "COMPLETED")
+
+        mockMvc.perform(
+            post("/api/v1/orders/{orderId}/cancel", ownOrder.id)
+                .header("X-Device-Id", "device-123")
+        )
+            .andExpect(status().isConflict)
     }
 
     private fun createGuestOrder(

@@ -253,6 +253,20 @@ class OrderServiceImpl(
         return saved
     }
 
+    @Transactional
+    override fun cancelOrder(actor: CurrentActor, orderId: UUID, comment: String?): Order {
+        getOrder(actor, orderId)
+
+        return orderStatusService.changeStatus(
+            orderId = orderId,
+            command = ChangeOrderStatusCommand(
+                targetStateType = OrderStateType.CANCELED,
+                comment = comment,
+            ),
+            actor = actor.toStatusChangeActor(),
+        )
+    }
+
     override fun getOrder(actor: CurrentActor, orderId: UUID): Order {
         val order = orderRepository.findById(orderId)
             ?: throw NotFoundException("Order not found")
@@ -416,4 +430,11 @@ class OrderServiceImpl(
             )
         }
     }
+}
+
+private fun CurrentActor.toStatusChangeActor(): OrderStatusChangeActor {
+    return OrderStatusChangeActor(
+        sourceType = ru.foodbox.delivery.modules.orders.domain.OrderStatusChangeSourceType.CUSTOMER,
+        actorId = (this as? CurrentActor.User)?.userId,
+    )
 }
