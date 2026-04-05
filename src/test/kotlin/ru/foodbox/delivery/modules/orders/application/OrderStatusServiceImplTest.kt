@@ -56,6 +56,7 @@ class OrderStatusServiceImplTest {
         )
 
         assertEquals("CONFIRMED", updated.currentStatus.code)
+        assertEquals(listOf("PENDING", "CONFIRMED"), updated.statusHistory.map { it.code })
         assertEquals(2, historyRepository.findAllByOrderId(order.id).size)
         assertEquals(1, eventPublisher.events.size)
     }

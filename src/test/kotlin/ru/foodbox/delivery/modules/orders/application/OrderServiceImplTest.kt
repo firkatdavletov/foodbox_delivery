@@ -714,5 +714,6 @@ private fun Order.copyOrder(): Order {
             item.copy(modifiers = item.modifiers.map { it.copy() })
         },
         payment = payment?.copy(),
+        statusHistory = statusHistory.toList(),
     )
 }

@@ -23,14 +23,21 @@ data class Order(
     val createdAt: Instant,
     var updatedAt: Instant,
     var payment: OrderPaymentSnapshot? = null,
+    var statusHistory: List<OrderStatusHistoryEntry> = emptyList(),
 ) {
     fun updateStatus(
         newStatus: OrderStatusDefinition,
         changedAt: Instant = Instant.now(),
     ) {
+        ensureStatusHistoryInitialized()
         currentStatus = newStatus
         statusChangedAt = changedAt
         updatedAt = changedAt
+        statusHistory = statusHistory + OrderStatusHistoryEntry(
+            code = newStatus.code,
+            name = newStatus.name,
+            timestamp = changedAt,
+        )
     }
 
     fun updatePaymentSnapshot(snapshot: OrderPaymentSnapshot?) {
@@ -49,5 +56,19 @@ data class Order(
         deliveryFeeMinor = priceMinor
         totalMinor = subtotalMinor + priceMinor
         updatedAt = Instant.now()
+    }
+
+    fun ensureStatusHistoryInitialized() {
+        if (statusHistory.isNotEmpty()) {
+            return
+        }
+
+        statusHistory = listOf(
+            OrderStatusHistoryEntry(
+                code = currentStatus.code,
+                name = currentStatus.name,
+                timestamp = statusChangedAt,
+            )
+        )
     }
 }

@@ -7,6 +7,7 @@ import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
 import ru.foodbox.delivery.modules.orders.domain.OrderPaymentSnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderStateType
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistoryEntry
 import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderDeliverySnapshotEntity
@@ -15,6 +16,7 @@ import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.Orde
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.OrderItemModifierEntity
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderJpaRepository
 import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderStatusDefinitionJpaRepository
+import ru.foodbox.delivery.modules.orders.infrastructure.persistence.jpa.OrderStatusHistoryJpaRepository
 import ru.foodbox.delivery.modules.delivery.infrastructure.persistence.embedded.DeliveryAddressEmbeddable
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
@@ -23,6 +25,7 @@ import kotlin.jvm.optionals.getOrNull
 class OrderRepositoryImpl(
     private val jpaRepository: OrderJpaRepository,
     private val orderStatusDefinitionJpaRepository: OrderStatusDefinitionJpaRepository,
+    private val orderStatusHistoryJpaRepository: OrderStatusHistoryJpaRepository,
 ) : OrderRepository {
 
     @Transactional
@@ -133,33 +136,37 @@ class OrderRepositoryImpl(
             address = DeliveryAddressEmbeddable.fromDomain(order.delivery.address),
         )
 
-        return toDomain(jpaRepository.save(entity))
+        return toDomain(
+            entity = jpaRepository.save(entity),
+            statusHistory = order.statusHistory,
+        )
     }
 
     @Transactional(readOnly = true)
     override fun findById(orderId: UUID): Order? {
         val entity = jpaRepository.findById(orderId).getOrNull() ?: return null
-        return toDomain(entity)
+        return toDomain(entity, loadStatusHistory(setOf(entity.id))[entity.id].orEmpty())
     }
 
     @Transactional(readOnly = true)
     override fun findAllByCurrentStatusStateTypes(stateTypes: Set<OrderStateType>): List<Order> {
-        return jpaRepository.findAllByCurrentStatusStateTypeInOrderByCreatedAtDesc(stateTypes).map(::toDomain)
+        return toDomainList(jpaRepository.findAllByCurrentStatusStateTypeInOrderByCreatedAtDesc(stateTypes))
     }
 
     @Transactional(readOnly = true)
     override fun findByOrderNumber(orderNumber: String): Order? {
-        return jpaRepository.findByOrderNumber(orderNumber)?.let(::toDomain)
+        return jpaRepository.findByOrderNumber(orderNumber)
+            ?.let { entity -> toDomain(entity, loadStatusHistory(setOf(entity.id))[entity.id].orEmpty()) }
     }
 
     @Transactional(readOnly = true)
     override fun findByUserId(userId: UUID): List<Order> {
-        return jpaRepository.findAllByUserIdOrderByCreatedAtDesc(userId).map(::toDomain)
+        return toDomainList(jpaRepository.findAllByUserIdOrderByCreatedAtDesc(userId))
     }
 
     @Transactional(readOnly = true)
     override fun findByGuestInstallId(installId: String): List<Order> {
-        return jpaRepository.findAllByGuestInstallIdOrderByCreatedAtDesc(installId).map(::toDomain)
+        return toDomainList(jpaRepository.findAllByGuestInstallIdOrderByCreatedAtDesc(installId))
     }
 
     @Transactional(readOnly = true)
@@ -167,7 +174,39 @@ class OrderRepositoryImpl(
         return jpaRepository.existsByCurrentStatusId(statusId)
     }
 
-    private fun toDomain(entity: OrderEntity): Order {
+    private fun toDomainList(entities: List<OrderEntity>): List<Order> {
+        if (entities.isEmpty()) {
+            return emptyList()
+        }
+
+        val historyByOrderId = loadStatusHistory(entities.map(OrderEntity::id).toSet())
+        return entities.map { entity ->
+            toDomain(entity, historyByOrderId[entity.id].orEmpty())
+        }
+    }
+
+    private fun loadStatusHistory(orderIds: Collection<UUID>): Map<UUID, List<OrderStatusHistoryEntry>> {
+        if (orderIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        return orderStatusHistoryJpaRepository.findAllByOrderIdInWithCurrentStatus(orderIds)
+            .groupBy { it.order.id }
+            .mapValues { (_, history) ->
+                history.map { entry ->
+                    OrderStatusHistoryEntry(
+                        code = entry.currentStatus.code,
+                        name = entry.currentStatus.name,
+                        timestamp = entry.changedAt,
+                    )
+                }
+            }
+    }
+
+    private fun toDomain(
+        entity: OrderEntity,
+        statusHistory: List<OrderStatusHistoryEntry> = emptyList(),
+    ): Order {
         return Order(
             id = entity.id,
             orderNumber = entity.orderNumber,
@@ -219,6 +258,7 @@ class OrderRepositoryImpl(
                     methodName = entity.paymentMethodName ?: methodCode.displayName,
                 )
             },
+            statusHistory = statusHistory,
         )
     }
 

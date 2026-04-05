@@ -28,12 +28,19 @@ data class OrderResponse(
     val delivery: OrderDeliveryResponse,
     val comment: String?,
     val items: List<OrderItemResponse>,
+    val statusHistory: List<OrderStatusHistoryEntryResponse>,
     val subtotalMinor: Long,
     val deliveryFeeMinor: Long,
     val totalMinor: Long,
     val statusChangedAt: Instant,
     val createdAt: Instant,
     val updatedAt: Instant,
+)
+
+data class OrderStatusHistoryEntryResponse(
+    val code: String,
+    val name: String,
+    val timestamp: Instant,
 )
 
 data class OrderPaymentResponse(

@@ -38,6 +38,7 @@ class OrderStatusServiceImpl(
 
     @Transactional
     override fun recordInitialStatus(order: Order, actor: OrderStatusChangeActor, comment: String?) {
+        order.ensureStatusHistoryInitialized()
         if (orderStatusHistoryRepository.existsByOrderId(order.id)) {
             return
         }

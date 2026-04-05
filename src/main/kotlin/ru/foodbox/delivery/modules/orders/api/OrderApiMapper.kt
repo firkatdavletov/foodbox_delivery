@@ -3,6 +3,7 @@ package ru.foodbox.delivery.modules.orders.api
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderDeliveryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusHistoryResponse
+import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusHistoryEntryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusSummaryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusTransitionResponse
@@ -13,6 +14,7 @@ import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
 import ru.foodbox.delivery.modules.cart.pricing.domain.calculateCartItemPrice
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderStatusDefinition
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistoryEntry
 import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistory
 import ru.foodbox.delivery.modules.orders.domain.OrderStatusTransition
 
@@ -85,6 +87,7 @@ internal fun Order.toResponse(): OrderResponse {
                 },
             )
         },
+        statusHistory = statusHistory.map(OrderStatusHistoryEntry::toResponse),
         subtotalMinor = subtotalMinor,
         deliveryFeeMinor = deliveryFeeMinor,
         totalMinor = totalMinor,
@@ -149,5 +152,13 @@ internal fun OrderStatusHistory.toResponse(): OrderStatusHistoryResponse {
         changedByUserId = changedByUserId,
         comment = comment,
         changedAt = changedAt,
+    )
+}
+
+internal fun OrderStatusHistoryEntry.toResponse(): OrderStatusHistoryEntryResponse {
+    return OrderStatusHistoryEntryResponse(
+        code = code,
+        name = name,
+        timestamp = timestamp,
     )
 }

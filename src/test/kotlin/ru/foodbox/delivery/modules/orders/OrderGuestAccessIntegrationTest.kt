@@ -14,11 +14,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
+import ru.foodbox.delivery.modules.orders.application.OrderStatusChangeActor
+import ru.foodbox.delivery.modules.orders.application.OrderStatusService
 import ru.foodbox.delivery.modules.orders.application.OrderStatusWorkflowDefaults
 import ru.foodbox.delivery.modules.orders.domain.Order
 import ru.foodbox.delivery.modules.orders.domain.OrderCustomerType
 import ru.foodbox.delivery.modules.orders.domain.OrderDeliverySnapshot
 import ru.foodbox.delivery.modules.orders.domain.OrderItem
+import ru.foodbox.delivery.modules.orders.domain.OrderStatusChangeSourceType
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import java.time.Instant
 import java.util.UUID
@@ -36,6 +39,9 @@ class OrderGuestAccessIntegrationTest {
 
     @Autowired
     private lateinit var orderRepository: OrderRepository
+
+    @Autowired
+    private lateinit var orderStatusService: OrderStatusService
 
     @BeforeEach
     fun cleanup() {
@@ -74,6 +80,9 @@ class OrderGuestAccessIntegrationTest {
             .andExpect(jsonPath("$.id").value(ownOrder.id.toString()))
             .andExpect(jsonPath("$.guestInstallId").value("device-123"))
             .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.statusHistory.length()").value(1))
+            .andExpect(jsonPath("$.statusHistory[0].code").value("PENDING"))
+            .andExpect(jsonPath("$.statusHistory[0].name").value("Pending"))
     }
 
     @Test
@@ -115,7 +124,7 @@ class OrderGuestAccessIntegrationTest {
         statusCode: String = "PENDING",
     ): Order {
         val now = Instant.now()
-        return orderRepository.save(
+        val order = orderRepository.save(
             Order(
                 id = UUID.randomUUID(),
                 orderNumber = "ORD-${System.nanoTime()}",
@@ -162,5 +171,11 @@ class OrderGuestAccessIntegrationTest {
                 updatedAt = now,
             )
         )
+
+        orderStatusService.recordInitialStatus(
+            order = order,
+            actor = OrderStatusChangeActor(sourceType = OrderStatusChangeSourceType.SYSTEM),
+        )
+        return order
     }
 }
