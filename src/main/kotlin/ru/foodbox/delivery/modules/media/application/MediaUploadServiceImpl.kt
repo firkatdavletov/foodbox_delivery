@@ -8,9 +8,12 @@ import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepos
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductVariantRepository
 import ru.foodbox.delivery.modules.media.application.command.CreateUploadSessionCommand
 import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.ImageProcessingJob
+import ru.foodbox.delivery.modules.media.domain.ImageProcessingJobStatus
 import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.domain.MediaUploadSession
+import ru.foodbox.delivery.modules.media.domain.repository.ImageProcessingJobRepository
 import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import ru.foodbox.delivery.modules.media.domain.storage.CreateDirectUploadRequest
 import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
@@ -28,6 +31,8 @@ class MediaUploadServiceImpl(
     private val variantRepository: CatalogProductVariantRepository,
     private val mediaUploadProperties: MediaUploadProperties,
     private val objectKeyFactory: MediaObjectKeyFactory,
+    private val jobRepository: ImageProcessingJobRepository,
+    private val imageProcessingProperties: ImageProcessingProperties,
 ) : MediaUploadService {
 
     @Transactional
@@ -58,6 +63,9 @@ class MediaUploadServiceImpl(
             fileSize = command.fileSize,
             status = MediaImageStatus.PENDING,
             publicUrl = null,
+            thumbKey = null,
+            cardKey = null,
+            processingError = null,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )
@@ -90,7 +98,7 @@ class MediaUploadServiceImpl(
             throw IllegalArgumentException("Upload session is deleted")
         }
 
-        if (uploadSession.status == MediaImageStatus.READY && !uploadSession.publicUrl.isNullOrBlank()) {
+        if (uploadSession.status in setOf(MediaImageStatus.READY, MediaImageStatus.PROCESSING)) {
             return uploadSession
         }
 
@@ -100,13 +108,30 @@ class MediaUploadServiceImpl(
         validateUploadedObject(uploadSession, objectMetadata)
 
         val now = Instant.now()
-        val readyImage = uploadSession.copy(
-            status = MediaImageStatus.READY,
+        val processingImage = uploadSession.copy(
+            status = MediaImageStatus.PROCESSING,
             publicUrl = storagePort.buildPublicUrl(uploadSession.objectKey),
             updatedAt = now,
         )
 
-        val saved = mediaImageRepository.save(readyImage)
+        val saved = mediaImageRepository.save(processingImage)
+
+        if (jobRepository.findByImageId(saved.id) == null) {
+            jobRepository.save(
+                ImageProcessingJob(
+                    id = UUID.randomUUID(),
+                    imageId = saved.id,
+                    status = ImageProcessingJobStatus.PENDING,
+                    attempts = 0,
+                    maxAttempts = imageProcessingProperties.maxAttempts,
+                    nextRetryAt = null,
+                    lastError = null,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+        }
+
         return saved
     }
 

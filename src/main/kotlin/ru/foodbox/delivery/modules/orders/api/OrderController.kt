@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
+import ru.foodbox.delivery.modules.catalog.application.CatalogImageService
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import ru.foodbox.delivery.modules.orders.api.dto.CancelOrderRequest
 import ru.foodbox.delivery.modules.orders.api.dto.CheckoutRequest
@@ -19,12 +20,14 @@ import ru.foodbox.delivery.modules.orders.application.OrderService
 import ru.foodbox.delivery.modules.orders.application.command.CheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutCommand
 import ru.foodbox.delivery.modules.orders.application.command.GuestCheckoutItemCommand
+import ru.foodbox.delivery.modules.orders.domain.Order
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/orders")
 class OrderController(
     private val orderService: OrderService,
+    private val catalogImageService: CatalogImageService,
 ) {
 
     @PostMapping("/checkout")
@@ -42,7 +45,7 @@ class OrderController(
                 deliveryAddress = request.address?.toDomain(),
                 comment = request.comment,
             ),
-        ).toResponse()
+        ).toResponseWithImages()
     }
 
     @PostMapping("/guest/checkout")
@@ -66,7 +69,7 @@ class OrderController(
             ),
             installId = deviceId?.trim()?.takeIf { it.isNotBlank() }
                 ?: installId?.trim()?.takeIf { it.isNotBlank() },
-        ).toResponse()
+        ).toResponseWithImages()
     }
 
     @PostMapping("/{orderId}/cancel")
@@ -79,7 +82,7 @@ class OrderController(
             actor = actor,
             orderId = orderId,
             comment = request?.comment,
-        ).toResponse()
+        ).toResponseWithImages()
     }
 
     @GetMapping("/{orderId}")
@@ -87,20 +90,40 @@ class OrderController(
         @CurrentActorParam actor: CurrentActor,
         @PathVariable orderId: UUID,
     ): OrderResponse {
-        return orderService.getOrder(actor, orderId).toResponse()
+        return orderService.getOrder(actor, orderId).toResponseWithImages()
     }
 
     @GetMapping("/current")
     fun getCurrentOrders(
         @CurrentActorParam actor: CurrentActor,
     ): List<OrderResponse> {
-        return orderService.getCurrentOrders(actor).map { it.toResponse() }
+        return orderService.getCurrentOrders(actor).toResponsesWithImages()
     }
 
     @GetMapping("/my")
     fun getMyOrders(
         @CurrentActorParam actor: CurrentActor,
     ): List<OrderResponse> {
-        return orderService.getMyOrders(actor).map { it.toResponse() }
+        return orderService.getMyOrders(actor).toResponsesWithImages()
+    }
+
+    private fun Order.toResponseWithImages(): OrderResponse {
+        val productIds = items.map { it.productId }.distinct()
+        val thumbUrls = if (productIds.isNotEmpty()) {
+            catalogImageService.getFirstProductThumbUrl(productIds)
+        } else {
+            emptyMap()
+        }
+        return toResponse(thumbUrls)
+    }
+
+    private fun List<Order>.toResponsesWithImages(): List<OrderResponse> {
+        val productIds = flatMap { order -> order.items.map { it.productId } }.distinct()
+        val thumbUrls = if (productIds.isNotEmpty()) {
+            catalogImageService.getFirstProductThumbUrl(productIds)
+        } else {
+            emptyMap()
+        }
+        return map { it.toResponse(thumbUrls) }
     }
 }

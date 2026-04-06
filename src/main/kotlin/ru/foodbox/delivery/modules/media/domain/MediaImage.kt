@@ -14,6 +14,9 @@ data class MediaImage(
     val fileSize: Long,
     val status: MediaImageStatus,
     val publicUrl: String?,
+    val thumbKey: String?,
+    val cardKey: String?,
+    val processingError: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

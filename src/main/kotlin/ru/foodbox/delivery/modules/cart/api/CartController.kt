@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
@@ -23,6 +22,8 @@ import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemModifierCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
+import ru.foodbox.delivery.modules.cart.domain.Cart
+import ru.foodbox.delivery.modules.catalog.application.CatalogImageService
 import ru.foodbox.delivery.modules.delivery.api.dto.toDomain
 import java.util.UUID
 
@@ -30,13 +31,14 @@ import java.util.UUID
 @RequestMapping("/api/v1/cart")
 class CartController(
     private val cartService: CartService,
+    private val catalogImageService: CatalogImageService,
 ) {
 
     @GetMapping
     fun getCart(
         @CurrentActorParam actor: CurrentActor,
     ): CartResponse {
-        return cartService.getOrCreateActiveCart(actor).toResponse()
+        return cartService.getOrCreateActiveCart(actor).toResponseWithImages()
     }
 
     @GetMapping("/delivery")
@@ -81,7 +83,7 @@ class CartController(
                     )
                 },
             ),
-        ).toResponse()
+        ).toResponseWithImages()
     }
 
     @PatchMapping("/items/{itemId}")
@@ -96,7 +98,7 @@ class CartController(
                 itemId = itemId,
                 quantity = request.quantity,
             ),
-        ).toResponse()
+        ).toResponseWithImages()
     }
 
     @DeleteMapping("/items/{itemId}")
@@ -104,13 +106,23 @@ class CartController(
         @CurrentActorParam actor: CurrentActor,
         @PathVariable itemId: UUID,
     ): CartResponse {
-        return cartService.removeItem(actor = actor, itemId = itemId).toResponse()
+        return cartService.removeItem(actor = actor, itemId = itemId).toResponseWithImages()
     }
 
     @DeleteMapping
     fun clear(
         @CurrentActorParam actor: CurrentActor,
     ): CartResponse {
-        return cartService.clear(actor).toResponse()
+        return cartService.clear(actor).toResponseWithImages()
+    }
+
+    private fun Cart.toResponseWithImages(): CartResponse {
+        val productIds = items.map { it.productId }.distinct()
+        val thumbUrls = if (productIds.isNotEmpty()) {
+            catalogImageService.getFirstProductThumbUrl(productIds)
+        } else {
+            emptyMap()
+        }
+        return toResponse(thumbUrls)
     }
 }

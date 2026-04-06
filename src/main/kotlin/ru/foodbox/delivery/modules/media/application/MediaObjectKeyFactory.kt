@@ -75,6 +75,16 @@ class MediaObjectKeyFactory {
         return contentType.substringBefore(';').trim().lowercase()
     }
 
+    fun thumbKey(originalKey: String): String {
+        val baseName = originalKey.substringBeforeLast('.')
+        return "${baseName}_thumb.webp"
+    }
+
+    fun cardKey(originalKey: String): String {
+        val baseName = originalKey.substringBeforeLast('.')
+        return "${baseName}_card.webp"
+    }
+
     private companion object {
         const val UNASSIGNED_SEGMENT = "unassigned"
         const val DEFAULT_EXTENSION = "bin"

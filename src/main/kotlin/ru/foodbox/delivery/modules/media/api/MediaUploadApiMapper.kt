@@ -37,7 +37,7 @@ internal fun MediaUploadSession.toCreateResponse(): CreateUploadSessionResponse 
     )
 }
 
-internal fun MediaImage.toResponse(): MediaImageResponse {
+internal fun MediaImage.toResponse(publicBaseUrlBuilder: ((String) -> String)? = null): MediaImageResponse {
     return MediaImageResponse(
         id = id,
         targetType = targetType,
@@ -49,6 +49,9 @@ internal fun MediaImage.toResponse(): MediaImageResponse {
         fileSize = fileSize,
         status = status,
         publicUrl = publicUrl,
+        thumbUrl = thumbKey?.let { publicBaseUrlBuilder?.invoke(it) ?: publicUrl },
+        cardUrl = cardKey?.let { publicBaseUrlBuilder?.invoke(it) ?: publicUrl },
+        processingError = processingError,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

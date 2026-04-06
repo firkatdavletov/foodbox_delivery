@@ -54,6 +54,7 @@ data class OrderItemResponse(
     val variantId: UUID?,
     val sku: String?,
     val title: String,
+    val imageUrl: String?,
     val unit: ProductUnit,
     val quantity: Int,
     val priceMinor: Long,

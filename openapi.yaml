@@ -3101,6 +3101,10 @@ components:
           nullable: true
         title:
           type: string
+        imageUrl:
+          type: string
+          nullable: true
+          description: Thumbnail URL of the product image.
         unit:
           $ref: '#/components/schemas/ProductUnit'
         countStep:
@@ -4833,6 +4837,10 @@ components:
           nullable: true
         title:
           type: string
+        imageUrl:
+          type: string
+          nullable: true
+          description: Thumbnail URL of the product image.
         unit:
           $ref: '#/components/schemas/ProductUnit'
         quantity:
@@ -5170,6 +5178,18 @@ components:
         publicUrl:
           type: string
           nullable: true
+        thumbUrl:
+          type: string
+          nullable: true
+          description: Public URL for the thumbnail variant (webp). Null while processing.
+        cardUrl:
+          type: string
+          nullable: true
+          description: Public URL for the card variant (webp). Null while processing.
+        processingError:
+          type: string
+          nullable: true
+          description: Error message if image processing failed.
         createdAt:
           type: string
           format: date-time
@@ -5302,7 +5322,7 @@ components:
 
     MediaImageStatus:
       type: string
-      enum: [PENDING, READY, DELETED]
+      enum: [PENDING, PROCESSING, READY, FAILED, DELETED]
 
     CreateVirtualTryOnSessionRequest:
       type: object

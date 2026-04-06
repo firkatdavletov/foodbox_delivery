@@ -35,6 +35,7 @@ dependencies {
 	implementation("org.apache.commons:commons-csv:1.11.0")
 	implementation("software.amazon.awssdk:s3:2.25.0")
 	implementation("software.amazon.awssdk:auth:2.25.0")
+	implementation("org.sejda.imageio:webp-imageio:0.1.6")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

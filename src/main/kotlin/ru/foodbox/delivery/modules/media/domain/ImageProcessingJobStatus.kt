@@ -1,9 +1,9 @@
 package ru.foodbox.delivery.modules.media.domain
 
-enum class MediaImageStatus {
+enum class ImageProcessingJobStatus {
     PENDING,
     PROCESSING,
-    READY,
+    COMPLETED,
+    RETRY,
     FAILED,
-    DELETED,
 }

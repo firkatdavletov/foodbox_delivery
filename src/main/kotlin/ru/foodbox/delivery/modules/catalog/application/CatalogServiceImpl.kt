@@ -131,7 +131,7 @@ class CatalogServiceImpl(
             productId = product.id,
             activeOnly = activeOnly,
         )
-        val productImages = imageService.getProductImages(listOf(product.id))[product.id].orEmpty()
+        val productImages = imageService.getProductCardImages(listOf(product.id))[product.id].orEmpty()
         return CatalogProductDetails(
             product = product.copy(
                 imageUrls = productImages.map { it.url },
@@ -235,7 +235,7 @@ class CatalogServiceImpl(
         }
 
         val productIds = products.map { it.id }
-        val imageUrlsByProductId = imageService.getProductImageUrls(products.map { it.id })
+        val imageUrlsByProductId = imageService.getProductThumbUrls(products.map { it.id })
         val configuredProductIds = buildSet {
             addAll(productVariantsService.findProductIdsWithVariants(productIds))
             addAll(

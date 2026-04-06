@@ -11,8 +11,10 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.S3Exception
@@ -94,6 +96,32 @@ class S3ObjectStorageAdapter(
                 throw ex
             }
         }
+    }
+
+    override fun getObjectBytes(objectKey: String): ByteArray {
+        validateConfigured()
+
+        val response = s3Client.getObjectAsBytes(
+            GetObjectRequest.builder()
+                .bucket(properties.bucket)
+                .key(objectKey)
+                .build()
+        )
+        return response.asByteArray()
+    }
+
+    override fun putObject(objectKey: String, data: ByteArray, contentType: String) {
+        validateConfigured()
+
+        s3Client.putObject(
+            PutObjectRequest.builder()
+                .bucket(properties.bucket)
+                .key(objectKey)
+                .contentType(contentType)
+                .contentLength(data.size.toLong())
+                .build(),
+            RequestBody.fromBytes(data),
+        )
     }
 
     override fun moveObject(sourceKey: String, destinationKey: String) {

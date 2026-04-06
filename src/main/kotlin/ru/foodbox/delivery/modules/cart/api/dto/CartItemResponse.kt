@@ -9,6 +9,7 @@ data class CartItemResponse(
     val productId: UUID,
     val variantId: UUID?,
     val title: String,
+    val imageUrl: String?,
     val unit: ProductUnit,
     val countStep: Int,
     val quantity: Int,

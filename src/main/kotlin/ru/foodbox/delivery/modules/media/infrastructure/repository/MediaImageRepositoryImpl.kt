@@ -39,6 +39,9 @@ class MediaImageRepositoryImpl(
             fileSize = mediaImage.fileSize,
             status = mediaImage.status,
             publicUrl = mediaImage.publicUrl,
+            thumbKey = mediaImage.thumbKey,
+            cardKey = mediaImage.cardKey,
+            processingError = mediaImage.processingError,
             createdAt = mediaImage.createdAt,
             updatedAt = mediaImage.updatedAt,
         )
@@ -52,6 +55,9 @@ class MediaImageRepositoryImpl(
         entity.fileSize = mediaImage.fileSize
         entity.status = mediaImage.status
         entity.publicUrl = mediaImage.publicUrl
+        entity.thumbKey = mediaImage.thumbKey
+        entity.cardKey = mediaImage.cardKey
+        entity.processingError = mediaImage.processingError
         entity.updatedAt = mediaImage.updatedAt
 
         return toDomain(jpaRepository.save(entity))
@@ -75,6 +81,9 @@ class MediaImageRepositoryImpl(
                 fileSize = mediaImage.fileSize,
                 status = mediaImage.status,
                 publicUrl = mediaImage.publicUrl,
+                thumbKey = mediaImage.thumbKey,
+                cardKey = mediaImage.cardKey,
+                processingError = mediaImage.processingError,
                 createdAt = mediaImage.createdAt,
                 updatedAt = mediaImage.updatedAt,
             )
@@ -88,6 +97,9 @@ class MediaImageRepositoryImpl(
             entity.fileSize = mediaImage.fileSize
             entity.status = mediaImage.status
             entity.publicUrl = mediaImage.publicUrl
+            entity.thumbKey = mediaImage.thumbKey
+            entity.cardKey = mediaImage.cardKey
+            entity.processingError = mediaImage.processingError
             entity.updatedAt = mediaImage.updatedAt
             entity
         }
@@ -107,6 +119,9 @@ class MediaImageRepositoryImpl(
             fileSize = entity.fileSize,
             status = entity.status,
             publicUrl = entity.publicUrl,
+            thumbKey = entity.thumbKey,
+            cardKey = entity.cardKey,
+            processingError = entity.processingError,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )

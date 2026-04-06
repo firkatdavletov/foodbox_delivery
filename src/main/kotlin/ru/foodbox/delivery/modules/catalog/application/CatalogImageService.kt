@@ -35,16 +35,58 @@ class CatalogImageService(
         return getProductImages(productIds).mapValues { (_, images) -> images.map { it.url } }
     }
 
+    fun getProductThumbUrls(productIds: Collection<UUID>): Map<UUID, List<String>> {
+        return mapProductImagesWithResolver(
+            productImageRepository.findAllByProductIds(productIds),
+            ::resolveThumbUrl,
+        ).mapValues { (_, images) -> images.map { it.url } }
+    }
+
+    fun getProductCardUrls(productIds: Collection<UUID>): Map<UUID, List<String>> {
+        return mapProductImagesWithResolver(
+            productImageRepository.findAllByProductIds(productIds),
+            ::resolveCardUrl,
+        ).mapValues { (_, images) -> images.map { it.url } }
+    }
+
     fun getVariantImageUrls(variantIds: Collection<UUID>): Map<UUID, List<String>> {
         return getVariantImages(variantIds).mapValues { (_, images) -> images.map { it.url } }
+    }
+
+    fun getVariantCardUrls(variantIds: Collection<UUID>): Map<UUID, List<String>> {
+        return mapVariantImagesWithResolver(
+            productVariantImageRepository.findAllByVariantIds(variantIds),
+            ::resolveCardUrl,
+        ).mapValues { (_, images) -> images.map { it.url } }
+    }
+
+    fun getFirstProductThumbUrl(productIds: Collection<UUID>): Map<UUID, String> {
+        return getProductThumbUrls(productIds)
+            .mapValues { (_, urls) -> urls.firstOrNull() }
+            .filterValues { it != null }
+            .mapValues { (_, url) -> url!! }
     }
 
     fun getProductImages(productIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
         return mapProductImages(productImageRepository.findAllByProductIds(productIds))
     }
 
+    fun getProductCardImages(productIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
+        return mapProductImagesWithResolver(
+            productImageRepository.findAllByProductIds(productIds),
+            ::resolveCardUrl,
+        )
+    }
+
     fun getVariantImages(variantIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
         return mapVariantImages(productVariantImageRepository.findAllByVariantIds(variantIds))
+    }
+
+    fun getVariantCardImages(variantIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
+        return mapVariantImagesWithResolver(
+            productVariantImageRepository.findAllByVariantIds(variantIds),
+            ::resolveCardUrl,
+        )
     }
 
     @Transactional
@@ -175,6 +217,13 @@ class CatalogImageService(
     }
 
     private fun mapProductImages(links: List<CatalogProductImage>): Map<UUID, List<CatalogImageReference>> {
+        return mapProductImagesWithResolver(links, ::resolveImageUrl)
+    }
+
+    private fun mapProductImagesWithResolver(
+        links: List<CatalogProductImage>,
+        urlResolver: (MediaImage) -> String,
+    ): Map<UUID, List<CatalogImageReference>> {
         if (links.isEmpty()) {
             return emptyMap()
         }
@@ -185,13 +234,20 @@ class CatalogImageService(
                 productLinks.map { link ->
                     CatalogImageReference(
                         id = link.imageId,
-                        url = resolveImageUrl(imagesById.getValue(link.imageId)),
+                        url = urlResolver(imagesById.getValue(link.imageId)),
                     )
                 }
             }
     }
 
     private fun mapVariantImages(links: List<CatalogProductVariantImage>): Map<UUID, List<CatalogImageReference>> {
+        return mapVariantImagesWithResolver(links, ::resolveImageUrl)
+    }
+
+    private fun mapVariantImagesWithResolver(
+        links: List<CatalogProductVariantImage>,
+        urlResolver: (MediaImage) -> String,
+    ): Map<UUID, List<CatalogImageReference>> {
         if (links.isEmpty()) {
             return emptyMap()
         }
@@ -202,7 +258,7 @@ class CatalogImageService(
                 variantLinks.map { link ->
                     CatalogImageReference(
                         id = link.imageId,
-                        url = resolveImageUrl(imagesById.getValue(link.imageId)),
+                        url = urlResolver(imagesById.getValue(link.imageId)),
                     )
                 }
             }
@@ -221,7 +277,7 @@ class CatalogImageService(
         imageIds.forEach { imageId ->
             val image = imagesById[imageId]
                 ?: throw IllegalArgumentException("Image '$imageId' not found")
-            if (image.status != MediaImageStatus.READY) {
+            if (image.status !in ATTACHABLE_STATUSES) {
                 throw IllegalArgumentException("Image '$imageId' is not ready")
             }
             if (image.targetType != targetType) {
@@ -279,7 +335,7 @@ class CatalogImageService(
 
         try {
             val touchedImages = currentImages.map { image ->
-                if (image.targetType == targetType && image.targetId == targetId && image.status == MediaImageStatus.READY) {
+                if (image.targetType == targetType && image.targetId == targetId && image.status in ATTACHABLE_STATUSES) {
                     image
                 } else {
                     val relocatedImage = relocateImageIfNeeded(
@@ -293,6 +349,18 @@ class CatalogImageService(
                             fromKey = image.objectKey,
                             toKey = relocatedImage.objectKey,
                         )
+                        if (image.thumbKey != null && relocatedImage.thumbKey != image.thumbKey) {
+                            completedRelocations += CompletedRelocation(
+                                fromKey = image.thumbKey,
+                                toKey = relocatedImage.thumbKey!!,
+                            )
+                        }
+                        if (image.cardKey != null && relocatedImage.cardKey != image.cardKey) {
+                            completedRelocations += CompletedRelocation(
+                                fromKey = image.cardKey,
+                                toKey = relocatedImage.cardKey!!,
+                            )
+                        }
                     }
                     relocatedImage
                 }
@@ -324,16 +392,34 @@ class CatalogImageService(
             image.objectKey
         }
 
+        var nextThumbKey = image.thumbKey
+        var nextCardKey = image.cardKey
+
         if (nextObjectKey != image.objectKey) {
             storagePort.moveObject(image.objectKey, nextObjectKey)
+
+            if (image.thumbKey != null) {
+                val newThumbKey = objectKeyFactory.thumbKey(nextObjectKey)
+                runCatching { storagePort.moveObject(image.thumbKey, newThumbKey) }
+                nextThumbKey = newThumbKey
+            }
+            if (image.cardKey != null) {
+                val newCardKey = objectKeyFactory.cardKey(nextObjectKey)
+                runCatching { storagePort.moveObject(image.cardKey, newCardKey) }
+                nextCardKey = newCardKey
+            }
         }
+
+        val nextStatus = if (image.status in ATTACHABLE_STATUSES) image.status else MediaImageStatus.READY
 
         return image.copy(
             targetType = targetType,
             targetId = targetId,
             objectKey = nextObjectKey,
             publicUrl = storagePort.buildPublicUrl(nextObjectKey),
-            status = MediaImageStatus.READY,
+            thumbKey = nextThumbKey,
+            cardKey = nextCardKey,
+            status = nextStatus,
             updatedAt = now,
         )
     }
@@ -392,6 +478,26 @@ class CatalogImageService(
 
     private fun resolveImageUrl(image: MediaImage): String {
         return image.publicUrl?.trim()?.takeIf { it.isNotBlank() } ?: storagePort.buildPublicUrl(image.objectKey)
+    }
+
+    private fun resolveThumbUrl(image: MediaImage): String {
+        val thumbKey = image.thumbKey
+        if (thumbKey != null) {
+            return storagePort.buildPublicUrl(thumbKey)
+        }
+        return resolveImageUrl(image)
+    }
+
+    private fun resolveCardUrl(image: MediaImage): String {
+        val cardKey = image.cardKey
+        if (cardKey != null) {
+            return storagePort.buildPublicUrl(cardKey)
+        }
+        return resolveImageUrl(image)
+    }
+
+    private companion object {
+        val ATTACHABLE_STATUSES = setOf(MediaImageStatus.READY, MediaImageStatus.PROCESSING)
     }
 
     private fun normalizeImageIds(imageIds: List<UUID>, fieldName: String): List<UUID> {

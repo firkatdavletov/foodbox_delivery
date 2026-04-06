@@ -54,6 +54,15 @@ class MediaImageEntity(
     @Column(name = "public_url", length = 1024)
     var publicUrl: String? = null,
 
+    @Column(name = "thumb_key", length = 512)
+    var thumbKey: String? = null,
+
+    @Column(name = "card_key", length = 512)
+    var cardKey: String? = null,
+
+    @Column(name = "processing_error", columnDefinition = "TEXT")
+    var processingError: String? = null,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant,
 

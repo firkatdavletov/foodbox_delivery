@@ -45,7 +45,7 @@ class CatalogProductVariantsService(
 
         val variants = variantRepository.findAllByProductId(productId)
         val variantIds = variants.map { it.id }
-        val imagesByVariantId = imageService.getVariantImages(variantIds)
+        val imagesByVariantId = imageService.getVariantCardImages(variantIds)
         val linksByVariantId = variantOptionValueRepository.findAllByVariantIds(variantIds)
             .groupBy { it.variantId }
 

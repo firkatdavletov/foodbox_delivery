@@ -10,12 +10,14 @@ import ru.foodbox.delivery.modules.media.api.dto.CreateUploadSessionRequest
 import ru.foodbox.delivery.modules.media.api.dto.CreateUploadSessionResponse
 import ru.foodbox.delivery.modules.media.api.dto.MediaImageResponse
 import ru.foodbox.delivery.modules.media.application.MediaUploadService
+import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/admin/media/uploads")
 class MediaUploadController(
     private val mediaUploadService: MediaUploadService,
+    private val storagePort: ObjectStoragePort,
 ) {
 
     @PostMapping
@@ -30,6 +32,6 @@ class MediaUploadController(
     fun completeUpload(
         @PathVariable uploadId: UUID,
     ): MediaImageResponse {
-        return mediaUploadService.completeUpload(uploadId).toResponse()
+        return mediaUploadService.completeUpload(uploadId).toResponse(storagePort::buildPublicUrl)
     }
 }

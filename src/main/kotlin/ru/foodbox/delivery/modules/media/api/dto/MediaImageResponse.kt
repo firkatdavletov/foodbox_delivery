@@ -16,6 +16,9 @@ data class MediaImageResponse(
     val fileSize: Long,
     val status: MediaImageStatus,
     val publicUrl: String?,
+    val thumbUrl: String?,
+    val cardUrl: String?,
+    val processingError: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

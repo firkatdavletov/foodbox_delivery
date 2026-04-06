@@ -18,7 +18,9 @@ import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistoryEntry
 import ru.foodbox.delivery.modules.orders.domain.OrderStatusHistory
 import ru.foodbox.delivery.modules.orders.domain.OrderStatusTransition
 
-internal fun Order.toResponse(): OrderResponse {
+internal fun Order.toResponse(
+    productThumbUrls: Map<java.util.UUID, String> = emptyMap(),
+): OrderResponse {
     return OrderResponse(
         id = id,
         orderNumber = orderNumber,
@@ -67,6 +69,7 @@ internal fun Order.toResponse(): OrderResponse {
                 variantId = it.variantId,
                 sku = it.sku,
                 title = it.title,
+                imageUrl = productThumbUrls[it.productId],
                 unit = it.unit,
                 quantity = it.quantity,
                 priceMinor = it.priceMinor,

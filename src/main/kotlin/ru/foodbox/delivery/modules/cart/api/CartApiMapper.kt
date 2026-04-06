@@ -12,7 +12,9 @@ import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import java.time.Instant
 
-internal fun Cart.toResponse(): CartResponse {
+internal fun Cart.toResponse(
+    productThumbUrls: Map<java.util.UUID, String> = emptyMap(),
+): CartResponse {
     return CartResponse(
         id = id,
         status = status,
@@ -27,6 +29,7 @@ internal fun Cart.toResponse(): CartResponse {
                 productId = it.productId,
                 variantId = it.variantId,
                 title = it.title,
+                imageUrl = productThumbUrls[it.productId],
                 unit = it.unit,
                 countStep = it.countStep,
                 quantity = it.quantity,
