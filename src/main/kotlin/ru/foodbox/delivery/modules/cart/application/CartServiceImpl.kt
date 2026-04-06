@@ -66,6 +66,7 @@ class CartServiceImpl(
                 modifiers = modifiers,
             )
         )
+        recalculateDeliveryQuoteIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -73,6 +74,7 @@ class CartServiceImpl(
     override fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart {
         val cart = loadOrCreateActiveCart(actor)
         cart.changeQuantity(command.itemId, command.quantity)
+        recalculateDeliveryQuoteIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -80,6 +82,7 @@ class CartServiceImpl(
     override fun removeItem(actor: CurrentActor, itemId: UUID): Cart {
         val cart = loadOrCreateActiveCart(actor)
         cart.removeItem(itemId)
+        recalculateDeliveryQuoteIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -243,10 +246,10 @@ class CartServiceImpl(
 
     private fun refreshExpiredDeliveryDraftIfNeeded(cart: Cart): Cart {
         val draft = cart.deliveryDraft ?: return cart
-        val quote = draft.quote ?: return cart
+        val quote = draft.quote
         val now = Instant.now()
 
-        if (!quote.isExpired(now)) {
+        if (quote != null && !quote.isExpired(now)) {
             return cart
         }
 
@@ -262,7 +265,7 @@ class CartServiceImpl(
                     deliveryAddress = draft.deliveryAddress,
                     pickupPointId = draft.pickupPointId,
                     pickupPointExternalId = draft.pickupPointExternalId,
-                    fallbackCurrency = quote.currency,
+                    fallbackCurrency = quote?.currency ?: DEFAULT_CURRENCY,
                 ),
                 fallbackPickupPointName = draft.pickupPointName,
                 fallbackPickupPointAddress = draft.pickupPointAddress,
@@ -272,6 +275,39 @@ class CartServiceImpl(
         )
 
         return cartRepository.save(cart)
+    }
+
+    private fun recalculateDeliveryQuoteIfNeeded(cart: Cart) {
+        val draft = cart.deliveryDraft ?: return
+        val quote = draft.quote ?: return
+        val now = Instant.now()
+
+        val newQuote = calculateDeliveryQuoteOrUnavailable(
+            cart = cart,
+            deliveryMethod = draft.deliveryMethod,
+            deliveryAddress = draft.deliveryAddress,
+            pickupPointId = draft.pickupPointId,
+            pickupPointExternalId = draft.pickupPointExternalId,
+            fallbackCurrency = quote.currency,
+        )
+
+        if (newQuote.priceMinor == quote.priceMinor && newQuote.available == quote.available) {
+            return
+        }
+
+        cart.upsertDeliveryDraft(
+            buildDeliveryDraft(
+                deliveryMethod = draft.deliveryMethod,
+                deliveryAddress = draft.deliveryAddress,
+                pickupPointId = draft.pickupPointId,
+                pickupPointExternalId = draft.pickupPointExternalId,
+                quote = newQuote,
+                fallbackPickupPointName = draft.pickupPointName,
+                fallbackPickupPointAddress = draft.pickupPointAddress,
+                createdAt = draft.createdAt,
+                now = now,
+            )
+        )
     }
 
     private fun buildDeliveryDraft(

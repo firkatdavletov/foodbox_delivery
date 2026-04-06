@@ -653,8 +653,10 @@ class CartServiceImplTest {
         assertEquals("4", activeCart.deliveryDraft?.deliveryAddress?.floor)
         assertEquals("45K", activeCart.deliveryDraft?.deliveryAddress?.intercom)
         assertEquals("Call before arrival", activeCart.deliveryDraft?.deliveryAddress?.comment)
-        assertNull(activeCart.deliveryDraft?.quote)
-        assertEquals(0L, activeCart.totalPriceMinor)
+        assertNotNull(activeCart.deliveryDraft?.quote)
+        assertEquals(true, activeCart.deliveryDraft?.quote?.available)
+        assertEquals(500L, activeCart.deliveryDraft?.quote?.priceMinor)
+        assertEquals(500L, activeCart.totalPriceMinor)
         assertEquals(2, cartRepository.allCarts.size)
     }
 
