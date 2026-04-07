@@ -37,6 +37,10 @@ tags:
       Client virtual try-on sessions, FASHN webhook integration, and websocket update flow.
       Websocket handshake endpoint: `/ws/virtual-try-on` (STOMP over SockJS).
       Subscription destination is returned per session in `websocketDestination`.
+  - name: Hero Banners
+    description: Public hero banner retrieval for storefront
+  - name: Hero Banners Admin
+    description: Admin hero banner management
 paths:
   /api/v1/auth/methods:
     get:
@@ -2517,6 +2521,255 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # ── Hero Banners (public) ──────────────────────────────────────────
+  /api/v1/public/hero-banners:
+    get:
+      tags: [Hero Banners]
+      operationId: getActiveHeroBanners
+      summary: Get active hero banners for storefront
+      parameters:
+        - name: storefrontCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: placement
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BannerPlacement'
+        - name: locale
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active hero banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HeroBannerStorefrontResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ── Hero Banners Admin ─────────────────────────────────────────────
+  /api/v1/admin/hero-banners:
+    get:
+      tags: [Hero Banners Admin]
+      operationId: listHeroBanners
+      summary: List hero banners with filters and pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storefrontCode
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: placement
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BannerPlacement'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BannerStatus'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated hero banner list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroBannerAdminPageResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Hero Banners Admin]
+      operationId: createHeroBanner
+      summary: Create a new hero banner
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHeroBannerRequest'
+      responses:
+        '201':
+          description: Hero banner created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroBannerAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/hero-banners/{id}:
+    get:
+      tags: [Hero Banners Admin]
+      operationId: getHeroBanner
+      summary: Get hero banner details
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/HeroBannerIdPathParam'
+      responses:
+        '200':
+          description: Hero banner details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroBannerAdminResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Hero Banners Admin]
+      operationId: updateHeroBanner
+      summary: Update hero banner
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/HeroBannerIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHeroBannerRequest'
+      responses:
+        '200':
+          description: Hero banner updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroBannerAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Hero Banners Admin]
+      operationId: deleteHeroBanner
+      summary: Soft-delete hero banner
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/HeroBannerIdPathParam'
+      responses:
+        '204':
+          description: Hero banner deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/hero-banners/{id}/status:
+    patch:
+      tags: [Hero Banners Admin]
+      operationId: changeHeroBannerStatus
+      summary: Change hero banner status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/HeroBannerIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeHeroBannerStatusRequest'
+      responses:
+        '200':
+          description: Status changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeroBannerAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/hero-banners/reorder:
+    patch:
+      tags: [Hero Banners Admin]
+      operationId: reorderHeroBanners
+      summary: Bulk update hero banner sort order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderHeroBannersRequest'
+      responses:
+        '204':
+          description: Banners reordered
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2554,6 +2807,13 @@ components:
         format: uuid
     UploadIdPathParam:
       name: uploadId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    HeroBannerIdPathParam:
+      name: id
       in: path
       required: true
       schema:
@@ -5482,3 +5742,313 @@ components:
     VirtualTryOnSessionStatus:
       type: string
       enum: [pending, completed, failed]
+
+    # ── Hero Banners ───────────────────────────────────────────────────
+    BannerPlacement:
+      type: string
+      enum: [HOME_HERO]
+
+    BannerStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+
+    BannerThemeVariant:
+      type: string
+      enum: [LIGHT, DARK, ACCENT]
+
+    BannerTextAlignment:
+      type: string
+      enum: [LEFT, CENTER, RIGHT]
+
+    HeroBannerStorefrontResponse:
+      type: object
+      required: [id, code, placement, title, desktopImageUrl, mobileImageUrl, desktopImageAlt, mobileImageAlt, themeVariant, textAlignment, sortOrder]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        placement:
+          $ref: '#/components/schemas/BannerPlacement'
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        desktopImageUrl:
+          type: string
+        mobileImageUrl:
+          type: string
+        desktopImageAlt:
+          type: string
+        mobileImageAlt:
+          type: string
+        primaryActionLabel:
+          type: string
+          nullable: true
+        primaryActionUrl:
+          type: string
+          nullable: true
+        secondaryActionLabel:
+          type: string
+          nullable: true
+        secondaryActionUrl:
+          type: string
+          nullable: true
+        themeVariant:
+          $ref: '#/components/schemas/BannerThemeVariant'
+        textAlignment:
+          $ref: '#/components/schemas/BannerTextAlignment'
+        sortOrder:
+          type: integer
+
+    HeroBannerTranslationResponse:
+      type: object
+      required: [id, locale, title, desktopImageAlt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        locale:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        desktopImageAlt:
+          type: string
+        mobileImageAlt:
+          type: string
+          nullable: true
+        primaryActionLabel:
+          type: string
+          nullable: true
+        secondaryActionLabel:
+          type: string
+          nullable: true
+
+    HeroBannerAdminResponse:
+      type: object
+      required: [id, code, storefrontCode, placement, status, sortOrder, desktopImageUrl, themeVariant, textAlignment, version, createdAt, updatedAt, translations]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        storefrontCode:
+          type: string
+        placement:
+          $ref: '#/components/schemas/BannerPlacement'
+        status:
+          $ref: '#/components/schemas/BannerStatus'
+        sortOrder:
+          type: integer
+        desktopImageUrl:
+          type: string
+        mobileImageUrl:
+          type: string
+          nullable: true
+        primaryActionUrl:
+          type: string
+          nullable: true
+        secondaryActionUrl:
+          type: string
+          nullable: true
+        themeVariant:
+          $ref: '#/components/schemas/BannerThemeVariant'
+        textAlignment:
+          $ref: '#/components/schemas/BannerTextAlignment'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeroBannerTranslationResponse'
+
+    HeroBannerAdminPageResponse:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeroBannerAdminResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+
+    HeroBannerTranslationRequest:
+      type: object
+      required: [locale, title, desktopImageAlt]
+      properties:
+        locale:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        subtitle:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        desktopImageAlt:
+          type: string
+          minLength: 1
+        mobileImageAlt:
+          type: string
+          nullable: true
+        primaryActionLabel:
+          type: string
+          nullable: true
+        secondaryActionLabel:
+          type: string
+          nullable: true
+
+    CreateHeroBannerRequest:
+      type: object
+      required: [code, storefrontCode, placement, status, sortOrder, desktopImageUrl, themeVariant, textAlignment]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        storefrontCode:
+          type: string
+          minLength: 1
+        placement:
+          $ref: '#/components/schemas/BannerPlacement'
+        status:
+          $ref: '#/components/schemas/BannerStatus'
+        sortOrder:
+          type: integer
+        desktopImageUrl:
+          type: string
+          minLength: 1
+        mobileImageUrl:
+          type: string
+          nullable: true
+        primaryActionUrl:
+          type: string
+          nullable: true
+        secondaryActionUrl:
+          type: string
+          nullable: true
+        themeVariant:
+          $ref: '#/components/schemas/BannerThemeVariant'
+        textAlignment:
+          $ref: '#/components/schemas/BannerTextAlignment'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeroBannerTranslationRequest'
+
+    UpdateHeroBannerRequest:
+      type: object
+      required: [code, storefrontCode, placement, status, sortOrder, desktopImageUrl, themeVariant, textAlignment]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        storefrontCode:
+          type: string
+          minLength: 1
+        placement:
+          $ref: '#/components/schemas/BannerPlacement'
+        status:
+          $ref: '#/components/schemas/BannerStatus'
+        sortOrder:
+          type: integer
+        desktopImageUrl:
+          type: string
+          minLength: 1
+        mobileImageUrl:
+          type: string
+          nullable: true
+        primaryActionUrl:
+          type: string
+          nullable: true
+        secondaryActionUrl:
+          type: string
+          nullable: true
+        themeVariant:
+          $ref: '#/components/schemas/BannerThemeVariant'
+        textAlignment:
+          $ref: '#/components/schemas/BannerTextAlignment'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        translations:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeroBannerTranslationRequest'
+
+    ChangeHeroBannerStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/BannerStatus'
+
+    ReorderHeroBannersRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, sortOrder]
+            properties:
+              id:
+                type: string
+                format: uuid
+              sortOrder:
+                type: integer
