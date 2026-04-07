@@ -108,13 +108,23 @@ class HeroBannerRepositoryImpl(
         size: Int,
     ): PageResult<HeroBanner> {
         val pageable = PageRequest.of(page, size, Sort.unsorted())
-        val result = jpaRepository.findAllAdmin(
-            storefrontCode = storefrontCode,
-            placement = placement,
-            status = status,
-            search = search,
-            pageable = pageable,
-        )
+        val normalizedSearch = search?.trim()?.takeIf { it.isNotEmpty() }?.lowercase()
+        val result = if (normalizedSearch == null) {
+            jpaRepository.findAllAdminWithoutSearch(
+                storefrontCode = storefrontCode,
+                placement = placement,
+                status = status,
+                pageable = pageable,
+            )
+        } else {
+            jpaRepository.findAllAdminWithSearch(
+                storefrontCode = storefrontCode,
+                placement = placement,
+                status = status,
+                searchPattern = normalizedSearch,
+                pageable = pageable,
+            )
+        }
         return PageResult(
             content = result.content.map(::toDomain),
             page = result.number,

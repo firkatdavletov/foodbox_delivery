@@ -34,38 +34,60 @@ interface HeroBannerJpaRepository : JpaRepository<HeroBannerEntity, UUID> {
 
     @Query(
         value = """
-            SELECT DISTINCT b FROM HeroBannerEntity b
-            LEFT JOIN b.translations t
-            WHERE b.deletedAt IS NULL
-              AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
-              AND (:placement IS NULL OR b.placement = :placement)
-              AND (:status IS NULL OR b.status = :status)
-              AND (
-                  :search IS NULL
-                  OR LOWER(b.code) LIKE LOWER(CONCAT('%', :search, '%'))
-                  OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%'))
-              )
-            ORDER BY b.sortOrder ASC, b.createdAt ASC
-        """,
+        SELECT DISTINCT b FROM HeroBannerEntity b
+        WHERE b.deletedAt IS NULL
+          AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
+          AND (:placement IS NULL OR b.placement = :placement)
+          AND (:status IS NULL OR b.status = :status)
+        ORDER BY b.sortOrder ASC, b.createdAt ASC
+    """,
         countQuery = """
-            SELECT COUNT(DISTINCT b.id) FROM HeroBannerEntity b
-            LEFT JOIN b.translations t
-            WHERE b.deletedAt IS NULL
-              AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
-              AND (:placement IS NULL OR b.placement = :placement)
-              AND (:status IS NULL OR b.status = :status)
-              AND (
-                  :search IS NULL
-                  OR LOWER(b.code) LIKE LOWER(CONCAT('%', :search, '%'))
-                  OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%'))
-              )
-        """
+        SELECT COUNT(b.id) FROM HeroBannerEntity b
+        WHERE b.deletedAt IS NULL
+          AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
+          AND (:placement IS NULL OR b.placement = :placement)
+          AND (:status IS NULL OR b.status = :status)
+    """
     )
-    fun findAllAdmin(
+    fun findAllAdminWithoutSearch(
         @Param("storefrontCode") storefrontCode: String?,
         @Param("placement") placement: BannerPlacement?,
         @Param("status") status: BannerStatus?,
-        @Param("search") search: String?,
+        pageable: Pageable,
+    ): Page<HeroBannerEntity>
+
+    @Query(
+        value = """
+        SELECT DISTINCT b FROM HeroBannerEntity b
+        LEFT JOIN b.translations t
+        WHERE b.deletedAt IS NULL
+          AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
+          AND (:placement IS NULL OR b.placement = :placement)
+          AND (:status IS NULL OR b.status = :status)
+          AND (
+              LOWER(b.code) LIKE :searchPattern
+              OR LOWER(t.title) LIKE :searchPattern
+          )
+        ORDER BY b.sortOrder ASC, b.createdAt ASC
+    """,
+        countQuery = """
+        SELECT COUNT(DISTINCT b.id) FROM HeroBannerEntity b
+        LEFT JOIN b.translations t
+        WHERE b.deletedAt IS NULL
+          AND (:storefrontCode IS NULL OR b.storefrontCode = :storefrontCode)
+          AND (:placement IS NULL OR b.placement = :placement)
+          AND (:status IS NULL OR b.status = :status)
+          AND (
+              LOWER(b.code) LIKE :searchPattern
+              OR LOWER(t.title) LIKE :searchPattern
+          )
+    """
+    )
+    fun findAllAdminWithSearch(
+        @Param("storefrontCode") storefrontCode: String?,
+        @Param("placement") placement: BannerPlacement?,
+        @Param("status") status: BannerStatus?,
+        @Param("searchPattern") searchPattern: String,
         pageable: Pageable,
     ): Page<HeroBannerEntity>
 
