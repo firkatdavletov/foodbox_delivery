@@ -14,6 +14,7 @@ import ru.foodbox.delivery.modules.payments.application.PaymentService
 class DeliveryServiceImpl(
     private val deliveryMethodSettingRepository: DeliveryMethodSettingRepository,
     private val pickupPointRepository: PickupPointRepository,
+    private val deliveryAddressGeocoder: DeliveryAddressGeocoder,
     private val yandexDeliveryGateway: YandexDeliveryGateway,
     private val paymentService: PaymentService,
     private val calculators: List<DeliveryCostCalculator>,
@@ -28,6 +29,10 @@ class DeliveryServiceImpl(
     }
 
     override fun getActivePickupPoints() = pickupPointRepository.findAllActive()
+
+    override fun detectYandexCity(latitude: Double, longitude: Double): String? {
+        return deliveryAddressGeocoder.reverseGeocode(latitude, longitude)?.city
+    }
 
     override fun detectYandexLocations(query: String) = yandexDeliveryGateway.detectLocations(query)
 

@@ -16,6 +16,8 @@ import ru.foodbox.delivery.modules.delivery.api.dto.DetectCourierCartDeliveryDra
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexCityDetectRequest
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexCityDetectResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectRequest
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointsRequest
@@ -59,6 +61,18 @@ class DeliveryController(
     ): YandexLocationDetectResponse {
         return toYandexLocationDetectResponse(
             deliveryService.detectYandexLocations(request.query),
+        )
+    }
+
+    @PostMapping("/yandex/city-detect")
+    fun detectYandexCity(
+        @Valid @RequestBody request: YandexCityDetectRequest,
+    ): YandexCityDetectResponse {
+        return toYandexCityDetectResponse(
+            deliveryService.detectYandexCity(
+                latitude = request.latitude,
+                longitude = request.longitude,
+            )
         )
     }
 

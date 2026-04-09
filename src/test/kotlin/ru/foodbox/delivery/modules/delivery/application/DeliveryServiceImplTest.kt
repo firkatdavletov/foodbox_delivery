@@ -19,6 +19,7 @@ import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodInfo
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class DeliveryServiceImplTest {
 
@@ -28,6 +29,7 @@ class DeliveryServiceImplTest {
         val service = DeliveryServiceImpl(
             deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(methods = emptyList()),
             calculators = emptyList(),
@@ -51,6 +53,7 @@ class DeliveryServiceImplTest {
         val service = DeliveryServiceImpl(
             deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(methods = emptyList()),
             calculators = emptyList(),
@@ -75,6 +78,7 @@ class DeliveryServiceImplTest {
         val service = DeliveryServiceImpl(
             deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(
                 methods = listOf(
@@ -98,6 +102,7 @@ class DeliveryServiceImplTest {
         val service = DeliveryServiceImpl(
             deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
             yandexDeliveryGateway = yandexDeliveryGateway,
             paymentService = StubPaymentService(
                 methods = listOf(
@@ -129,6 +134,7 @@ class DeliveryServiceImplTest {
         val service = DeliveryServiceImpl(
             deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
             pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
             yandexDeliveryGateway = RecordingYandexDeliveryGateway(),
             paymentService = StubPaymentService(methods = emptyList()),
             calculators = listOf(calculator),
@@ -149,6 +155,46 @@ class DeliveryServiceImplTest {
 
         assertEquals(0, calculator.lastContext?.itemCount)
         assertEquals(500L, result.priceMinor)
+    }
+
+    @Test
+    fun `detects yandex city by coordinates`() {
+        val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
+            pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(
+                address = DeliveryAddress(city = "Екатеринбург"),
+            ),
+            yandexDeliveryGateway = RecordingYandexDeliveryGateway(),
+            paymentService = StubPaymentService(methods = emptyList()),
+            calculators = emptyList(),
+        )
+
+        val result = service.detectYandexCity(
+            latitude = 56.8389,
+            longitude = 60.6057,
+        )
+
+        assertEquals("Екатеринбург", result)
+    }
+
+    @Test
+    fun `returns null when geocoder does not resolve city`() {
+        val service = DeliveryServiceImpl(
+            deliveryMethodSettingRepository = StubDeliveryMethodSettingRepository(allEnabledMethodSettings()),
+            pickupPointRepository = StubPickupPointRepository(),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(address = null),
+            yandexDeliveryGateway = RecordingYandexDeliveryGateway(),
+            paymentService = StubPaymentService(methods = emptyList()),
+            calculators = emptyList(),
+        )
+
+        val result = service.detectYandexCity(
+            latitude = 56.8389,
+            longitude = 60.6057,
+        )
+
+        assertNull(result)
     }
 
     private fun paymentMethodInfo(
@@ -248,6 +294,14 @@ class DeliveryServiceImplTest {
         override fun findActiveById(id: UUID): PickupPoint? = null
 
         override fun findAllActive(): List<PickupPoint> = emptyList()
+    }
+
+    private class StubDeliveryAddressGeocoder(
+        private val address: DeliveryAddress? = null,
+    ) : DeliveryAddressGeocoder {
+        override fun isConfigured(): Boolean = true
+
+        override fun reverseGeocode(latitude: Double, longitude: Double): DeliveryAddress? = address
     }
 
     private class StubPaymentService(

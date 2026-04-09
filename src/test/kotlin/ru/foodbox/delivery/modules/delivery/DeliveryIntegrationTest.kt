@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryQuote
+import ru.foodbox.delivery.modules.delivery.application.DeliveryAddressGeocoder
 import ru.foodbox.delivery.modules.delivery.application.YandexDeliveryGateway
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -38,6 +39,9 @@ class DeliveryIntegrationTest {
 
     @MockBean
     private lateinit var cartService: CartService
+
+    @MockBean
+    private lateinit var deliveryAddressGeocoder: DeliveryAddressGeocoder
 
     @MockBean
     private lateinit var pickupPointRepository: PickupPointRepository
@@ -95,6 +99,25 @@ class DeliveryIntegrationTest {
             .andExpect(jsonPath("$.pickupPoints[0].address.latitude").value(56.8389))
             .andExpect(jsonPath("$.pickupPoints[0].address.longitude").value(60.6057))
             .andExpect(jsonPath("$.pickupPoints[0].isActive").value(true))
+    }
+
+    @Test
+    fun `detects yandex city by coordinates`() {
+        Mockito.`when`(deliveryAddressGeocoder.reverseGeocode(56.8389, 60.6057)).thenReturn(
+            DeliveryAddress(
+                city = "Екатеринбург",
+                latitude = 56.8389,
+                longitude = 60.6057,
+            )
+        )
+
+        mockMvc.perform(
+            post("/api/v1/delivery/yandex/city-detect")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"latitude":56.8389,"longitude":60.6057}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.city").value("Екатеринбург"))
     }
 
     @Test

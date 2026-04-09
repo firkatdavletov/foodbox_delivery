@@ -1675,6 +1675,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/delivery/yandex/city-detect:
+    post:
+      tags: [Delivery]
+      operationId: detectYandexCity
+      summary: Detect city name by coordinates via Yandex geocoder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YandexCityDetectRequest'
+      responses:
+        '200':
+          description: Detected city for coordinates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YandexCityDetectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/delivery/yandex/pickup-points:
     post:
       tags: [Delivery]
@@ -3492,6 +3515,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/YandexLocationVariantResponse'
+
+    YandexCityDetectRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+
+    YandexCityDetectResponse:
+      type: object
+      required: [city]
+      properties:
+        city:
+          type: string
+          nullable: true
 
     YandexLocationVariantResponse:
       type: object

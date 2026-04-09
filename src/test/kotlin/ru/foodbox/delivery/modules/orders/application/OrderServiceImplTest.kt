@@ -662,6 +662,8 @@ class OrderServiceImplTest {
 
         override fun getActivePickupPoints(): List<PickupPoint> = emptyList()
 
+        override fun detectYandexCity(latitude: Double, longitude: Double): String? = null
+
         override fun detectYandexLocations(query: String): List<YandexDeliveryLocationVariant> = emptyList()
 
         override fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption> = emptyList()

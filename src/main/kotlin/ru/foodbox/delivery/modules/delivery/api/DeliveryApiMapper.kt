@@ -5,6 +5,7 @@ import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryMethodsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.DeliveryQuoteResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.PickupPointResponse
+import ru.foodbox.delivery.modules.delivery.api.dto.YandexCityDetectResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationDetectResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationVariantResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointResponse
@@ -72,6 +73,10 @@ internal fun toYandexLocationDetectResponse(
             )
         },
     )
+}
+
+internal fun toYandexCityDetectResponse(city: String?): YandexCityDetectResponse {
+    return YandexCityDetectResponse(city = city)
 }
 
 internal fun toYandexPickupPointsResponse(

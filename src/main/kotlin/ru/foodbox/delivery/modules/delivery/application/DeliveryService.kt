@@ -12,6 +12,7 @@ interface DeliveryService {
     fun getAvailableMethodSettings(): List<DeliveryMethodSetting>
     fun getAvailableMethods(): List<DeliveryMethodType> = getAvailableMethodSettings().map(DeliveryMethodSetting::method)
     fun getActivePickupPoints(): List<PickupPoint>
+    fun detectYandexCity(latitude: Double, longitude: Double): String?
     fun detectYandexLocations(query: String): List<YandexDeliveryLocationVariant>
     fun getYandexPickupPoints(geoId: Long): List<YandexPickupPointOption>
     fun getYandexPickupPoint(pickupPointId: String): YandexPickupPointOption?
