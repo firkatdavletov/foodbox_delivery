@@ -38,7 +38,7 @@ enum class DeliveryMethodType(
         apiCode = "custom_delivery_address",
         defaultTitle = "Доставка по согласованию",
         defaultDescription = "Адрес и условия доставки согласовываются отдельно после оформления заказа",
-        requiresAddress = false,
+        requiresAddress = true,
         requiresPickupPoint = false,
         defaultIsActive = false,
     ),
