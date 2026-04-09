@@ -15,6 +15,7 @@ data class PickupPointsResponse(
 data class DeliveryMethodResponse(
     val code: DeliveryMethodType,
     val name: String,
+    val description: String?,
     val requiresAddress: Boolean,
     val requiresPickupPoint: Boolean,
 )

@@ -13,10 +13,11 @@ internal fun List<CheckoutDeliveryOption>.toResponse(): CheckoutOptionsResponse 
 
 internal fun CheckoutDeliveryOption.toResponse(): CheckoutDeliveryOptionResponse {
     return CheckoutDeliveryOptionResponse(
-        code = deliveryMethod,
-        name = deliveryMethod.displayName,
-        requiresAddress = deliveryMethod.requiresAddress,
-        requiresPickupPoint = deliveryMethod.requiresPickupPoint,
+        code = deliveryMethod.method,
+        name = deliveryMethod.title,
+        description = deliveryMethod.description,
+        requiresAddress = deliveryMethod.method.requiresAddress,
+        requiresPickupPoint = deliveryMethod.method.requiresPickupPoint,
         paymentMethods = paymentMethods.map {
             CheckoutPaymentMethodResponse(
                 code = it.code,

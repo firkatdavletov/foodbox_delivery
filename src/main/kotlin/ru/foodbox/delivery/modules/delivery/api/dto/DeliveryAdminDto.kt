@@ -21,10 +21,11 @@ import java.util.UUID
 
 data class DeliveryMethodSettingResponse(
     val method: DeliveryMethodType,
-    val name: String,
+    val title: String,
+    val description: String?,
     val requiresAddress: Boolean,
     val requiresPickupPoint: Boolean,
-    val isEnabled: Boolean,
+    val isActive: Boolean,
     val sortOrder: Int,
 )
 
@@ -32,8 +33,15 @@ data class UpsertDeliveryMethodSettingRequest(
     @field:NotNull
     val method: DeliveryMethodType,
 
+    @field:NotBlank
+    @field:Size(max = 255)
+    val title: String,
+
+    @field:Size(max = 5000)
+    val description: String? = null,
+
     @field:NotNull
-    val isEnabled: Boolean,
+    val isActive: Boolean,
 
     @field:Min(0)
     val sortOrder: Int,
@@ -189,10 +197,11 @@ data class UpsertCheckoutPaymentRuleRequest(
 fun DeliveryMethodSetting.toResponse(): DeliveryMethodSettingResponse {
     return DeliveryMethodSettingResponse(
         method = method,
-        name = method.displayName,
+        title = title,
+        description = description,
         requiresAddress = method.requiresAddress,
         requiresPickupPoint = method.requiresPickupPoint,
-        isEnabled = enabled,
+        isActive = isActive,
         sortOrder = sortOrder,
     )
 }
@@ -200,7 +209,9 @@ fun DeliveryMethodSetting.toResponse(): DeliveryMethodSettingResponse {
 fun UpsertDeliveryMethodSettingRequest.toDomain(): DeliveryMethodSetting {
     return DeliveryMethodSetting(
         method = method,
-        enabled = isEnabled,
+        title = title,
+        description = description,
+        isActive = isActive,
         sortOrder = sortOrder,
     )
 }
@@ -307,7 +318,7 @@ fun ReplaceCheckoutPaymentRulesRequest.toDomain(): List<CheckoutPaymentMethodRul
 fun AdminCheckoutPaymentRule.toResponse(): CheckoutPaymentRuleResponse {
     return CheckoutPaymentRuleResponse(
         deliveryMethod = deliveryMethod,
-        deliveryMethodName = deliveryMethod.displayName,
+        deliveryMethodName = deliveryMethodTitle,
         paymentMethods = paymentMethods,
         isDynamic = dynamic,
     )

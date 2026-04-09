@@ -27,6 +27,7 @@ import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestConf
 import ru.foodbox.delivery.modules.delivery.application.DeliveryOrderRequestService
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
@@ -562,7 +563,7 @@ class OrderServiceImplTest {
         paymentMethods: List<PaymentMethodCode>,
     ): CheckoutDeliveryOption {
         return CheckoutDeliveryOption(
-            deliveryMethod = deliveryMethod,
+            deliveryMethod = DeliveryMethodSetting.defaultFor(deliveryMethod).copy(isActive = true),
             paymentMethods = paymentMethods.map(::paymentMethodInfo),
         )
     }
@@ -652,7 +653,7 @@ class OrderServiceImplTest {
     ) : DeliveryService {
         val contexts = mutableListOf<DeliveryQuoteContext>()
 
-        override fun getAvailableMethods(): List<DeliveryMethodType> = emptyList()
+        override fun getAvailableMethodSettings(): List<DeliveryMethodSetting> = emptyList()
 
         override fun getActivePickupPoints(): List<PickupPoint> = emptyList()
 

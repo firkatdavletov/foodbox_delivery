@@ -26,6 +26,7 @@ import ru.foodbox.delivery.modules.cart.modifier.application.CartItemModifierRes
 import ru.foodbox.delivery.modules.delivery.application.DeliveryAddressGeocoder
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
@@ -691,7 +692,7 @@ class CartServiceImplTest {
     ) : DeliveryService {
         var lastContext: DeliveryQuoteContext? = null
 
-        override fun getAvailableMethods(): List<DeliveryMethodType> = emptyList()
+        override fun getAvailableMethodSettings(): List<DeliveryMethodSetting> = emptyList()
 
         override fun getActivePickupPoints(): List<PickupPoint> = emptyList()
 

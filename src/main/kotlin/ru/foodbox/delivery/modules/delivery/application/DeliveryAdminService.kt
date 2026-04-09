@@ -30,22 +30,21 @@ class DeliveryAdminService(
 ) {
 
     fun getMethodSettings(): List<DeliveryMethodSetting> {
-        val settingsByMethod = deliveryMethodSettingRepository.findAll().associateBy(DeliveryMethodSetting::method)
-        return DeliveryMethodType.entries
-            .map { method ->
-                settingsByMethod[method] ?: DeliveryMethodSetting(
-                    method = method,
-                    enabled = method.isActive,
-                    sortOrder = method.ordinal,
-                )
-            }
-            .sortedWith(compareBy<DeliveryMethodSetting> { it.sortOrder }.thenBy { it.method.ordinal })
+        return resolveAllMethodSettings()
     }
 
     @Transactional
     fun upsertMethodSetting(setting: DeliveryMethodSetting): DeliveryMethodSetting {
+        val title = setting.title.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("title must not be blank")
+        val description = setting.description?.trim()?.takeIf { it.isNotBlank() }
         require(setting.sortOrder >= 0) { "sortOrder must be non-negative" }
-        return deliveryMethodSettingRepository.save(setting)
+        return deliveryMethodSettingRepository.save(
+            setting.copy(
+                title = title,
+                description = description,
+            )
+        )
     }
 
     fun getZones(isActive: Boolean?): List<DeliveryZone> {
@@ -148,6 +147,9 @@ class DeliveryAdminService(
             DeliveryMethodType.PICKUP -> require(tariff.zone == null) {
                 "Pickup tariff must not be linked to a delivery zone"
             }
+            DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS -> throw IllegalArgumentException(
+                "Tariffs are not supported for custom delivery address"
+            )
             DeliveryMethodType.YANDEX_PICKUP_POINT -> throw IllegalArgumentException(
                 "Tariffs are not supported for Yandex pickup point delivery"
             )
@@ -164,6 +166,7 @@ class DeliveryAdminService(
                 zoneId = zone?.id,
             )
             DeliveryMethodType.PICKUP -> deliveryTariffRepository.findDefaultByMethod(tariff.method)
+            DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS -> null
             DeliveryMethodType.YANDEX_PICKUP_POINT -> null
         }
         duplicate?.let { existing ->
@@ -234,11 +237,12 @@ class DeliveryAdminService(
     fun getCheckoutPaymentRules(): List<AdminCheckoutPaymentRule> {
         val rulesByDeliveryMethod = checkoutPaymentMethodRuleRepository.findAll().associateBy(CheckoutPaymentMethodRule::deliveryMethod)
 
-        return DeliveryMethodType.entries
-            .sortedBy { it.ordinal }
-            .map { method ->
+        return resolveAllMethodSettings()
+            .map { setting ->
+                val method = setting.method
                 AdminCheckoutPaymentRule(
                     deliveryMethod = method,
+                    deliveryMethodTitle = setting.title,
                     paymentMethods = if (method in CheckoutPaymentRuleDefaults.dynamicDeliveryMethods) {
                         emptyList()
                     } else {
@@ -278,10 +282,18 @@ class DeliveryAdminService(
         )
         return getCheckoutPaymentRules()
     }
+
+    private fun resolveAllMethodSettings(): List<DeliveryMethodSetting> {
+        val settingsByMethod = deliveryMethodSettingRepository.findAll().associateBy(DeliveryMethodSetting::method)
+        return DeliveryMethodType.entries
+            .map { method -> settingsByMethod[method] ?: DeliveryMethodSetting.defaultFor(method) }
+            .sortedWith(compareBy<DeliveryMethodSetting> { it.sortOrder }.thenBy { it.method.ordinal })
+    }
 }
 
 data class AdminCheckoutPaymentRule(
     val deliveryMethod: DeliveryMethodType,
+    val deliveryMethodTitle: String,
     val paymentMethods: List<ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode>,
     val dynamic: Boolean,
 )

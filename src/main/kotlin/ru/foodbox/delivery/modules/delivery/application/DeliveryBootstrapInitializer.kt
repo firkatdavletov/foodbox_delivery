@@ -38,18 +38,20 @@ class DeliveryBootstrapInitializer(
     }
 
     private fun seedMethodSettings() {
-        if (deliveryMethodSettingRepository.findAll().isNotEmpty()) {
-            return
-        }
+        val existingByMethod = deliveryMethodSettingRepository.findAll().associateBy(DeliveryMethodSetting::method)
 
         DeliveryMethodType.entries.forEach { method ->
-            deliveryMethodSettingRepository.save(
-                DeliveryMethodSetting(
-                    method = method,
-                    enabled = method.isActive,
-                    sortOrder = method.ordinal,
+            val existing = existingByMethod[method]
+            if (existing == null) {
+                deliveryMethodSettingRepository.save(DeliveryMethodSetting.defaultFor(method))
+            } else if (existing.title.isBlank()) {
+                deliveryMethodSettingRepository.save(
+                    existing.copy(
+                        title = method.defaultTitle,
+                        description = existing.description ?: method.defaultDescription,
+                    )
                 )
-            )
+            }
         }
     }
 

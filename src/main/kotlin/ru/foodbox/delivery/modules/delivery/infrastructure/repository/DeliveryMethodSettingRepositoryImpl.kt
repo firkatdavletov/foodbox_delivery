@@ -27,13 +27,17 @@ class DeliveryMethodSettingRepositoryImpl(
         val now = Instant.now()
         val entity = existing ?: DeliveryMethodSettingEntity(
             method = setting.method,
-            isEnabled = setting.enabled,
+            title = setting.title,
+            description = setting.description,
+            isActive = setting.isActive,
             sortOrder = setting.sortOrder,
             createdAt = now,
             updatedAt = now,
         )
 
-        entity.isEnabled = setting.enabled
+        entity.title = setting.title
+        entity.description = setting.description
+        entity.isActive = setting.isActive
         entity.sortOrder = setting.sortOrder
         entity.updatedAt = now
         return jpaRepository.save(entity).toDomain()
@@ -42,7 +46,9 @@ class DeliveryMethodSettingRepositoryImpl(
     private fun DeliveryMethodSettingEntity.toDomain(): DeliveryMethodSetting {
         return DeliveryMethodSetting(
             method = method,
-            enabled = isEnabled,
+            title = title,
+            description = description,
+            isActive = isActive,
             sortOrder = sortOrder,
         )
     }

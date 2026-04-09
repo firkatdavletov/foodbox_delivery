@@ -362,7 +362,7 @@ class OrderServiceImpl(
 
         return OrderDeliverySnapshot(
             method = method,
-            methodName = method.displayName,
+            methodName = resolveDeliveryMethodTitle(method),
             priceMinor = priceMinor,
             currency = quote.currency,
             zoneCode = quote.zoneCode,
@@ -373,8 +373,15 @@ class OrderServiceImpl(
             pickupPointExternalId = quote.pickupPointExternalId,
             pickupPointName = quote.pickupPointName,
             pickupPointAddress = quote.pickupPointAddress,
-            address = if (method == DeliveryMethodType.COURIER) address?.normalized() else null,
+            address = if (method.requiresAddress) address?.normalized() else null,
         )
+    }
+
+    private fun resolveDeliveryMethodTitle(method: DeliveryMethodType): String {
+        return deliveryService.getAvailableMethodSettings()
+            .firstOrNull { it.method == method }
+            ?.title
+            ?: method.defaultTitle
     }
 
     private fun requireAvailableQuote(quote: DeliveryQuote): DeliveryQuote {
@@ -411,7 +418,7 @@ class OrderServiceImpl(
             CheckoutOptionsQuery(
                 pickupPointId = pickupPointExternalId,
             )
-        ).firstOrNull { it.deliveryMethod == deliveryMethod }
+        ).firstOrNull { it.deliveryMethod.method == deliveryMethod }
             ?.paymentMethods
             ?.map { it.code }
             ?.toSet()

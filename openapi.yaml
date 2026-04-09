@@ -3097,6 +3097,9 @@ components:
           $ref: '#/components/schemas/DeliveryMethodType'
         name:
           type: string
+        description:
+          type: string
+          nullable: true
         requiresAddress:
           type: boolean
         requiresPickupPoint:
@@ -3447,6 +3450,9 @@ components:
           $ref: '#/components/schemas/DeliveryMethodType'
         name:
           type: string
+        description:
+          type: string
+          nullable: true
         requiresAddress:
           type: boolean
         requiresPickupPoint:
@@ -3617,17 +3623,20 @@ components:
 
     DeliveryMethodSettingResponse:
       type: object
-      required: [method, name, requiresAddress, requiresPickupPoint, isEnabled, sortOrder]
+      required: [method, title, requiresAddress, requiresPickupPoint, isActive, sortOrder]
       properties:
         method:
           $ref: '#/components/schemas/DeliveryMethodType'
-        name:
+        title:
           type: string
+        description:
+          type: string
+          nullable: true
         requiresAddress:
           type: boolean
         requiresPickupPoint:
           type: boolean
-        isEnabled:
+        isActive:
           type: boolean
         sortOrder:
           type: integer
@@ -3636,11 +3645,16 @@ components:
 
     UpsertDeliveryMethodSettingRequest:
       type: object
-      required: [method, isEnabled, sortOrder]
+      required: [method, title, isActive, sortOrder]
       properties:
         method:
           $ref: '#/components/schemas/DeliveryMethodType'
-        isEnabled:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isActive:
           type: boolean
         sortOrder:
           type: integer
@@ -5537,7 +5551,7 @@ components:
 
     DeliveryMethodType:
       type: string
-      enum: [PICKUP, COURIER, YANDEX_PICKUP_POINT]
+      enum: [PICKUP, COURIER, YANDEX_PICKUP_POINT, CUSTOM_DELIVERY_ADDRESS]
 
     DeliveryZoneType:
       type: string

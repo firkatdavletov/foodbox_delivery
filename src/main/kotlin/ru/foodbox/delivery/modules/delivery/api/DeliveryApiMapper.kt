@@ -10,6 +10,7 @@ import ru.foodbox.delivery.modules.delivery.api.dto.YandexLocationVariantRespons
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.YandexPickupPointsResponse
 import ru.foodbox.delivery.modules.delivery.api.dto.toResponse
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
@@ -17,16 +18,17 @@ import ru.foodbox.delivery.modules.delivery.domain.YandexDeliveryLocationVariant
 import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
 
 internal fun toMethodsResponse(
-    methods: List<DeliveryMethodType>,
+    methods: List<DeliveryMethodSetting>,
     pickupPoints: List<PickupPoint>,
 ): DeliveryMethodsResponse {
     return DeliveryMethodsResponse(
         methods = methods.map {
             DeliveryMethodResponse(
-                code = it,
-                name = it.displayName,
-                requiresAddress = it.requiresAddress,
-                requiresPickupPoint = it.requiresPickupPoint,
+                code = it.method,
+                name = it.title,
+                description = it.description,
+                requiresAddress = it.method.requiresAddress,
+                requiresPickupPoint = it.method.requiresPickupPoint,
             )
         },
         pickupPoints = pickupPoints.map(PickupPoint::toResponse),

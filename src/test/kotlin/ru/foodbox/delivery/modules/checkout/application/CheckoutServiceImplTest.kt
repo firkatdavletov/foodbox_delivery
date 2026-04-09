@@ -5,6 +5,7 @@ import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.checkout.domain.CheckoutPaymentMethodRule
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
 import ru.foodbox.delivery.modules.delivery.application.DeliveryService
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
@@ -85,7 +86,7 @@ class CheckoutServiceImplTest {
                 DeliveryMethodType.COURIER,
                 DeliveryMethodType.YANDEX_PICKUP_POINT,
             ),
-            options.map { it.deliveryMethod },
+            options.map { it.deliveryMethod.method },
         )
         assertEquals(
             listOf(PaymentMethodCode.CASH, PaymentMethodCode.CARD_ON_DELIVERY),
@@ -147,7 +148,17 @@ class CheckoutServiceImplTest {
         private val methods: List<DeliveryMethodType>,
         private val yandexPickupPoints: List<YandexPickupPointOption> = emptyList(),
     ) : DeliveryService {
-        override fun getAvailableMethods(): List<DeliveryMethodType> = methods
+        override fun getAvailableMethodSettings(): List<DeliveryMethodSetting> {
+            return methods.mapIndexed { index, method ->
+                DeliveryMethodSetting(
+                    method = method,
+                    title = method.defaultTitle,
+                    description = method.defaultDescription,
+                    isActive = true,
+                    sortOrder = index,
+                )
+            }
+        }
 
         override fun getActivePickupPoints(): List<PickupPoint> = emptyList()
 

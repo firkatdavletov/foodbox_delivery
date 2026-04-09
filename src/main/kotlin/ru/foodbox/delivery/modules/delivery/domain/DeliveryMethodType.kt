@@ -4,34 +4,51 @@ import com.fasterxml.jackson.annotation.JsonCreator
 
 enum class DeliveryMethodType(
     val apiCode: String,
-    val displayName: String,
+    val defaultTitle: String,
+    val defaultDescription: String?,
     val requiresAddress: Boolean,
     val requiresPickupPoint: Boolean,
-    val isActive: Boolean,
+    val defaultIsActive: Boolean,
 ) {
     PICKUP(
         apiCode = "pickup",
-        displayName = "Самовывоз",
+        defaultTitle = "Самовывоз",
+        defaultDescription = "Заберите заказ в пункте самовывоза",
         requiresAddress = false,
         requiresPickupPoint = true,
-        isActive = false,
+        defaultIsActive = false,
     ),
     COURIER(
         apiCode = "courier",
-        displayName = "Доставка",
+        defaultTitle = "Доставка",
+        defaultDescription = "Курьер доставит заказ по указанному адресу",
         requiresAddress = true,
         requiresPickupPoint = false,
-        isActive = false,
+        defaultIsActive = false,
     ),
     YANDEX_PICKUP_POINT(
         apiCode = "yandex_pickup_point",
-        displayName = "Доставка в ПВЗ Яндекс Маркет",
+        defaultTitle = "Доставка в ПВЗ Яндекс Маркет",
+        defaultDescription = "Получение заказа в пункте выдачи Яндекс Маркета",
         requiresAddress = false,
         requiresPickupPoint = true,
-        isActive = true,
+        defaultIsActive = true,
     ),
-
+    CUSTOM_DELIVERY_ADDRESS(
+        apiCode = "custom_delivery_address",
+        defaultTitle = "Доставка по согласованию",
+        defaultDescription = "Адрес и условия доставки согласовываются отдельно после оформления заказа",
+        requiresAddress = false,
+        requiresPickupPoint = false,
+        defaultIsActive = false,
+    ),
     ;
+
+    val displayName: String
+        get() = defaultTitle
+
+    val isActive: Boolean
+        get() = defaultIsActive
 
     companion object {
         @JvmStatic

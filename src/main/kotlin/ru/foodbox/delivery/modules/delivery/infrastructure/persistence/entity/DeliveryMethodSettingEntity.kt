@@ -17,8 +17,14 @@ class DeliveryMethodSettingEntity(
     @Column(name = "method", nullable = false, length = 32)
     var method: DeliveryMethodType,
 
-    @Column(name = "is_enabled", nullable = false)
-    var isEnabled: Boolean,
+    @Column(name = "title", nullable = false, length = 255)
+    var title: String,
+
+    @Column(name = "description", columnDefinition = "text")
+    var description: String?,
+
+    @Column(name = "is_active", nullable = false)
+    var isActive: Boolean,
 
     @Column(name = "sort_order", nullable = false)
     var sortOrder: Int,

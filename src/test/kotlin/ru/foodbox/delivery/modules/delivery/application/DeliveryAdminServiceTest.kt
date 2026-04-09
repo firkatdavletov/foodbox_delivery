@@ -12,6 +12,7 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryTariff
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.checkout.domain.repository.CheckoutPaymentMethodRuleRepository
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZone
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryZoneType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -25,6 +26,61 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class DeliveryAdminServiceTest {
+
+    @Test
+    fun `returns delivery method settings with persisted overrides and default fallback`() {
+        val methodSettingRepository = InMemoryDeliveryMethodSettingRepository().apply {
+            save(
+                DeliveryMethodSetting(
+                    method = DeliveryMethodType.COURIER,
+                    title = "Курьером сегодня",
+                    description = "Доставка в течение дня",
+                    isActive = true,
+                    sortOrder = 50,
+                )
+            )
+        }
+        val service = deliveryAdminService(
+            zoneRepository = InMemoryDeliveryZoneRepository(),
+            methodSettingRepository = methodSettingRepository,
+        )
+
+        val settings = service.getMethodSettings()
+        val courier = settings.first { it.method == DeliveryMethodType.COURIER }
+        val custom = settings.first { it.method == DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS }
+
+        assertEquals("Курьером сегодня", courier.title)
+        assertEquals("Доставка в течение дня", courier.description)
+        assertEquals(true, courier.isActive)
+        assertEquals(50, courier.sortOrder)
+
+        assertEquals(DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS.defaultTitle, custom.title)
+        assertEquals(DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS.defaultDescription, custom.description)
+        assertEquals(DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS.defaultIsActive, custom.isActive)
+    }
+
+    @Test
+    fun `upsert method setting trims title and clears blank description`() {
+        val methodSettingRepository = InMemoryDeliveryMethodSettingRepository()
+        val service = deliveryAdminService(
+            zoneRepository = InMemoryDeliveryZoneRepository(),
+            methodSettingRepository = methodSettingRepository,
+        )
+
+        val saved = service.upsertMethodSetting(
+            DeliveryMethodSetting(
+                method = DeliveryMethodType.PICKUP,
+                title = "  Самовывоз из шоурума  ",
+                description = "   ",
+                isActive = true,
+                sortOrder = 1,
+            )
+        )
+
+        assertEquals("Самовывоз из шоурума", saved.title)
+        assertEquals(null, saved.description)
+        assertEquals(saved, methodSettingRepository.findByMethod(DeliveryMethodType.PICKUP))
+    }
 
     @Test
     fun `detects pickup point address by coordinates using geocoder`() {
@@ -271,12 +327,13 @@ class DeliveryAdminServiceTest {
 
     private fun deliveryAdminService(
         zoneRepository: DeliveryZoneRepository,
+        methodSettingRepository: DeliveryMethodSettingRepository = InMemoryDeliveryMethodSettingRepository(),
         tariffRepository: DeliveryTariffRepository = InMemoryDeliveryTariffRepository(),
         pickupPointRepository: PickupPointRepository = InMemoryPickupPointRepository(),
         geocoder: DeliveryAddressGeocoder = mock(DeliveryAddressGeocoder::class.java),
     ): DeliveryAdminService {
         return DeliveryAdminService(
-            deliveryMethodSettingRepository = mock(DeliveryMethodSettingRepository::class.java),
+            deliveryMethodSettingRepository = methodSettingRepository,
             deliveryZoneRepository = zoneRepository,
             deliveryTariffRepository = tariffRepository,
             pickupPointRepository = pickupPointRepository,
@@ -299,6 +356,19 @@ class DeliveryAdminServiceTest {
             arrayOf(geometryFactory.createPolygon(shell))
         ).also { geometry ->
             geometry.srid = 4326
+        }
+    }
+
+    private class InMemoryDeliveryMethodSettingRepository : DeliveryMethodSettingRepository {
+        private val settingsByMethod = linkedMapOf<DeliveryMethodType, DeliveryMethodSetting>()
+
+        override fun findAll(): List<DeliveryMethodSetting> = settingsByMethod.values.toList()
+
+        override fun findByMethod(method: DeliveryMethodType): DeliveryMethodSetting? = settingsByMethod[method]
+
+        override fun save(setting: DeliveryMethodSetting): DeliveryMethodSetting {
+            settingsByMethod[setting.method] = setting
+            return setting
         }
     }
 

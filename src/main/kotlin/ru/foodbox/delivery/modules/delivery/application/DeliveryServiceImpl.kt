@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.modules.delivery.application
 
 import org.springframework.stereotype.Service
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodSetting
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryValidationException
@@ -18,12 +19,11 @@ class DeliveryServiceImpl(
     private val calculators: List<DeliveryCostCalculator>,
 ) : DeliveryService {
 
-    override fun getAvailableMethods(): List<DeliveryMethodType> {
-        return deliveryMethodSettingRepository.findAll()
-            .filter { it.enabled }
-            .map { it.method }
-            .filter { method ->
-                method != DeliveryMethodType.YANDEX_PICKUP_POINT || yandexDeliveryGateway.isConfigured()
+    override fun getAvailableMethodSettings(): List<DeliveryMethodSetting> {
+        return resolveMethodSettings()
+            .filter { it.isActive }
+            .filter { setting ->
+                setting.method != DeliveryMethodType.YANDEX_PICKUP_POINT || yandexDeliveryGateway.isConfigured()
             }
     }
 
@@ -41,6 +41,8 @@ class DeliveryServiceImpl(
     override fun calculateQuote(context: DeliveryQuoteContext): DeliveryQuote {
         require(context.subtotalMinor >= 0) { "subtotalMinor must be greater than or equal to zero" }
         require(context.itemCount >= 0) { "itemCount must be greater than or equal to zero" }
+        getAvailableMethodSettings().firstOrNull { it.method == context.deliveryMethod }
+            ?: throw DeliveryValidationException("Selected delivery method is unavailable")
 
         val calculator = calculators.firstOrNull { it.supports(context.deliveryMethod) }
             ?: throw DeliveryValidationException("Unsupported delivery method: ${context.deliveryMethod}")
@@ -58,6 +60,13 @@ class DeliveryServiceImpl(
         } else {
             YANDEX_PAYMENT_METHOD_CARD_ON_RECEIPT
         }
+    }
+
+    private fun resolveMethodSettings(): List<DeliveryMethodSetting> {
+        val settingsByMethod = deliveryMethodSettingRepository.findAll().associateBy(DeliveryMethodSetting::method)
+        return DeliveryMethodType.entries
+            .map { method -> settingsByMethod[method] ?: DeliveryMethodSetting.defaultFor(method) }
+            .sortedWith(compareBy<DeliveryMethodSetting> { it.sortOrder }.thenBy { it.method.ordinal })
     }
 
     private companion object {

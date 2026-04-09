@@ -10,6 +10,7 @@ data class CheckoutOptionsResponse(
 data class CheckoutDeliveryOptionResponse(
     val code: DeliveryMethodType,
     val name: String,
+    val description: String?,
     val requiresAddress: Boolean,
     val requiresPickupPoint: Boolean,
     val paymentMethods: List<CheckoutPaymentMethodResponse>,

@@ -34,11 +34,11 @@ class DeliveryController(
 
     @GetMapping("/methods")
     fun getMethods(): DeliveryMethodsResponse {
-        val methods = deliveryService.getAvailableMethods()
+        val methods = deliveryService.getAvailableMethodSettings()
 
         return toMethodsResponse(
             methods = methods,
-            pickupPoints = if (methods.contains(DeliveryMethodType.PICKUP)) {
+            pickupPoints = if (methods.any { it.method == DeliveryMethodType.PICKUP }) {
                 deliveryService.getActivePickupPoints()
             } else {
                 emptyList()

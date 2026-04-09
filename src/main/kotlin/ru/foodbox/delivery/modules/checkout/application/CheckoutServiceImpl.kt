@@ -27,14 +27,14 @@ class CheckoutServiceImpl(
         val rulesByDeliveryMethod = checkoutPaymentMethodRuleRepository.findAll()
             .associateBy { it.deliveryMethod }
 
-        return deliveryService.getAvailableMethods().mapNotNull { deliveryMethod ->
-            val paymentMethods = when (deliveryMethod) {
+        return deliveryService.getAvailableMethodSettings().mapNotNull { deliveryMethod ->
+            val paymentMethods = when (deliveryMethod.method) {
                 DeliveryMethodType.YANDEX_PICKUP_POINT -> resolveYandexPaymentMethods(
                     pickupPointId = query.pickupPointId,
                     availablePaymentMethods = availablePaymentMethods,
                 )
                 else -> resolveConfiguredPaymentMethods(
-                    deliveryMethod = deliveryMethod,
+                    deliveryMethod = deliveryMethod.method,
                     availablePaymentMethods = availablePaymentMethods,
                     rulesByDeliveryMethod = rulesByDeliveryMethod,
                 )
@@ -42,7 +42,7 @@ class CheckoutServiceImpl(
             if (paymentMethods.isEmpty()) {
                 logger.info(
                     "Checkout delivery method {} is skipped because no available payment methods remain after resolution",
-                    deliveryMethod,
+                    deliveryMethod.method,
                 )
                 null
             } else {

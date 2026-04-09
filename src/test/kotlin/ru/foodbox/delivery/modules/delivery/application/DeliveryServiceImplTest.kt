@@ -35,7 +35,14 @@ class DeliveryServiceImplTest {
 
         val result = service.getAvailableMethods()
 
-        assertEquals(listOf(DeliveryMethodType.PICKUP, DeliveryMethodType.COURIER), result)
+        assertEquals(
+            listOf(
+                DeliveryMethodType.PICKUP,
+                DeliveryMethodType.COURIER,
+                DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS,
+            ),
+            result,
+        )
     }
 
     @Test
@@ -56,6 +63,7 @@ class DeliveryServiceImplTest {
                 DeliveryMethodType.PICKUP,
                 DeliveryMethodType.COURIER,
                 DeliveryMethodType.YANDEX_PICKUP_POINT,
+                DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS,
             ),
             result,
         )
@@ -160,7 +168,9 @@ class DeliveryServiceImplTest {
         return DeliveryMethodType.entries.mapIndexed { index, method ->
             DeliveryMethodSetting(
                 method = method,
-                enabled = true,
+                title = method.defaultTitle,
+                description = method.defaultDescription,
+                isActive = true,
                 sortOrder = index,
             )
         }
