@@ -181,14 +181,17 @@ class ImageProcessingService(
 
         if (writer != null) {
             val output = ByteArrayOutputStream()
-            writer.output = ImageIO.createImageOutputStream(output)
-            val param = writer.defaultWriteParam
-            if (param.canWriteCompressed()) {
-                param.compressionMode = ImageWriteParam.MODE_EXPLICIT
-                param.compressionQuality = quality / 100f
+            val imageOutput = ImageIO.createImageOutputStream(output)
+                ?: throw IllegalStateException("Failed to create ImageOutputStream for $WEBP_CONTENT_TYPE")
+            try {
+                writer.output = imageOutput
+                val param = writer.defaultWriteParam
+                configureCompression(param, quality)
+                writer.write(null, IIOImage(image, null, null), param)
+            } finally {
+                imageOutput.close()
+                writer.dispose()
             }
-            writer.write(null, IIOImage(image, null, null), param)
-            writer.dispose()
             return output.toByteArray()
         }
 
@@ -201,4 +204,15 @@ class ImageProcessingService(
         const val WEBP_CONTENT_TYPE = "image/webp"
         const val FALLBACK_FORMAT = "png"
     }
+}
+
+internal fun configureCompression(param: ImageWriteParam, quality: Int) {
+    if (!param.canWriteCompressed()) {
+        return
+    }
+
+    param.compressionMode = ImageWriteParam.MODE_EXPLICIT
+    // Luciad WebP writer requires an explicit compression type before quality is set.
+    param.compressionTypes?.firstOrNull()?.let { param.compressionType = it }
+    param.compressionQuality = quality.coerceIn(0, 100) / 100f
 }
