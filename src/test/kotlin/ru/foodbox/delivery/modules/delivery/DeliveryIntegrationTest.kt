@@ -98,16 +98,17 @@ class DeliveryIntegrationTest {
     }
 
     @Test
-    fun `detects courier cart delivery draft by coordinates`() {
+    fun `detects cart delivery draft by coordinates with requested delivery method`() {
         Mockito.`when`(
             cartService.detectCourierDeliveryDraft(
                 CurrentActor.Guest("install-1"),
                 56.8389,
                 60.6057,
+                DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS,
             )
         ).thenReturn(
             CartDeliveryDraft(
-                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryMethod = DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS,
                 deliveryAddress = DeliveryAddress(
                     country = "Россия",
                     region = "Свердловская область",
@@ -143,7 +144,7 @@ class DeliveryIntegrationTest {
             post("/api/v1/delivery/courier/draft-detect")
                 .header("X-Install-Id", "install-1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"latitude":56.8389,"longitude":60.6057}""")
+                .content("""{"latitude":56.8389,"longitude":60.6057,"deliveryMethod":"CUSTOM_DELIVERY_ADDRESS"}""")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.address.country").value("Россия"))
@@ -154,7 +155,7 @@ class DeliveryIntegrationTest {
             .andExpect(jsonPath("$.address.postalCode").value("620014"))
             .andExpect(jsonPath("$.address.latitude").value(56.839))
             .andExpect(jsonPath("$.address.longitude").value(60.606))
-            .andExpect(jsonPath("$.deliveryMethod").value("COURIER"))
+            .andExpect(jsonPath("$.deliveryMethod").value("CUSTOM_DELIVERY_ADDRESS"))
             .andExpect(jsonPath("$.quote.available").value(true))
             .andExpect(jsonPath("$.quote.priceMinor").value(500))
             .andExpect(jsonPath("$.quote.zoneCode").value("EKB"))

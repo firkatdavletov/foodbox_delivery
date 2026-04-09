@@ -604,7 +604,12 @@ class OrderServiceImplTest {
 
         override fun getDeliveryDraft(actor: CurrentActor): CartDeliveryDraft? = cart.deliveryDraft
 
-        override fun detectCourierDeliveryDraft(actor: CurrentActor, latitude: Double, longitude: Double): CartDeliveryDraft {
+        override fun detectCourierDeliveryDraft(
+            actor: CurrentActor,
+            latitude: Double,
+            longitude: Double,
+            deliveryMethod: DeliveryMethodType,
+        ): CartDeliveryDraft {
             throw UnsupportedOperationException("Not used in order service tests")
         }
 

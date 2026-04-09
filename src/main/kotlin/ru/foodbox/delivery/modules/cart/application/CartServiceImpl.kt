@@ -98,7 +98,12 @@ class CartServiceImpl(
     }
 
     @Transactional
-    override fun detectCourierDeliveryDraft(actor: CurrentActor, latitude: Double, longitude: Double): CartDeliveryDraft {
+    override fun detectCourierDeliveryDraft(
+        actor: CurrentActor,
+        latitude: Double,
+        longitude: Double,
+        deliveryMethod: DeliveryMethodType,
+    ): CartDeliveryDraft {
         validateCoordinates(latitude = latitude, longitude = longitude)
 
         val cart = loadOrCreateActiveCart(actor)
@@ -113,13 +118,13 @@ class CartServiceImpl(
                 cartId = cart.id,
                 subtotalMinor = cart.itemsSubtotalMinor(),
                 itemCount = cart.items.sumOf { it.quantity },
-                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryMethod = deliveryMethod,
                 deliveryAddress = detectedAddress,
             )
         )
         cart.upsertDeliveryDraft(
             buildDeliveryDraft(
-                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryMethod = deliveryMethod,
                 deliveryAddress = detectedAddress,
                 pickupPointId = null,
                 pickupPointExternalId = null,

@@ -43,8 +43,9 @@ import kotlin.test.assertNull
 class CartServiceImplTest {
 
     @Test
-    fun `detects courier delivery draft by coordinates and uses geocoded address`() {
+    fun `detects delivery draft by coordinates and uses requested delivery method`() {
         val actor = CurrentActor.Guest("install-1")
+        val requestedDeliveryMethod = DeliveryMethodType.CUSTOM_DELIVERY_ADDRESS
         val cart = Cart(
             id = UUID.randomUUID(),
             owner = CartOwner(CartOwnerType.INSTALLATION, actor.installId),
@@ -68,7 +69,7 @@ class CartServiceImplTest {
         val cartRepository = InMemoryCartRepository(cart)
         val deliveryService = CapturingDeliveryService(
             quoteToReturn = DeliveryQuote(
-                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryMethod = requestedDeliveryMethod,
                 available = true,
                 priceMinor = 500,
                 currency = "RUB",
@@ -97,11 +98,12 @@ class CartServiceImplTest {
             actor = actor,
             latitude = 56.8389,
             longitude = 60.6057,
+            deliveryMethod = requestedDeliveryMethod,
         )
 
         assertEquals(56.8389, geocoder.lastLatitude)
         assertEquals(60.6057, geocoder.lastLongitude)
-        assertEquals(DeliveryMethodType.COURIER, draft.deliveryMethod)
+        assertEquals(requestedDeliveryMethod, draft.deliveryMethod)
         assertEquals("Yekaterinburg", draft.deliveryAddress?.city)
         assertEquals("Lenina", draft.deliveryAddress?.street)
         assertEquals("1", draft.deliveryAddress?.house)
@@ -109,6 +111,7 @@ class CartServiceImplTest {
         assertEquals(60.6057, draft.deliveryAddress?.longitude)
         assertEquals(2_000L, deliveryService.lastContext?.subtotalMinor)
         assertEquals(2, deliveryService.lastContext?.itemCount)
+        assertEquals(requestedDeliveryMethod, deliveryService.lastContext?.deliveryMethod)
         assertEquals(500L, draft.quote?.priceMinor)
         assertEquals(2_500L, cartRepository.savedCart?.totalPriceMinor)
     }
@@ -158,6 +161,7 @@ class CartServiceImplTest {
             actor = actor,
             latitude = 56.8389,
             longitude = 60.6057,
+            deliveryMethod = DeliveryMethodType.COURIER,
         )
 
         assertEquals(0L, deliveryService.lastContext?.subtotalMinor)

@@ -6,6 +6,7 @@ import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuanti
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.domain.Cart
 import ru.foodbox.delivery.modules.cart.domain.CartDeliveryDraft
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import java.util.UUID
 
 interface CartService {
@@ -15,7 +16,12 @@ interface CartService {
     fun removeItem(actor: CurrentActor, itemId: UUID): Cart
     fun clear(actor: CurrentActor): Cart
     fun getDeliveryDraft(actor: CurrentActor): CartDeliveryDraft?
-    fun detectCourierDeliveryDraft(actor: CurrentActor, latitude: Double, longitude: Double): CartDeliveryDraft
+    fun detectCourierDeliveryDraft(
+        actor: CurrentActor,
+        latitude: Double,
+        longitude: Double,
+        deliveryMethod: DeliveryMethodType,
+    ): CartDeliveryDraft
     fun updateDeliveryDraft(actor: CurrentActor, command: UpdateCartDeliveryCommand): CartDeliveryDraft
     fun mergeGuestCartIntoUser(userId: UUID, installId: String): Cart
     fun markOrdered(cartId: UUID)

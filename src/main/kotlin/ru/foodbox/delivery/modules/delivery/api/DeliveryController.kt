@@ -80,6 +80,7 @@ class DeliveryController(
             actor = actor,
             latitude = request.latitude,
             longitude = request.longitude,
+            deliveryMethod = request.deliveryMethod,
         ).toResponse()!!
     }
 
