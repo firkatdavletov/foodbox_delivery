@@ -701,6 +701,7 @@ class CatalogVariantsIntegrationTest {
         val initialCategoryImage = mediaImageJpaRepository.findById(initialImageId).orElseThrow()
         assertEquals(categoryId, initialCategoryImage.targetId)
         assertTrue(initialCategoryImage.objectKey.startsWith("categories/$categoryId/"))
+        assertEquals(initialImageId.toString(), created["imageIds"][0].asText())
         assertEquals("https://cdn.example.com/${initialCategoryImage.objectKey}", created["imageUrls"][0].asText())
 
         val updated = upsertCategoryAsAdmin(
@@ -716,6 +717,7 @@ class CatalogVariantsIntegrationTest {
         val nextCategoryImage = mediaImageJpaRepository.findById(nextImageId).orElseThrow()
         assertEquals(categoryId, nextCategoryImage.targetId)
         assertTrue(nextCategoryImage.objectKey.startsWith("categories/$categoryId/"))
+        assertEquals(nextImageId.toString(), updated["imageIds"][0].asText())
         assertEquals("https://cdn.example.com/${nextCategoryImage.objectKey}", updated["imageUrls"][0].asText())
         assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(initialImageId).orElseThrow().status)
         assertEquals(MediaImageStatus.READY, mediaImageJpaRepository.findById(nextImageId).orElseThrow().status)
@@ -748,6 +750,8 @@ class CatalogVariantsIntegrationTest {
         val categories = getAdminCategories(isActive = true)
         val updatedCategory = categories.first { it["id"].asText() == categoryId.toString() }
         val secondImage = mediaImageJpaRepository.findById(secondImageId).orElseThrow()
+        assertEquals(1, updatedCategory["imageIds"].size())
+        assertEquals(secondImageId.toString(), updatedCategory["imageIds"][0].asText())
         assertEquals(1, updatedCategory["imageUrls"].size())
         assertEquals("https://cdn.example.com/${secondImage.objectKey}", updatedCategory["imageUrls"][0].asText())
         assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(firstImageId).orElseThrow().status)

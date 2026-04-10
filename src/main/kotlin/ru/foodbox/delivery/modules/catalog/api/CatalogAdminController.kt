@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.AdminCategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertCategoryRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductRequest
@@ -35,8 +35,8 @@ class CatalogAdminController(
     @GetMapping("/categories")
     fun getCategories(
         @RequestParam(name = "isActive") isActive: Boolean,
-    ): List<CategoryResponse> {
-        return catalogService.getAdminCategories(isActive).map { it.toResponse() }
+    ): List<AdminCategoryResponse> {
+        return catalogService.getAdminCategories(isActive).map { it.toAdminResponse() }
     }
 
     @GetMapping("/products")
@@ -49,7 +49,7 @@ class CatalogAdminController(
     @PostMapping("/categories")
     fun upsertCategory(
         @Valid @RequestBody request: UpsertCategoryRequest,
-    ): CategoryResponse {
+    ): AdminCategoryResponse {
         val category = catalogService.upsertCategory(
             UpsertCategoryCommand(
                 id = request.id,
@@ -60,7 +60,7 @@ class CatalogAdminController(
             )
         )
 
-        return category.toResponse()
+        return category.toAdminResponse()
     }
 
     @DeleteMapping("/categories/{categoryId}/images/{imageId}")

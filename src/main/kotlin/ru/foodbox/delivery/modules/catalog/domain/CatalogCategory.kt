@@ -7,6 +7,7 @@ data class CatalogCategory(
     val id: UUID,
     val name: String,
     val slug: String,
+    val imageIds: List<UUID> = emptyList(),
     val imageUrls: List<String> = emptyList(),
     val isActive: Boolean,
     val createdAt: Instant,

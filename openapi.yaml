@@ -761,7 +761,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CategoryResponse'
+                  $ref: '#/components/schemas/AdminCategoryResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -788,7 +788,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CategoryResponse'
+                $ref: '#/components/schemas/AdminCategoryResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -4044,6 +4044,29 @@ components:
           type: string
         slug:
           type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    AdminCategoryResponse:
+      type: object
+      required: [id, name, slug, imageIds, imageUrls, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         imageUrls:
           type: array
           items:

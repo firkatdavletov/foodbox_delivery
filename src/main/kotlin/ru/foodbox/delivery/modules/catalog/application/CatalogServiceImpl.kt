@@ -261,9 +261,13 @@ class CatalogServiceImpl(
             return emptyList()
         }
 
-        val imageUrlsByCategoryId = imageService.getCategoryImageUrls(categories.map { it.id })
+        val imagesByCategoryId = imageService.getCategoryImages(categories.map { it.id })
         return categories.map { category ->
-            category.copy(imageUrls = imageUrlsByCategoryId[category.id].orEmpty())
+            val images = imagesByCategoryId[category.id].orEmpty()
+            category.copy(
+                imageIds = images.map { it.id },
+                imageUrls = images.map { it.url },
+            )
         }
     }
 

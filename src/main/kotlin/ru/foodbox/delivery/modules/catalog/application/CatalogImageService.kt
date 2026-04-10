@@ -195,7 +195,7 @@ class CatalogImageService(
         }
     }
 
-    private fun getCategoryImages(categoryIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
+    fun getCategoryImages(categoryIds: Collection<UUID>): Map<UUID, List<CatalogImageReference>> {
         return mapCategoryImages(categoryImageRepository.findAllByCategoryIds(categoryIds))
     }
 

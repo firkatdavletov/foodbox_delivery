@@ -1,6 +1,7 @@
 package ru.foodbox.delivery.modules.catalog.api
 
 import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.AdminCategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductModifierGroupResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductModifierOptionResponse
@@ -19,6 +20,17 @@ internal fun CatalogCategory.toResponse(): CategoryResponse {
         id = id,
         name = name,
         slug = slug,
+        imageUrls = imageUrls,
+        isActive = isActive,
+    )
+}
+
+internal fun CatalogCategory.toAdminResponse(): AdminCategoryResponse {
+    return AdminCategoryResponse(
+        id = id,
+        name = name,
+        slug = slug,
+        imageIds = imageIds,
         imageUrls = imageUrls,
         isActive = isActive,
     )

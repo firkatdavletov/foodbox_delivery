@@ -9,3 +9,12 @@ data class CategoryResponse(
     val imageUrls: List<String>,
     val isActive: Boolean,
 )
+
+data class AdminCategoryResponse(
+    val id: UUID,
+    val name: String,
+    val slug: String,
+    val imageIds: List<UUID>,
+    val imageUrls: List<String>,
+    val isActive: Boolean,
+)
