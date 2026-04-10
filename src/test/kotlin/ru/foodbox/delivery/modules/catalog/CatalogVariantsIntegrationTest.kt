@@ -13,6 +13,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -722,6 +723,82 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `delete category image removes attachment and marks media image deleted`() {
+        val firstImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/categories/sale-first.jpg",
+            targetType = MediaTargetType.CATEGORY,
+        )
+        val secondImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/categories/sale-second.jpg",
+            targetType = MediaTargetType.CATEGORY,
+        )
+
+        val created = upsertCategoryAsAdmin(
+            mapOf(
+                "name" to "Распродажа",
+                "slug" to "sale",
+                "imageIds" to listOf(firstImageId, secondImageId),
+                "isActive" to true,
+            )
+        )
+        val categoryId = UUID.fromString(created["id"].asText())
+
+        deleteCategoryImageAsAdmin(categoryId, firstImageId)
+
+        val categories = getAdminCategories(isActive = true)
+        val updatedCategory = categories.first { it["id"].asText() == categoryId.toString() }
+        val secondImage = mediaImageJpaRepository.findById(secondImageId).orElseThrow()
+        assertEquals(1, updatedCategory["imageUrls"].size())
+        assertEquals("https://cdn.example.com/${secondImage.objectKey}", updatedCategory["imageUrls"][0].asText())
+        assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(firstImageId).orElseThrow().status)
+        assertEquals(MediaImageStatus.READY, secondImage.status)
+        assertEquals(categoryId, secondImage.targetId)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `delete product image removes attachment and marks media image deleted`() {
+        val categoryId = createCategory(externalId = "cat-delete-product-image", slug = "delete-product-image")
+        val firstImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/delete-first.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+        val secondImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/delete-second.jpg",
+            targetType = MediaTargetType.PRODUCT,
+        )
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Толстовка",
+                "priceMinor" to 3900,
+                "imageIds" to listOf(firstImageId, secondImageId),
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to emptyList<Any>(),
+                "variants" to emptyList<Any>(),
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+
+        deleteProductImageAsAdmin(productId, firstImageId)
+
+        val details = getProductDetails(productId)
+        val adminDetails = getAdminProductDetails(productId)
+        val secondImage = mediaImageJpaRepository.findById(secondImageId).orElseThrow()
+        assertEquals(1, details["imageUrls"].size())
+        assertEquals("https://cdn.example.com/${secondImage.objectKey}", details["imageUrls"][0].asText())
+        assertEquals(1, adminDetails["imageIds"].size())
+        assertEquals(secondImageId.toString(), adminDetails["imageIds"][0].asText())
+        assertEquals(MediaImageStatus.DELETED, mediaImageJpaRepository.findById(firstImageId).orElseThrow().status)
+        assertEquals(MediaImageStatus.READY, secondImage.status)
+        assertEquals(productId, secondImage.targetId)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `details api returns variants and defaultVariantId`() {
         val categoryId = createCategory(externalId = "cat-sneakers", slug = "sneakers")
 
@@ -1184,6 +1261,19 @@ class CatalogVariantsIntegrationTest {
         return objectMapper.readTree(response)
     }
 
+    private fun getAdminCategories(isActive: Boolean): JsonNode {
+        val response = mockMvc.perform(
+            get("/api/v1/admin/catalog/categories")
+                .param("isActive", isActive.toString())
+                .accept(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
     private fun getAdminProductDetails(productId: UUID): JsonNode {
         val response = mockMvc.perform(
             get("/api/v1/admin/products/{productId}", productId)
@@ -1194,5 +1284,17 @@ class CatalogVariantsIntegrationTest {
             .contentAsString
 
         return objectMapper.readTree(response)
+    }
+
+    private fun deleteCategoryImageAsAdmin(categoryId: UUID, imageId: UUID) {
+        mockMvc.perform(
+            delete("/api/v1/admin/catalog/categories/{categoryId}/images/{imageId}", categoryId, imageId)
+        ).andExpect(status().isNoContent)
+    }
+
+    private fun deleteProductImageAsAdmin(productId: UUID, imageId: UUID) {
+        mockMvc.perform(
+            delete("/api/v1/admin/catalog/products/{productId}/images/{imageId}", productId, imageId)
+        ).andExpect(status().isNoContent)
     }
 }

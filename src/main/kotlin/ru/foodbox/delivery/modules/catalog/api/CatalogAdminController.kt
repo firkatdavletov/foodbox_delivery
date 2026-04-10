@@ -1,11 +1,15 @@
 package ru.foodbox.delivery.modules.catalog.api
 
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.modules.catalog.api.dto.CategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
@@ -20,6 +24,7 @@ import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVar
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 import ru.foodbox.delivery.modules.catalog.modifier.application.command.ReplaceProductModifierGroupCommand
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/admin/catalog")
@@ -56,6 +61,15 @@ class CatalogAdminController(
         )
 
         return category.toResponse()
+    }
+
+    @DeleteMapping("/categories/{categoryId}/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteCategoryImage(
+        @PathVariable categoryId: UUID,
+        @PathVariable imageId: UUID,
+    ) {
+        catalogService.deleteCategoryImage(categoryId, imageId)
     }
 
     @PostMapping("/products")
@@ -114,6 +128,15 @@ class CatalogAdminController(
         )
 
         return product.toResponse()
+    }
+
+    @DeleteMapping("/products/{productId}/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteProductImage(
+        @PathVariable productId: UUID,
+        @PathVariable imageId: UUID,
+    ) {
+        catalogService.deleteProductImage(productId, imageId)
     }
 }
 

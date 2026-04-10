@@ -3,8 +3,8 @@ package ru.foodbox.delivery.modules.catalog.application
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
-import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import java.util.UUID
 
 interface CatalogService {
@@ -16,4 +16,6 @@ interface CatalogService {
     fun getAdminProductDetails(productId: UUID): CatalogProductDetails?
     fun upsertCategory(command: UpsertCategoryCommand): CatalogCategory
     fun upsertProduct(command: UpsertProductCommand): CatalogProduct
+    fun deleteCategoryImage(categoryId: UUID, imageId: UUID)
+    fun deleteProductImage(productId: UUID, imageId: UUID)
 }

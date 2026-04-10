@@ -798,6 +798,30 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/catalog/categories/{categoryId}/images/{imageId}:
+    delete:
+      tags: [Catalog Admin]
+      operationId: deleteCategoryImage
+      summary: Delete category image
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CategoryIdPathParam'
+        - $ref: '#/components/parameters/ImageIdPathParam'
+      responses:
+        '204':
+          description: Category image deleted
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/catalog/products:
     get:
       tags: [Catalog Admin]
@@ -848,6 +872,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog/products/{productId}/images/{imageId}:
+    delete:
+      tags: [Catalog Admin]
+      operationId: deleteProductImage
+      summary: Delete product image
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: '#/components/parameters/ImageIdPathParam'
+      responses:
+        '204':
+          description: Product image deleted
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -2807,8 +2855,22 @@ components:
       description: Preferred guest actor identifier used by `CurrentActorArgumentResolver`. Legacy `X-Install-Id` is also accepted for backward compatibility.
 
   parameters:
+    CategoryIdPathParam:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ProductIdPathParam:
       name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ImageIdPathParam:
+      name: imageId
       in: path
       required: true
       schema:

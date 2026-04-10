@@ -7,11 +7,13 @@ import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVar
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
-import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.ProductSnapshot
 import ru.foodbox.delivery.modules.catalog.modifier.application.CatalogProductModifiersService
+import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryImageRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
+import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductImageRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
 import java.time.Instant
 import java.util.Locale
@@ -21,6 +23,8 @@ import java.util.UUID
 class CatalogServiceImpl(
     private val categoryRepository: CatalogCategoryRepository,
     private val productRepository: CatalogProductRepository,
+    private val categoryImageRepository: CatalogCategoryImageRepository,
+    private val productImageRepository: CatalogProductImageRepository,
     private val productVariantsService: CatalogProductVariantsService,
     private val productModifiersService: CatalogProductModifiersService,
     private val imageService: CatalogImageService,
@@ -123,6 +127,23 @@ class CatalogServiceImpl(
         return enrichCategories(listOf(saved)).first()
     }
 
+    @Transactional
+    override fun deleteCategoryImage(categoryId: UUID, imageId: UUID) {
+        categoryRepository.findById(categoryId)
+            ?: throw NotFoundException("Category not found")
+
+        val existingImages = categoryImageRepository.findAllByCategoryIds(listOf(categoryId))
+        val remainingImageIds = existingImages
+            .filterNot { it.imageId == imageId }
+            .map { it.imageId }
+
+        if (remainingImageIds.size == existingImages.size) {
+            throw NotFoundException("Category image not found")
+        }
+
+        imageService.syncCategoryImages(categoryId, remainingImageIds, Instant.now())
+    }
+
     private fun buildProductDetails(productId: UUID, activeOnly: Boolean): CatalogProductDetails {
         val product = productRepository.findById(productId)
             ?: throw NotFoundException("Product not found")
@@ -216,6 +237,23 @@ class CatalogServiceImpl(
             commands = command.modifierGroups,
         )
         return enrichProducts(listOf(saved), modifierGroupsActiveOnly = false).first()
+    }
+
+    @Transactional
+    override fun deleteProductImage(productId: UUID, imageId: UUID) {
+        productRepository.findById(productId)
+            ?: throw NotFoundException("Product not found")
+
+        val existingImages = productImageRepository.findAllByProductIds(listOf(productId))
+        val remainingImageIds = existingImages
+            .filterNot { it.imageId == imageId }
+            .map { it.imageId }
+
+        if (remainingImageIds.size == existingImages.size) {
+            throw NotFoundException("Product image not found")
+        }
+
+        imageService.syncProductImages(productId, remainingImageIds, Instant.now())
     }
 
     private fun enrichCategories(categories: List<CatalogCategory>): List<CatalogCategory> {
