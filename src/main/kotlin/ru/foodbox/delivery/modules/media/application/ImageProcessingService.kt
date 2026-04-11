@@ -42,12 +42,13 @@ class ImageProcessingService(
             val originalBytes = storagePort.getObjectBytes(image.objectKey)
             val sourceImage = ImageIO.read(ByteArrayInputStream(originalBytes))
                 ?: throw IllegalStateException("Failed to decode image: ${image.objectKey}")
+            val normalizedImage = normalizeImageOrientation(sourceImage, originalBytes)
 
             val thumbKey = objectKeyFactory.thumbKey(image.objectKey)
             val cardKey = objectKeyFactory.cardKey(image.objectKey)
 
             val thumbBytes = resizeAndEncodeWebp(
-                source = sourceImage,
+                source = normalizedImage,
                 maxWidth = properties.thumb.width,
                 maxHeight = properties.thumb.height,
                 quality = properties.thumb.quality,
@@ -55,7 +56,7 @@ class ImageProcessingService(
             storagePort.putObject(thumbKey, thumbBytes, WEBP_CONTENT_TYPE)
 
             val cardBytes = resizeAndEncodeWebp(
-                source = sourceImage,
+                source = normalizedImage,
                 maxWidth = properties.card.width,
                 maxHeight = properties.card.height,
                 quality = properties.card.quality,
@@ -216,3 +217,175 @@ internal fun configureCompression(param: ImageWriteParam, quality: Int) {
     param.compressionTypes?.firstOrNull()?.let { param.compressionType = it }
     param.compressionQuality = quality.coerceIn(0, 100) / 100f
 }
+
+internal fun normalizeImageOrientation(source: BufferedImage, originalBytes: ByteArray): BufferedImage {
+    val orientation = extractExifOrientation(originalBytes) ?: return source
+    if (orientation !in 2..8) {
+        return source
+    }
+
+    val targetWidth = if (orientation in setOf(5, 6, 7, 8)) source.height else source.width
+    val targetHeight = if (orientation in setOf(5, 6, 7, 8)) source.width else source.height
+    val targetType = if (source.colorModel.hasAlpha()) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB
+    val normalized = BufferedImage(targetWidth, targetHeight, targetType)
+
+    for (y in 0 until source.height) {
+        for (x in 0 until source.width) {
+            val rgb = source.getRGB(x, y)
+            val (targetX, targetY) = when (orientation) {
+                2 -> (source.width - 1 - x) to y
+                3 -> (source.width - 1 - x) to (source.height - 1 - y)
+                4 -> x to (source.height - 1 - y)
+                5 -> y to x
+                6 -> (source.height - 1 - y) to x
+                7 -> (source.height - 1 - y) to (source.width - 1 - x)
+                8 -> y to (source.width - 1 - x)
+                else -> x to y
+            }
+            normalized.setRGB(targetX, targetY, rgb)
+        }
+    }
+
+    return normalized
+}
+
+internal fun extractExifOrientation(bytes: ByteArray): Int? {
+    if (bytes.size < 4 || readUnsignedShort(bytes, 0, littleEndian = false) != JPEG_SOI_MARKER) {
+        return null
+    }
+
+    var offset = 2
+    while (offset + 4 <= bytes.size) {
+        if (bytes[offset].toInt() and 0xFF != JPEG_MARKER_PREFIX) {
+            offset += 1
+            continue
+        }
+
+        val marker = bytes[offset + 1].toInt() and 0xFF
+        offset += 2
+
+        if (marker == JPEG_SOI_SUFFIX || marker == JPEG_TEM_MARKER) {
+            continue
+        }
+        if (marker == JPEG_EOI_SUFFIX || marker == JPEG_SOS_SUFFIX) {
+            break
+        }
+        if (offset + 2 > bytes.size) {
+            return null
+        }
+
+        val segmentLength = readUnsignedShort(bytes, offset, littleEndian = false)
+        if (segmentLength < 2 || offset + segmentLength > bytes.size) {
+            return null
+        }
+
+        val segmentDataOffset = offset + 2
+        val segmentDataLength = segmentLength - 2
+        if (marker == JPEG_APP1_MARKER && hasExifHeader(bytes, segmentDataOffset, segmentDataLength)) {
+            return readExifOrientationFromTiff(
+                bytes = bytes,
+                tiffOffset = segmentDataOffset + EXIF_HEADER.size,
+                tiffLength = segmentDataLength - EXIF_HEADER.size,
+            )
+        }
+
+        offset += segmentLength
+    }
+
+    return null
+}
+
+private fun hasExifHeader(bytes: ByteArray, offset: Int, length: Int): Boolean {
+    if (length < EXIF_HEADER.size || offset + EXIF_HEADER.size > bytes.size) {
+        return false
+    }
+    return EXIF_HEADER.indices.all { index -> bytes[offset + index] == EXIF_HEADER[index] }
+}
+
+private fun readExifOrientationFromTiff(bytes: ByteArray, tiffOffset: Int, tiffLength: Int): Int? {
+    if (tiffLength < 8 || tiffOffset + tiffLength > bytes.size) {
+        return null
+    }
+
+    val littleEndian = when {
+        bytes[tiffOffset] == 'I'.code.toByte() && bytes[tiffOffset + 1] == 'I'.code.toByte() -> true
+        bytes[tiffOffset] == 'M'.code.toByte() && bytes[tiffOffset + 1] == 'M'.code.toByte() -> false
+        else -> return null
+    }
+
+    if (readUnsignedShort(bytes, tiffOffset + 2, littleEndian) != TIFF_MAGIC_NUMBER) {
+        return null
+    }
+
+    val ifdOffset = readInt(bytes, tiffOffset + 4, littleEndian)
+    if (ifdOffset < 8 || ifdOffset + 2 > tiffLength) {
+        return null
+    }
+
+    val ifdStart = tiffOffset + ifdOffset
+    val entryCount = readUnsignedShort(bytes, ifdStart, littleEndian)
+
+    for (index in 0 until entryCount) {
+        val entryOffset = ifdStart + 2 + index * TIFF_ENTRY_SIZE
+        if (entryOffset + TIFF_ENTRY_SIZE > tiffOffset + tiffLength) {
+            return null
+        }
+
+        val tag = readUnsignedShort(bytes, entryOffset, littleEndian)
+        if (tag != EXIF_ORIENTATION_TAG) {
+            continue
+        }
+
+        val type = readUnsignedShort(bytes, entryOffset + 2, littleEndian)
+        val count = readInt(bytes, entryOffset + 4, littleEndian)
+        if (type != TIFF_TYPE_SHORT || count < 1) {
+            return null
+        }
+
+        return readUnsignedShort(bytes, entryOffset + 8, littleEndian)
+    }
+
+    return null
+}
+
+private fun readUnsignedShort(bytes: ByteArray, offset: Int, littleEndian: Boolean): Int {
+    val first = bytes[offset].toInt() and 0xFF
+    val second = bytes[offset + 1].toInt() and 0xFF
+    return if (littleEndian) {
+        first or (second shl 8)
+    } else {
+        (first shl 8) or second
+    }
+}
+
+private fun readInt(bytes: ByteArray, offset: Int, littleEndian: Boolean): Int {
+    val b0 = bytes[offset].toInt() and 0xFF
+    val b1 = bytes[offset + 1].toInt() and 0xFF
+    val b2 = bytes[offset + 2].toInt() and 0xFF
+    val b3 = bytes[offset + 3].toInt() and 0xFF
+    return if (littleEndian) {
+        b0 or (b1 shl 8) or (b2 shl 16) or (b3 shl 24)
+    } else {
+        (b0 shl 24) or (b1 shl 16) or (b2 shl 8) or b3
+    }
+}
+
+private const val JPEG_MARKER_PREFIX = 0xFF
+private const val JPEG_SOI_MARKER = 0xFFD8
+private const val JPEG_SOI_SUFFIX = 0xD8
+private const val JPEG_EOI_SUFFIX = 0xD9
+private const val JPEG_SOS_SUFFIX = 0xDA
+private const val JPEG_TEM_MARKER = 0x01
+private const val JPEG_APP1_MARKER = 0xE1
+private const val TIFF_MAGIC_NUMBER = 42
+private const val TIFF_TYPE_SHORT = 3
+private const val TIFF_ENTRY_SIZE = 12
+private const val EXIF_ORIENTATION_TAG = 0x0112
+private val EXIF_HEADER = byteArrayOf(
+    'E'.code.toByte(),
+    'x'.code.toByte(),
+    'i'.code.toByte(),
+    'f'.code.toByte(),
+    0,
+    0,
+)
