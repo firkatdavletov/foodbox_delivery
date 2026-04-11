@@ -9,6 +9,7 @@ import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.repository.ImageProcessingJobRepository
 import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
+import java.awt.geom.AffineTransform
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -42,26 +43,32 @@ class ImageProcessingService(
             val originalBytes = storagePort.getObjectBytes(image.objectKey)
             val sourceImage = ImageIO.read(ByteArrayInputStream(originalBytes))
                 ?: throw IllegalStateException("Failed to decode image: ${image.objectKey}")
-            val normalizedImage = normalizeImageOrientation(sourceImage, originalBytes)
+            val orientation = runCatching { extractExifOrientation(originalBytes) }
+                .onFailure { ex ->
+                    log.warn("Failed to extract EXIF orientation for image {}: {}", image.id, ex.message)
+                }
+                .getOrNull()
 
             val thumbKey = objectKeyFactory.thumbKey(image.objectKey)
             val cardKey = objectKeyFactory.cardKey(image.objectKey)
 
-            val thumbBytes = resizeAndEncodeWebp(
-                source = normalizedImage,
+            val thumbImage = resizeAndEncodeWebp(
+                source = sourceImage,
+                orientation = orientation,
                 maxWidth = properties.thumb.width,
                 maxHeight = properties.thumb.height,
                 quality = properties.thumb.quality,
             )
-            storagePort.putObject(thumbKey, thumbBytes, WEBP_CONTENT_TYPE)
+            storagePort.putObject(thumbKey, thumbImage.bytes, thumbImage.contentType)
 
-            val cardBytes = resizeAndEncodeWebp(
-                source = normalizedImage,
+            val cardImage = resizeAndEncodeWebp(
+                source = sourceImage,
+                orientation = orientation,
                 maxWidth = properties.card.width,
                 maxHeight = properties.card.height,
                 quality = properties.card.quality,
             )
-            storagePort.putObject(cardKey, cardBytes, WEBP_CONTENT_TYPE)
+            storagePort.putObject(cardKey, cardImage.bytes, cardImage.contentType)
 
             val now = Instant.now()
             mediaImageRepository.save(
@@ -134,32 +141,52 @@ class ImageProcessingService(
 
     private fun resizeAndEncodeWebp(
         source: BufferedImage,
+        orientation: Int?,
         maxWidth: Int,
         maxHeight: Int,
         quality: Int,
-    ): ByteArray {
-        val resized = boundResize(source, maxWidth, maxHeight)
+    ): EncodedImage {
+        val resized = boundResize(source, orientation, maxWidth, maxHeight)
         return encodeToWebp(resized, quality)
     }
 
-    private fun boundResize(source: BufferedImage, maxWidth: Int, maxHeight: Int): BufferedImage {
+    private fun boundResize(
+        source: BufferedImage,
+        orientation: Int?,
+        maxWidth: Int,
+        maxHeight: Int,
+    ): BufferedImage {
         val srcWidth = source.width
         val srcHeight = source.height
+        val normalizedOrientation = orientation?.takeIf { it in 2..8 } ?: 1
+        val orientedWidth = if (normalizedOrientation in ORIENTATIONS_SWAPPING_DIMENSIONS) srcHeight else srcWidth
+        val orientedHeight = if (normalizedOrientation in ORIENTATIONS_SWAPPING_DIMENSIONS) srcWidth else srcHeight
 
-        if (srcWidth <= maxWidth && srcHeight <= maxHeight) {
+        if (normalizedOrientation == 1 && srcWidth <= maxWidth && srcHeight <= maxHeight) {
             return toRgb(source)
         }
 
-        val scale = minOf(maxWidth.toDouble() / srcWidth, maxHeight.toDouble() / srcHeight)
-        val targetWidth = (srcWidth * scale).toInt().coerceAtLeast(1)
-        val targetHeight = (srcHeight * scale).toInt().coerceAtLeast(1)
+        val scale = minOf(
+            maxWidth.toDouble() / orientedWidth,
+            maxHeight.toDouble() / orientedHeight,
+            1.0,
+        )
+        val targetWidth = (orientedWidth * scale).toInt().coerceAtLeast(1)
+        val targetHeight = (orientedHeight * scale).toInt().coerceAtLeast(1)
 
         val resized = BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB)
         val g = resized.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        g.drawImage(source, 0, 0, targetWidth, targetHeight, null)
+        val transform = buildOrientationTransform(
+            orientation = normalizedOrientation,
+            sourceWidth = srcWidth,
+            sourceHeight = srcHeight,
+            scaleX = targetWidth.toDouble() / orientedWidth,
+            scaleY = targetHeight.toDouble() / orientedHeight,
+        )
+        g.drawImage(source, transform, null)
         g.dispose()
         return resized
     }
@@ -175,36 +202,55 @@ class ImageProcessingService(
         return rgb
     }
 
-    private fun encodeToWebp(image: BufferedImage, quality: Int): ByteArray {
+    private fun encodeToWebp(image: BufferedImage, quality: Int): EncodedImage {
         val writer = ImageIO.getImageWritersByMIMEType(WEBP_CONTENT_TYPE).let { writers ->
             if (writers.hasNext()) writers.next() else null
         }
 
         if (writer != null) {
-            val output = ByteArrayOutputStream()
-            val imageOutput = ImageIO.createImageOutputStream(output)
-                ?: throw IllegalStateException("Failed to create ImageOutputStream for $WEBP_CONTENT_TYPE")
             try {
-                writer.output = imageOutput
-                val param = writer.defaultWriteParam
-                configureCompression(param, quality)
-                writer.write(null, IIOImage(image, null, null), param)
-            } finally {
-                imageOutput.close()
-                writer.dispose()
+                val output = ByteArrayOutputStream()
+                val imageOutput = ImageIO.createImageOutputStream(output)
+                    ?: throw IllegalStateException("Failed to create ImageOutputStream for $WEBP_CONTENT_TYPE")
+                try {
+                    writer.output = imageOutput
+                    val param = writer.defaultWriteParam
+                    configureCompression(param, quality)
+                    writer.write(null, IIOImage(image, null, null), param)
+                } finally {
+                    imageOutput.close()
+                    writer.dispose()
+                }
+                return EncodedImage(
+                    bytes = output.toByteArray(),
+                    contentType = WEBP_CONTENT_TYPE,
+                )
+            } catch (ex: Exception) {
+                log.warn("Failed to encode image as WebP, falling back to PNG: {}", ex.message)
+            } catch (ex: LinkageError) {
+                log.warn("WebP writer is not available, falling back to PNG: {}", ex.message)
             }
-            return output.toByteArray()
         }
 
         val output = ByteArrayOutputStream()
         ImageIO.write(image, FALLBACK_FORMAT, output)
-        return output.toByteArray()
+        return EncodedImage(
+            bytes = output.toByteArray(),
+            contentType = PNG_CONTENT_TYPE,
+        )
     }
 
     private companion object {
         const val WEBP_CONTENT_TYPE = "image/webp"
+        const val PNG_CONTENT_TYPE = "image/png"
         const val FALLBACK_FORMAT = "png"
+        val ORIENTATIONS_SWAPPING_DIMENSIONS = setOf(5, 6, 7, 8)
     }
+
+    private data class EncodedImage(
+        val bytes: ByteArray,
+        val contentType: String,
+    )
 }
 
 internal fun configureCompression(param: ImageWriteParam, quality: Int) {
@@ -247,6 +293,25 @@ internal fun normalizeImageOrientation(source: BufferedImage, originalBytes: Byt
     }
 
     return normalized
+}
+
+internal fun buildOrientationTransform(
+    orientation: Int,
+    sourceWidth: Int,
+    sourceHeight: Int,
+    scaleX: Double,
+    scaleY: Double,
+): AffineTransform {
+    return when (orientation) {
+        2 -> AffineTransform(-scaleX, 0.0, 0.0, scaleY, scaleX * sourceWidth, 0.0)
+        3 -> AffineTransform(-scaleX, 0.0, 0.0, -scaleY, scaleX * sourceWidth, scaleY * sourceHeight)
+        4 -> AffineTransform(scaleX, 0.0, 0.0, -scaleY, 0.0, scaleY * sourceHeight)
+        5 -> AffineTransform(0.0, scaleY, scaleX, 0.0, 0.0, 0.0)
+        6 -> AffineTransform(0.0, scaleY, -scaleX, 0.0, scaleX * sourceHeight, 0.0)
+        7 -> AffineTransform(0.0, -scaleY, -scaleX, 0.0, scaleX * sourceHeight, scaleY * sourceWidth)
+        8 -> AffineTransform(0.0, -scaleY, scaleX, 0.0, 0.0, scaleY * sourceWidth)
+        else -> AffineTransform(scaleX, 0.0, 0.0, scaleY, 0.0, 0.0)
+    }
 }
 
 internal fun extractExifOrientation(bytes: ByteArray): Int? {
