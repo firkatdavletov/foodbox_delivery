@@ -45,6 +45,7 @@ import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportType
 import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
+import ru.foodbox.delivery.modules.media.domain.storage.StoredObjectMetadata
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
 import java.time.Instant
@@ -1155,6 +1156,48 @@ class CatalogVariantsIntegrationTest {
         assertTrue(errorBody.contains("multiple values for option group"))
     }
 
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `missing variant image object returns validation error`() {
+        val categoryId = createCategory(externalId = "cat-missing-storage-image", slug = "missing-storage-image")
+        val variantImageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/products/missing-storage-image.jpg",
+            targetType = MediaTargetType.VARIANT,
+        )
+        val variantImage = mediaImageJpaRepository.findById(variantImageId).orElseThrow()
+        Mockito.doReturn(null)
+            .`when`(storagePort)
+            .getObjectMetadata(variantImage.objectKey)
+
+        val errorBody = upsertProductAsAdminExpectBadRequest(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Пальто",
+                "priceMinor" to 9500,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "m", "title" to "M")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "COAT-M",
+                        "imageIds" to listOf(variantImageId),
+                        "options" to listOf(mapOf("optionGroupCode" to "size", "optionValueCode" to "m")),
+                    )
+                ),
+            )
+        )
+
+        assertTrue(errorBody.contains("\"code\":\"VALIDATION_ERROR\""))
+        assertTrue(errorBody.contains("file is missing in storage"))
+    }
+
     private fun createCategory(externalId: String, slug: String): UUID {
         val now = Instant.now()
         val category = categoryRepository.save(
@@ -1197,7 +1240,14 @@ class CatalogVariantsIntegrationTest {
             createdAt = now,
             updatedAt = now,
         )
-        return mediaImageJpaRepository.save(image).id
+        val saved = mediaImageJpaRepository.save(image)
+        Mockito.doReturn(
+            StoredObjectMetadata(
+                contentType = saved.contentType,
+                contentLength = saved.fileSize,
+            )
+        ).`when`(storagePort).getObjectMetadata(saved.objectKey)
+        return saved.id
     }
 
     private fun upsertProductAsAdmin(request: Any): JsonNode {

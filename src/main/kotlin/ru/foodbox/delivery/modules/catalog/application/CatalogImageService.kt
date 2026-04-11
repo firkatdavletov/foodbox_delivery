@@ -380,6 +380,8 @@ class CatalogImageService(
         targetId: UUID,
         now: Instant,
     ): MediaImage {
+        ensureImageObjectExists(image)
+
         val nextObjectKey = if (requiresRelocation(image, targetType, targetId)) {
             objectKeyFactory.assignedKey(
                 targetType = targetType,
@@ -422,6 +424,13 @@ class CatalogImageService(
             status = nextStatus,
             updatedAt = now,
         )
+    }
+
+    private fun ensureImageObjectExists(image: MediaImage) {
+        val objectMetadata = storagePort.getObjectMetadata(image.objectKey)
+        if (objectMetadata == null) {
+            throw IllegalArgumentException("Image '${image.id}' file is missing in storage")
+        }
     }
 
     private fun requiresRelocation(
