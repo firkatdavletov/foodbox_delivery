@@ -53,4 +53,20 @@ interface PaymentJpaRepository : JpaRepository<PaymentEntity, UUID> {
     ): PaymentEntity?
 
     fun findFirstByOrderIdOrderByCreatedAtDesc(orderId: UUID): PaymentEntity?
+
+    @Query(
+        """
+        select p
+        from PaymentEntity p
+        where p.orderId in :orderIds
+          and p.createdAt = (
+              select max(p2.createdAt)
+              from PaymentEntity p2
+              where p2.orderId = p.orderId
+          )
+        """
+    )
+    fun findLatestByOrderIdIn(
+        @Param("orderIds") orderIds: Collection<UUID>,
+    ): List<PaymentEntity>
 }

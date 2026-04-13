@@ -16,26 +16,66 @@ import ru.foodbox.delivery.modules.catalog.application.CatalogImageService
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusHistoryResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderStatusTransitionResponse
 import ru.foodbox.delivery.modules.orders.api.dto.OrderResponse
+import ru.foodbox.delivery.modules.orders.api.dto.AdminOrderListResponse
+import ru.foodbox.delivery.modules.orders.application.AdminOrderListQuery
+import ru.foodbox.delivery.modules.orders.application.AdminOrderListScope
+import ru.foodbox.delivery.modules.orders.application.AdminOrderListService
+import ru.foodbox.delivery.modules.orders.application.AdminOrderListSortBy
+import ru.foodbox.delivery.modules.orders.application.AdminOrderListSortDirection
 import ru.foodbox.delivery.modules.orders.api.dto.UpdateOrderStatusRequest
 import ru.foodbox.delivery.modules.orders.application.OrderService
 import ru.foodbox.delivery.modules.orders.application.OrderStatusChangeActor
 import ru.foodbox.delivery.modules.orders.application.OrderStatusService
 import ru.foodbox.delivery.modules.orders.application.command.ChangeOrderStatusCommand
+import ru.foodbox.delivery.modules.orders.application.parseAdminOrderListBoundary
 import ru.foodbox.delivery.modules.orders.domain.Order
+import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/admin/orders")
 class OrderAdminController(
+    private val adminOrderListService: AdminOrderListService,
     private val orderService: OrderService,
     private val orderStatusService: OrderStatusService,
     private val catalogImageService: CatalogImageService,
 ) {
 
     @GetMapping
-    fun getOrders(): List<OrderResponse> {
-        val orders = orderService.getAdminOrders()
-        return orders.toResponsesWithImages()
+    fun getOrders(
+        @RequestParam(name = "page", defaultValue = "1") page: Int,
+        @RequestParam(name = "pageSize", defaultValue = "25") pageSize: Int,
+        @RequestParam(name = "search", required = false) search: String?,
+        @RequestParam(name = "statusCodes", required = false) statusCodes: List<String>?,
+        @RequestParam(name = "deliveryMethods", required = false) deliveryMethods: List<String>?,
+        @RequestParam(name = "createdFrom", required = false) createdFrom: String?,
+        @RequestParam(name = "createdTo", required = false) createdTo: String?,
+        @RequestParam(name = "scope", required = false) scope: String?,
+        @RequestParam(name = "sortBy", required = false) sortBy: String?,
+        @RequestParam(name = "sortDirection", required = false) sortDirection: String?,
+    ): AdminOrderListResponse {
+        return adminOrderListService.getOrders(
+            AdminOrderListQuery(
+                page = page,
+                pageSize = pageSize,
+                search = search,
+                statusCodes = statusCodes.orEmpty()
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .map(String::uppercase)
+                    .toSet(),
+                deliveryMethods = deliveryMethods.orEmpty()
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .map(DeliveryMethodType::fromValue)
+                    .toSet(),
+                createdFrom = parseAdminOrderListBoundary(createdFrom, inclusiveEndOfDay = false),
+                createdTo = parseAdminOrderListBoundary(createdTo, inclusiveEndOfDay = true),
+                scope = AdminOrderListScope.fromApiValue(scope),
+                sortBy = AdminOrderListSortBy.fromApiValue(sortBy),
+                sortDirection = AdminOrderListSortDirection.fromApiValue(sortDirection),
+            )
+        )
     }
 
     @GetMapping("/search")

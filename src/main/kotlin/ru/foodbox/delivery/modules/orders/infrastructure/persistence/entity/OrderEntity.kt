@@ -23,6 +23,10 @@ import java.util.UUID
     name = "orders",
     indexes = [
         Index(name = "idx_orders_current_status_id", columnList = "current_status_id"),
+        Index(name = "idx_orders_created_at", columnList = "created_at"),
+        Index(name = "idx_orders_customer_name", columnList = "customer_name"),
+        Index(name = "idx_orders_customer_phone", columnList = "customer_phone"),
+        Index(name = "idx_orders_customer_email", columnList = "customer_email"),
     ],
 )
 class OrderEntity(
