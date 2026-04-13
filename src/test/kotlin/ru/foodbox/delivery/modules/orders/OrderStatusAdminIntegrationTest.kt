@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
@@ -122,6 +123,26 @@ class OrderStatusAdminIntegrationTest {
                 )
         )
             .andExpect(status().isConflict)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin can get order details by id`() {
+        val orderId = createPendingOrder()
+
+        mockMvc.perform(get("/api/v1/admin/orders/{orderId}", orderId))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(orderId.toString()))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.statusHistory.length()").value(1))
+            .andExpect(jsonPath("$.statusHistory[0].code").value("PENDING"))
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin gets not found for missing order details`() {
+        mockMvc.perform(get("/api/v1/admin/orders/{orderId}", UUID.randomUUID()))
+            .andExpect(status().isNotFound)
     }
 
     @Test

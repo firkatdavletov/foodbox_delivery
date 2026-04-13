@@ -85,6 +85,13 @@ class OrderAdminController(
         return orderService.getAdminOrderByNumber(orderNumber).toResponseWithImages()
     }
 
+    @GetMapping("/{orderId}")
+    fun getOrder(
+        @PathVariable orderId: UUID,
+    ): OrderResponse {
+        return orderService.getAdminOrder(orderId).toResponseWithImages()
+    }
+
     @GetMapping("/{orderId}/available-status-transitions")
     fun getAvailableStatusTransitions(
         authentication: Authentication,

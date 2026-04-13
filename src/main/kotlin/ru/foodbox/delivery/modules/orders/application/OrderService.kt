@@ -14,5 +14,6 @@ interface OrderService {
     fun getMyOrders(actor: CurrentActor): List<Order>
     fun getCurrentOrders(actor: CurrentActor): List<Order>
     fun getAdminOrders(): List<Order>
+    fun getAdminOrder(orderId: UUID): Order
     fun getAdminOrderByNumber(orderNumber: String): Order
 }

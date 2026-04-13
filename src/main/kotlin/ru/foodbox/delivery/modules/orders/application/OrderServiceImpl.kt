@@ -310,6 +310,11 @@ class OrderServiceImpl(
         )
     }
 
+    override fun getAdminOrder(orderId: UUID): Order {
+        return orderRepository.findById(orderId)
+            ?: throw NotFoundException("Order not found")
+    }
+
     override fun getAdminOrderByNumber(orderNumber: String): Order {
         val normalizedOrderNumber = orderNumber.trim().takeIf { it.isNotBlank() }
             ?: throw IllegalArgumentException("orderNumber must not be blank")
