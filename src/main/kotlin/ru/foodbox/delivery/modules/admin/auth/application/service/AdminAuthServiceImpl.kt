@@ -101,7 +101,7 @@ class AdminAuthServiceImpl(
     ): IssuedAdminSessionTokens {
         val now = Instant.now()
         val sessionId = UUID.randomUUID()
-        val accessTokenExpiresAt = now.plus(15, ChronoUnit.MINUTES)
+        val accessTokenExpiresAt = now.plus(1, ChronoUnit.DAYS)
         val refreshTokenExpiresAt = now.plus(30, ChronoUnit.DAYS)
 
         val rawRefreshToken = refreshTokenService.generateRawToken()
