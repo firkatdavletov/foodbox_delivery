@@ -28,6 +28,8 @@ tags:
     description: Order placement and retrieval
   - name: Orders Admin
     description: Admin order operations
+  - name: Dashboard Admin
+    description: Admin dashboard counters and overview metrics
   - name: Notifications Admin
     description: Admin notification operations
   - name: Media Admin
@@ -2342,6 +2344,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OrderResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/dashboard:
+    get:
+      tags: [Dashboard Admin]
+      operationId: getAdminDashboard
+      summary: Get admin dashboard counters
+      description: |
+        Returns the aggregated counters used by the admin control panel dashboard.
+        `paidToday` is calculated in the backend application timezone returned in `timeZone`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard counters snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboardResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
@@ -5320,6 +5346,58 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    AdminDashboardResponse:
+      type: object
+      required:
+        [
+          generatedAt,
+          timeZone,
+          orders,
+          paidToday,
+          awaitingPayment,
+          newOrders,
+          problematicOrders,
+          itemsWithoutPhotos,
+          abandonedBaskets,
+        ]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the dashboard snapshot was generated.
+        timeZone:
+          type: string
+          description: IANA timezone used by the backend when calculating daily counters.
+          example: UTC
+        orders:
+          type: integer
+          format: int64
+          description: Count of active non-final orders shown in the admin queue.
+        paidToday:
+          type: integer
+          format: int64
+          description: Count of distinct orders with a successful payment recorded today.
+        awaitingPayment:
+          type: integer
+          format: int64
+          description: Count of active orders whose latest payment is awaiting payment or pending.
+        newOrders:
+          type: integer
+          format: int64
+          description: Count of orders in initial new-order workflow states.
+        problematicOrders:
+          type: integer
+          format: int64
+          description: Count of orders in problematic or on-hold workflow states.
+        itemsWithoutPhotos:
+          type: integer
+          format: int64
+          description: Count of active catalog products that have neither product images nor variant images.
+        abandonedBaskets:
+          type: integer
+          format: int64
+          description: Count of carts marked as abandoned.
 
     OrderStatusHistoryEntryResponse:
       type: object

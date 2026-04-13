@@ -6,6 +6,7 @@ import ru.foodbox.delivery.modules.orders.infrastructure.persistence.entity.Orde
 import java.util.UUID
 
 interface OrderJpaRepository : JpaRepository<OrderEntity, UUID> {
+    fun countByCurrentStatusStateTypeIn(stateTypes: Collection<OrderStateType>): Long
     fun findAllByCurrentStatusStateTypeInOrderByCreatedAtDesc(stateTypes: Collection<OrderStateType>): List<OrderEntity>
     fun findByOrderNumber(orderNumber: String): OrderEntity?
     fun findAllByUserIdOrderByCreatedAtDesc(userId: UUID): List<OrderEntity>
