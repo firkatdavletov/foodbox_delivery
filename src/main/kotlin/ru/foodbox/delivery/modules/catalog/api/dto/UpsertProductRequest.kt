@@ -37,29 +37,23 @@ data class UpsertProductRequest(
     val isActive: Boolean = true,
 
     @field:Valid
-    val optionGroups: List<UpsertProductOptionGroupRequest> = emptyList(),
-
-    @field:Valid
-    val modifierGroups: List<UpsertProductModifierGroupLinkRequest> = emptyList(),
-
-    @field:Valid
-    val variants: List<UpsertProductVariantRequest> = emptyList(),
+    val modifierGroups: List<UpsertProductModifierGroupLinkRequest>? = null,
 )
 
 data class UpsertProductOptionGroupRequest(
+    val id: UUID? = null,
+
     @field:NotBlank
     val code: String,
 
     @field:NotBlank
     val title: String,
-
     val sortOrder: Int = 0,
-
-    @field:Valid
-    val values: List<UpsertProductOptionValueRequest> = emptyList(),
 )
 
 data class UpsertProductOptionValueRequest(
+    val id: UUID? = null,
+
     @field:NotBlank
     val code: String,
 
@@ -70,6 +64,7 @@ data class UpsertProductOptionValueRequest(
 )
 
 data class UpsertProductVariantRequest(
+    val id: UUID? = null,
     val externalId: String? = null,
 
     @field:NotBlank
@@ -86,17 +81,7 @@ data class UpsertProductVariantRequest(
     val imageIds: List<UUID> = emptyList(),
     val sortOrder: Int = 0,
     val isActive: Boolean = true,
-
-    @field:Valid
-    val options: List<UpsertProductVariantOptionRequest> = emptyList(),
-)
-
-data class UpsertProductVariantOptionRequest(
-    @field:NotBlank
-    val optionGroupCode: String,
-
-    @field:NotBlank
-    val optionValueCode: String,
+    val optionValueIds: List<UUID> = emptyList(),
 )
 
 data class UpsertProductModifierGroupLinkRequest(

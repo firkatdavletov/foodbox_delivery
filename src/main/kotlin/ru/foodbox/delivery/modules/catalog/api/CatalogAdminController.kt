@@ -17,12 +17,7 @@ import ru.foodbox.delivery.modules.catalog.api.dto.AdminCategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertCategoryRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductRequest
-import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductVariantOptionRequest
 import ru.foodbox.delivery.modules.catalog.application.CatalogService
-import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionGroupCommand
-import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionValueCommand
-import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantCommand
-import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertCategoryCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductCommand
 import ru.foodbox.delivery.modules.catalog.modifier.application.command.ReplaceProductModifierGroupCommand
@@ -105,38 +100,13 @@ class CatalogAdminController(
                 unit = request.unit,
                 countStep = request.countStep,
                 isActive = request.isActive,
-                optionGroups = request.optionGroups.map { optionGroup ->
-                    ReplaceProductOptionGroupCommand(
-                        code = optionGroup.code,
-                        title = optionGroup.title,
-                        sortOrder = optionGroup.sortOrder,
-                        values = optionGroup.values.map { value ->
-                            ReplaceProductOptionValueCommand(
-                                code = value.code,
-                                title = value.title,
-                                sortOrder = value.sortOrder,
-                            )
-                        },
-                    )
-                },
-                modifierGroups = request.modifierGroups.map { modifierGroup ->
+                replaceProductVariants = false,
+                replaceProductModifierGroups = request.modifierGroups != null,
+                modifierGroups = request.modifierGroups.orEmpty().map { modifierGroup ->
                     ReplaceProductModifierGroupCommand(
                         modifierGroupId = modifierGroup.modifierGroupId,
                         sortOrder = modifierGroup.sortOrder,
                         isActive = modifierGroup.isActive,
-                    )
-                },
-                variants = request.variants.map { variant ->
-                    ReplaceProductVariantCommand(
-                        externalId = variant.externalId,
-                        sku = variant.sku,
-                        title = variant.title,
-                        priceMinor = variant.priceMinor,
-                        oldPriceMinor = variant.oldPriceMinor,
-                        imageIds = variant.imageIds,
-                        sortOrder = variant.sortOrder,
-                        isActive = variant.isActive,
-                        options = variant.options.map(UpsertProductVariantOptionRequest::toCommand),
                     )
                 },
             )
@@ -153,11 +123,4 @@ class CatalogAdminController(
     ) {
         catalogService.deleteProductImage(productId, imageId)
     }
-}
-
-private fun UpsertProductVariantOptionRequest.toCommand(): ReplaceProductVariantOptionCommand {
-    return ReplaceProductVariantOptionCommand(
-        optionGroupCode = optionGroupCode,
-        optionValueCode = optionValueCode,
-    )
 }

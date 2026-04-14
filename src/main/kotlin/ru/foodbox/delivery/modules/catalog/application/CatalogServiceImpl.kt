@@ -235,18 +235,22 @@ class CatalogServiceImpl(
 
         val saved = productRepository.save(product)
         imageService.syncProductImages(saved.id, command.imageIds, now)
-        productVariantsService.replaceAll(
-            productId = saved.id,
-            command = ReplaceProductVariantsCommand(
-                optionGroups = command.optionGroups,
-                variants = command.variants,
-            ),
-            now = now,
-        )
-        productModifiersService.replaceProductModifierGroups(
-            productId = saved.id,
-            commands = command.modifierGroups,
-        )
+        if (command.replaceProductVariants) {
+            productVariantsService.replaceAll(
+                productId = saved.id,
+                command = ReplaceProductVariantsCommand(
+                    optionGroups = command.optionGroups,
+                    variants = command.variants,
+                ),
+                now = now,
+            )
+        }
+        if (command.replaceProductModifierGroups) {
+            productModifiersService.replaceProductModifierGroups(
+                productId = saved.id,
+                commands = command.modifierGroups,
+            )
+        }
         return enrichProducts(listOf(saved), modifierGroupsActiveOnly = false).first()
     }
 

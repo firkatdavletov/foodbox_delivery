@@ -804,6 +804,33 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/catalog/categories/{categoryId}:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminCategoryDetails
+      summary: Get full category by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CategoryIdPathParam'
+      responses:
+        '200':
+          description: Category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategoryDetailsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/catalog/categories/{categoryId}/images/{imageId}:
     delete:
       tags: [Catalog Admin]
@@ -986,6 +1013,162 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminProductDetailsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}/option-groups/{optionGroupId}:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminProductOptionGroupById
+      summary: Get one product option group by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: '#/components/parameters/OptionGroupIdPathParam'
+      responses:
+        '200':
+          description: Product option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductOptionGroupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}/option-groups:
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertProductOptionGroup
+      summary: Create or update a product option group
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProductOptionGroupRequest'
+      responses:
+        '200':
+          description: Saved option group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductOptionGroupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}/option-groups/{optionGroupId}/values:
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertProductOptionValue
+      summary: Create or update a product option value
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: '#/components/parameters/OptionGroupIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProductOptionValueRequest'
+      responses:
+        '200':
+          description: Saved option value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductOptionValueResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}/variants/{variantId}:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminProductVariantById
+      summary: Get one product variant by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: '#/components/parameters/VariantIdPathParam'
+      responses:
+        '200':
+          description: Product variant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductVariantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/products/{productId}/variants:
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertProductVariant
+      summary: Create or update a product variant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProductVariantRequest'
+      responses:
+        '200':
+          description: Saved product variant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductVariantResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -3106,6 +3289,20 @@ components:
       schema:
         type: string
         format: uuid
+    OptionGroupIdPathParam:
+      name: optionGroupId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VariantIdPathParam:
+      name: variantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ImageIdPathParam:
       name: imageId
       in: path
@@ -4317,6 +4514,42 @@ components:
         isActive:
           type: boolean
 
+    AdminCategoryDetailsResponse:
+      type: object
+      required: [id, name, slug, sortOrder, imageIds, imageUrls, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        imageUrls:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
     ProductResponse:
       type: object
       required: [id, categoryId, title, slug, priceMinor, imageUrls, unit, countStep, isActive, isConfigured]
@@ -4750,11 +4983,21 @@ components:
           type: string
           format: uuid
           nullable: true
+        externalId:
+          type: string
+          nullable: true
         name:
           type: string
           minLength: 1
         slug:
           type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          format: int32
           nullable: true
         imageIds:
           type: array
@@ -4811,18 +5054,10 @@ components:
         isActive:
           type: boolean
           default: true
-        optionGroups:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpsertProductOptionGroupRequest'
         modifierGroups:
           type: array
           items:
             $ref: '#/components/schemas/UpsertProductModifierGroupLinkRequest'
-        variants:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpsertProductVariantRequest'
 
     UpsertModifierGroupRequest:
       type: object
@@ -4912,6 +5147,10 @@ components:
       type: object
       required: [code, title]
       properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
         code:
           type: string
           minLength: 1
@@ -4922,15 +5161,15 @@ components:
           type: integer
           format: int32
           default: 0
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpsertProductOptionValueRequest'
 
     UpsertProductOptionValueRequest:
       type: object
       required: [code, title]
       properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
         code:
           type: string
           minLength: 1
@@ -4946,6 +5185,10 @@ components:
       type: object
       required: [sku]
       properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
         externalId:
           type: string
           nullable: true
@@ -4977,21 +5220,11 @@ components:
         isActive:
           type: boolean
           default: true
-        options:
+        optionValueIds:
           type: array
           items:
-            $ref: '#/components/schemas/UpsertProductVariantOptionRequest'
-
-    UpsertProductVariantOptionRequest:
-      type: object
-      required: [optionGroupCode, optionValueCode]
-      properties:
-        optionGroupCode:
-          type: string
-          minLength: 1
-        optionValueCode:
-          type: string
-          minLength: 1
+            type: string
+            format: uuid
 
     CatalogImportMultipartRequest:
       type: object

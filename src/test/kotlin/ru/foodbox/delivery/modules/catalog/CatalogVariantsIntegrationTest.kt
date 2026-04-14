@@ -247,7 +247,7 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `update product replaces all variants`() {
+    fun `update product does not replace existing options and variants`() {
         val categoryId = createCategory(externalId = "cat-jeans", slug = "jeans")
 
         val initialRequest = mapOf(
@@ -289,34 +289,16 @@ class CatalogVariantsIntegrationTest {
             "unit" to "PIECE",
             "countStep" to 1,
             "isActive" to true,
-            "optionGroups" to listOf(
-                mapOf(
-                    "code" to "color",
-                    "title" to "Цвет",
-                    "values" to listOf(
-                        mapOf("code" to "blue", "title" to "Синий"),
-                    ),
-                )
-            ),
-            "variants" to listOf(
-                mapOf(
-                    "sku" to "JEANS-BLUE",
-                    "title" to "Синий",
-                    "isActive" to true,
-                    "options" to listOf(
-                        mapOf("optionGroupCode" to "color", "optionValueCode" to "blue"),
-                    ),
-                )
-            ),
         )
 
         upsertProductAsAdmin(updateRequest)
 
         val details = getProductDetails(productId)
         assertEquals(1, details.get("optionGroups").size())
-        assertEquals("color", details.get("optionGroups")[0].get("code").asText())
+        assertEquals("size", details.get("optionGroups")[0].get("code").asText())
         assertEquals(1, details.get("variants").size())
-        assertEquals("JEANS-BLUE", details.get("variants")[0].get("sku").asText())
+        assertEquals("JEANS-M", details.get("variants")[0].get("sku").asText())
+        assertEquals(5100, details["priceMinor"].asLong())
     }
 
     @Test
@@ -894,6 +876,86 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `admin option group endpoint returns values by id`() {
+        val categoryId = createCategory(externalId = "cat-option-group-details", slug = "option-group-details")
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Рубашка",
+                "priceMinor" to 3400,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(
+                            mapOf("code" to "m", "title" to "M"),
+                            mapOf("code" to "l", "title" to "L"),
+                        ),
+                    )
+                ),
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+        val optionGroupId = UUID.fromString(created["optionGroups"][0]["id"].asText())
+
+        val optionGroup = getAdminProductOptionGroup(productId, optionGroupId)
+        assertEquals("size", optionGroup["code"].asText())
+        assertEquals(2, optionGroup["values"].size())
+        val valueCodes = optionGroup["values"].map { it["code"].asText() }.toSet()
+        assertEquals(setOf("m", "l"), valueCodes)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin variant endpoint returns variant by id`() {
+        val categoryId = createCategory(externalId = "cat-variant-details", slug = "variant-details")
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Пуховик",
+                "priceMinor" to 12400,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(
+                            mapOf("code" to "m", "title" to "M"),
+                        ),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "externalId" to "variant-puffer-m",
+                        "sku" to "PUFFER-M",
+                        "title" to "Размер M",
+                        "priceMinor" to 12900,
+                        "options" to listOf(
+                            mapOf("optionGroupCode" to "size", "optionValueCode" to "m"),
+                        ),
+                    )
+                ),
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+        val variantId = UUID.fromString(created["variants"][0]["id"].asText())
+
+        val variant = getAdminProductVariant(productId, variantId)
+        assertEquals("variant-puffer-m", variant["externalId"].asText())
+        assertEquals("PUFFER-M", variant["sku"].asText())
+        assertEquals(12900, variant["priceMinor"].asLong())
+        assertEquals(1, variant["optionValueIds"].size())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `admin product details endpoint returns inactive product`() {
         val categoryId = createCategory(externalId = "cat-admin-details", slug = "admin-details")
 
@@ -1005,36 +1067,34 @@ class CatalogVariantsIntegrationTest {
     @WithMockUser(roles = ["ADMIN"])
     fun `duplicate option group code returns validation error`() {
         val categoryId = createCategory(externalId = "cat-dup-group", slug = "dup-group")
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Товар",
+                "priceMinor" to 1000,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
 
-        val request = mapOf(
-            "categoryId" to categoryId,
-            "title" to "Товар",
-            "priceMinor" to 1000,
-            "unit" to "PIECE",
-            "countStep" to 1,
-            "isActive" to true,
-            "optionGroups" to listOf(
-                mapOf(
-                    "code" to "color",
-                    "title" to "Цвет",
-                    "values" to listOf(mapOf("code" to "black", "title" to "Черный")),
-                ),
-                mapOf(
-                    "code" to "color",
-                    "title" to "Цвет 2",
-                    "values" to listOf(mapOf("code" to "white", "title" to "Белый")),
-                ),
-            ),
-            "variants" to listOf(
-                mapOf(
-                    "sku" to "DUP-GROUP-1",
-                    "options" to listOf(mapOf("optionGroupCode" to "color", "optionValueCode" to "black")),
-                )
-            ),
+        postProductOptionGroupAsAdmin(
+            productId,
+            mapOf(
+                "code" to "color",
+                "title" to "Цвет",
+            )
         )
 
-        val errorBody = upsertProductAsAdminExpectBadRequest(request)
-        assertTrue(errorBody.contains("Duplicate option group code"))
+        val errorBody = postProductOptionGroupAsAdminExpectBadRequest(
+            productId,
+            mapOf(
+                "code" to "color",
+                "title" to "Цвет 2",
+            )
+        )
+        assertTrue(errorBody.contains("already exists"))
     }
 
     @Test
@@ -1098,30 +1158,33 @@ class CatalogVariantsIntegrationTest {
     fun `variant with unknown option value returns validation error`() {
         val categoryId = createCategory(externalId = "cat-unknown-value", slug = "unknown-value")
 
-        val request = mapOf(
-            "categoryId" to categoryId,
-            "title" to "Товар",
-            "priceMinor" to 1000,
-            "unit" to "PIECE",
-            "countStep" to 1,
-            "isActive" to true,
-            "optionGroups" to listOf(
-                mapOf(
-                    "code" to "color",
-                    "title" to "Цвет",
-                    "values" to listOf(mapOf("code" to "black", "title" to "Черный")),
-                )
-            ),
-            "variants" to listOf(
-                mapOf(
-                    "sku" to "UNKNOWN-VALUE-1",
-                    "options" to listOf(mapOf("optionGroupCode" to "color", "optionValueCode" to "white")),
-                )
-            ),
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Товар",
+                "priceMinor" to 1000,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "color",
+                        "title" to "Цвет",
+                        "values" to listOf(mapOf("code" to "black", "title" to "Черный")),
+                    )
+                ),
+            )
         )
+        val productId = UUID.fromString(created["id"].asText())
 
-        val errorBody = upsertProductAsAdminExpectBadRequest(request)
-        assertTrue(errorBody.contains("unknown option value"))
+        val errorBody = postProductVariantAsAdminExpectBadRequest(
+            productId,
+            mapOf(
+                "sku" to "UNKNOWN-VALUE-1",
+                "optionValueIds" to listOf(UUID.randomUUID()),
+            )
+        )
+        assertTrue(errorBody.contains("unknown option value id"))
     }
 
     @Test
@@ -1289,16 +1352,85 @@ class CatalogVariantsIntegrationTest {
     }
 
     private fun upsertProductAsAdmin(request: Any): JsonNode {
-        val response = mockMvc.perform(
-            post("/api/v1/admin/catalog/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsBytes(request))
-        ).andExpect(status().isOk)
-            .andReturn()
-            .response
-            .contentAsString
+        val requestMap = request.asMutableRequestMap()
+        val optionGroups = requestMap.removeListOfMaps("optionGroups")
+        val variants = requestMap.removeListOfMaps("variants")
 
-        return objectMapper.readTree(response)
+        val productResponse = postJson(
+            path = "/api/v1/admin/catalog/products",
+            body = requestMap,
+        )
+        assertEquals(200, productResponse.first)
+        val savedProduct = objectMapper.readTree(productResponse.second)
+        val productId = UUID.fromString(savedProduct["id"].asText())
+
+        val optionGroupIdsByCode = linkedMapOf<String, UUID>()
+        val optionValueIdsByCode = linkedMapOf<Pair<String, String>, UUID>()
+        val variantIdsBySku = linkedMapOf<String, UUID>()
+        populateProductConfigurationLookups(
+            details = getAdminProductDetails(productId),
+            optionGroupIdsByCode = optionGroupIdsByCode,
+            optionValueIdsByCode = optionValueIdsByCode,
+            variantIdsBySku = variantIdsBySku,
+        )
+
+        optionGroups.forEach { optionGroup ->
+            val optionGroupPayload = optionGroup.toMutableMap()
+            val values = optionGroupPayload.removeListOfMaps("values")
+            val optionGroupCode = optionGroupPayload.getValue("code").toString()
+            if (optionGroupPayload["id"] == null) {
+                optionGroupIdsByCode[optionGroupCode]?.let { optionGroupPayload["id"] = it }
+            }
+
+            val optionGroupResponse = postProductOptionGroupAsAdmin(productId, optionGroupPayload)
+            val optionGroupId = UUID.fromString(optionGroupResponse["id"].asText())
+            optionGroupIdsByCode[optionGroupCode] = optionGroupId
+            optionGroupResponse["values"].forEach { valueNode ->
+                optionValueIdsByCode[optionGroupCode to valueNode["code"].asText()] =
+                    UUID.fromString(valueNode["id"].asText())
+            }
+
+            values.forEach { value ->
+                val optionValuePayload = value.toMutableMap()
+                val optionValueCode = optionValuePayload.getValue("code").toString()
+                if (optionValuePayload["id"] == null) {
+                    optionValueIdsByCode[optionGroupCode to optionValueCode]?.let { optionValuePayload["id"] = it }
+                }
+
+                val optionValueResponse = postProductOptionValueAsAdmin(productId, optionGroupId, optionValuePayload)
+                optionValueIdsByCode[optionGroupCode to optionValueCode] =
+                    UUID.fromString(optionValueResponse["id"].asText())
+            }
+        }
+
+        populateProductConfigurationLookups(
+            details = getAdminProductDetails(productId),
+            optionGroupIdsByCode = optionGroupIdsByCode,
+            optionValueIdsByCode = optionValueIdsByCode,
+            variantIdsBySku = variantIdsBySku,
+        )
+
+        variants.forEach { variant ->
+            val variantPayload = variant.toMutableMap()
+            val options = variantPayload.removeListOfMaps("options")
+            val sku = variantPayload.getValue("sku").toString()
+            if (variantPayload["id"] == null) {
+                variantIdsBySku[sku]?.let { variantPayload["id"] = it }
+            }
+            if (variantPayload["optionValueIds"] == null) {
+                variantPayload["optionValueIds"] = options.map { option ->
+                    val optionGroupCode = option.getValue("optionGroupCode").toString()
+                    val optionValueCode = option.getValue("optionValueCode").toString()
+                    optionValueIdsByCode[optionGroupCode to optionValueCode]
+                        ?: error("Option value $optionGroupCode/$optionValueCode was not created")
+                }
+            }
+
+            val variantResponse = postProductVariantAsAdmin(productId, variantPayload)
+            variantIdsBySku[sku] = UUID.fromString(variantResponse["id"].asText())
+        }
+
+        return getAdminProductDetails(productId)
     }
 
     private fun upsertCategoryAsAdmin(request: Any): JsonNode {
@@ -1315,14 +1447,110 @@ class CatalogVariantsIntegrationTest {
     }
 
     private fun upsertProductAsAdminExpectBadRequest(request: Any): String {
-        return mockMvc.perform(
-            post("/api/v1/admin/catalog/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsBytes(request))
-        ).andExpect(status().isBadRequest)
-            .andReturn()
-            .response
-            .contentAsString
+        val requestMap = request.asMutableRequestMap()
+        val optionGroups = requestMap.removeListOfMaps("optionGroups")
+        val variants = requestMap.removeListOfMaps("variants")
+
+        val productResponse = postJson(
+            path = "/api/v1/admin/catalog/products",
+            body = requestMap,
+        )
+        if (productResponse.first == 400) {
+            return productResponse.second
+        }
+        assertEquals(200, productResponse.first)
+
+        val savedProduct = objectMapper.readTree(productResponse.second)
+        val productId = UUID.fromString(savedProduct["id"].asText())
+
+        val optionGroupIdsByCode = linkedMapOf<String, UUID>()
+        val optionValueIdsByCode = linkedMapOf<Pair<String, String>, UUID>()
+        val variantIdsBySku = linkedMapOf<String, UUID>()
+        populateProductConfigurationLookups(
+            details = getAdminProductDetails(productId),
+            optionGroupIdsByCode = optionGroupIdsByCode,
+            optionValueIdsByCode = optionValueIdsByCode,
+            variantIdsBySku = variantIdsBySku,
+        )
+
+        optionGroups.forEach { optionGroup ->
+            val optionGroupPayload = optionGroup.toMutableMap()
+            val values = optionGroupPayload.removeListOfMaps("values")
+            val optionGroupCode = optionGroupPayload.getValue("code").toString()
+            if (optionGroupPayload["id"] == null) {
+                optionGroupIdsByCode[optionGroupCode]?.let { optionGroupPayload["id"] = it }
+            }
+
+            val optionGroupResponse = postJson(
+                path = "/api/v1/admin/products/{productId}/option-groups",
+                body = optionGroupPayload,
+                uriVariables = arrayOf(productId),
+            )
+            if (optionGroupResponse.first == 400) {
+                return optionGroupResponse.second
+            }
+            assertEquals(200, optionGroupResponse.first)
+
+            val savedGroup = objectMapper.readTree(optionGroupResponse.second)
+            val optionGroupId = UUID.fromString(savedGroup["id"].asText())
+            optionGroupIdsByCode[optionGroupCode] = optionGroupId
+
+            values.forEach { value ->
+                val optionValuePayload = value.toMutableMap()
+                val optionValueCode = optionValuePayload.getValue("code").toString()
+                if (optionValuePayload["id"] == null) {
+                    optionValueIdsByCode[optionGroupCode to optionValueCode]?.let { optionValuePayload["id"] = it }
+                }
+
+                val optionValueResponse = postJson(
+                    path = "/api/v1/admin/products/{productId}/option-groups/{optionGroupId}/values",
+                    body = optionValuePayload,
+                    uriVariables = arrayOf(productId, optionGroupId),
+                )
+                if (optionValueResponse.first == 400) {
+                    return optionValueResponse.second
+                }
+                assertEquals(200, optionValueResponse.first)
+                val savedValue = objectMapper.readTree(optionValueResponse.second)
+                optionValueIdsByCode[optionGroupCode to optionValueCode] = UUID.fromString(savedValue["id"].asText())
+            }
+        }
+
+        populateProductConfigurationLookups(
+            details = getAdminProductDetails(productId),
+            optionGroupIdsByCode = optionGroupIdsByCode,
+            optionValueIdsByCode = optionValueIdsByCode,
+            variantIdsBySku = variantIdsBySku,
+        )
+
+        variants.forEach { variant ->
+            val variantPayload = variant.toMutableMap()
+            val options = variantPayload.removeListOfMaps("options")
+            val sku = variantPayload.getValue("sku").toString()
+            if (variantPayload["id"] == null) {
+                variantIdsBySku[sku]?.let { variantPayload["id"] = it }
+            }
+            if (variantPayload["optionValueIds"] == null) {
+                variantPayload["optionValueIds"] = options.map { option ->
+                    val optionGroupCode = option.getValue("optionGroupCode").toString()
+                    val optionValueCode = option.getValue("optionValueCode").toString()
+                    optionValueIdsByCode[optionGroupCode to optionValueCode]
+                        ?: error("Option value $optionGroupCode/$optionValueCode was not created")
+                }
+            }
+
+            val variantResponse = postJson(
+                path = "/api/v1/admin/products/{productId}/variants",
+                body = variantPayload,
+                uriVariables = arrayOf(productId),
+            )
+            if (variantResponse.first == 400) {
+                return variantResponse.second
+            }
+            assertEquals(200, variantResponse.first)
+        }
+
+        error("Expected bad request but request succeeded")
     }
 
     private fun getProductDetails(productId: UUID): JsonNode {
@@ -1390,6 +1618,30 @@ class CatalogVariantsIntegrationTest {
         return objectMapper.readTree(response)
     }
 
+    private fun getAdminProductOptionGroup(productId: UUID, optionGroupId: UUID): JsonNode {
+        val response = mockMvc.perform(
+            get("/api/v1/admin/products/{productId}/option-groups/{optionGroupId}", productId, optionGroupId)
+                .accept(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
+    private fun getAdminProductVariant(productId: UUID, variantId: UUID): JsonNode {
+        val response = mockMvc.perform(
+            get("/api/v1/admin/products/{productId}/variants/{variantId}", productId, variantId)
+                .accept(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
     private fun deleteCategoryImageAsAdmin(categoryId: UUID, imageId: UUID) {
         mockMvc.perform(
             delete("/api/v1/admin/catalog/categories/{categoryId}/images/{imageId}", categoryId, imageId)
@@ -1400,5 +1652,108 @@ class CatalogVariantsIntegrationTest {
         mockMvc.perform(
             delete("/api/v1/admin/catalog/products/{productId}/images/{imageId}", productId, imageId)
         ).andExpect(status().isNoContent)
+    }
+
+    private fun postProductOptionGroupAsAdmin(productId: UUID, request: Map<String, Any?>): JsonNode {
+        val response = postJson(
+            path = "/api/v1/admin/products/{productId}/option-groups",
+            body = request,
+            uriVariables = arrayOf(productId),
+        )
+        assertEquals(200, response.first)
+        return objectMapper.readTree(response.second)
+    }
+
+    private fun postProductOptionGroupAsAdminExpectBadRequest(productId: UUID, request: Map<String, Any?>): String {
+        val response = postJson(
+            path = "/api/v1/admin/products/{productId}/option-groups",
+            body = request,
+            uriVariables = arrayOf(productId),
+        )
+        assertEquals(400, response.first)
+        return response.second
+    }
+
+    private fun postProductOptionValueAsAdmin(
+        productId: UUID,
+        optionGroupId: UUID,
+        request: Map<String, Any?>,
+    ): JsonNode {
+        val response = postJson(
+            path = "/api/v1/admin/products/{productId}/option-groups/{optionGroupId}/values",
+            body = request,
+            uriVariables = arrayOf(productId, optionGroupId),
+        )
+        assertEquals(200, response.first)
+        return objectMapper.readTree(response.second)
+    }
+
+    private fun postProductVariantAsAdmin(productId: UUID, request: Map<String, Any?>): JsonNode {
+        val response = postJson(
+            path = "/api/v1/admin/products/{productId}/variants",
+            body = request,
+            uriVariables = arrayOf(productId),
+        )
+        assertEquals(200, response.first)
+        return objectMapper.readTree(response.second)
+    }
+
+    private fun postProductVariantAsAdminExpectBadRequest(productId: UUID, request: Map<String, Any?>): String {
+        val response = postJson(
+            path = "/api/v1/admin/products/{productId}/variants",
+            body = request,
+            uriVariables = arrayOf(productId),
+        )
+        assertEquals(400, response.first)
+        return response.second
+    }
+
+    private fun postJson(
+        path: String,
+        body: Any,
+        uriVariables: Array<out Any> = emptyArray(),
+    ): Pair<Int, String> {
+        val response = mockMvc.perform(
+            post(path, *uriVariables)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(body))
+        ).andReturn().response
+
+        return response.status to response.contentAsString
+    }
+
+    private fun populateProductConfigurationLookups(
+        details: JsonNode,
+        optionGroupIdsByCode: MutableMap<String, UUID>,
+        optionValueIdsByCode: MutableMap<Pair<String, String>, UUID>,
+        variantIdsBySku: MutableMap<String, UUID>,
+    ) {
+        details["optionGroups"].forEach { optionGroup ->
+            val optionGroupCode = optionGroup["code"].asText()
+            optionGroupIdsByCode[optionGroupCode] = UUID.fromString(optionGroup["id"].asText())
+            optionGroup["values"].forEach { value ->
+                optionValueIdsByCode[optionGroupCode to value["code"].asText()] =
+                    UUID.fromString(value["id"].asText())
+            }
+        }
+
+        details["variants"].forEach { variant ->
+            variantIdsBySku[variant["sku"].asText()] = UUID.fromString(variant["id"].asText())
+        }
+    }
+
+    private fun Any.asMutableRequestMap(): MutableMap<String, Any?> {
+        @Suppress("UNCHECKED_CAST")
+        val rawMap = this as? Map<*, *> ?: error("Request must be a map")
+        return rawMap.entries.associate { it.key.toString() to it.value }.toMutableMap()
+    }
+
+    private fun MutableMap<String, Any?>.removeListOfMaps(field: String): List<Map<String, Any?>> {
+        val rawList = remove(field) as? List<*> ?: return emptyList()
+        return rawList.map { item ->
+            @Suppress("UNCHECKED_CAST")
+            val rawMap = item as? Map<*, *> ?: error("Field '$field' must contain objects")
+            rawMap.entries.associate { it.key.toString() to it.value }
+        }
     }
 }

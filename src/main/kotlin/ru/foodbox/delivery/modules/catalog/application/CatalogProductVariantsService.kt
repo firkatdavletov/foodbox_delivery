@@ -2,11 +2,15 @@ package ru.foodbox.delivery.modules.catalog.application
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionGroupCommand
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionValueCommand
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantCommand
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
 import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantsCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionGroupCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionValueCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductVariantCommand
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionGroup
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionGroupDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionValue
@@ -89,6 +93,180 @@ class CatalogProductVariantsService(
             defaultVariantId = defaultVariantId,
             variants = variantDetails,
         )
+    }
+
+    fun getOptionGroup(productId: UUID, optionGroupId: UUID): CatalogProductOptionGroupDetails? {
+        return getDetails(productId).optionGroups.firstOrNull { it.id == optionGroupId }
+    }
+
+    fun getVariant(productId: UUID, variantId: UUID): CatalogProductVariantDetails? {
+        val variant = variantRepository.findById(variantId) ?: return null
+        if (variant.productId != productId) {
+            return null
+        }
+
+        return getDetails(productId).variants.firstOrNull { it.id == variantId }
+    }
+
+    @Transactional
+    fun upsertOptionGroup(command: UpsertProductOptionGroupCommand): CatalogProductOptionGroupDetails {
+        productRepository.findById(command.productId)
+            ?: throw NotFoundException("Product not found")
+
+        val normalizedCode = command.code.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("optionGroup.code is required")
+        val normalizedTitle = command.title.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("optionGroup.title is required")
+
+        val existingGroups = optionGroupRepository.findAllByProductId(command.productId)
+        val existingGroup = command.id?.let { groupId ->
+            existingGroups.firstOrNull { it.id == groupId }
+                ?: throw NotFoundException("Option group not found")
+        }
+
+        val duplicateCode = existingGroups.firstOrNull { it.id != existingGroup?.id && it.code == normalizedCode }
+        if (duplicateCode != null) {
+            throw IllegalArgumentException("Option group code '$normalizedCode' already exists")
+        }
+
+        val optionGroupId = existingGroup?.id ?: UUID.randomUUID()
+        optionGroupRepository.saveAll(
+            listOf(
+                CatalogProductOptionGroup(
+                    id = optionGroupId,
+                    productId = command.productId,
+                    code = normalizedCode,
+                    title = normalizedTitle,
+                    sortOrder = command.sortOrder,
+                )
+            )
+        )
+
+        return getOptionGroup(command.productId, optionGroupId)
+            ?: throw IllegalStateException("Saved option group was not found")
+    }
+
+    @Transactional
+    fun upsertOptionValue(command: UpsertProductOptionValueCommand): CatalogProductOptionValueDetails {
+        productRepository.findById(command.productId)
+            ?: throw NotFoundException("Product not found")
+
+        val optionGroup = optionGroupRepository.findAllByProductId(command.productId)
+            .firstOrNull { it.id == command.optionGroupId }
+            ?: throw NotFoundException("Option group not found")
+
+        val normalizedCode = command.code.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("optionValue.code is required")
+        val normalizedTitle = command.title.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("optionValue.title is required")
+
+        val existingValues = optionValueRepository.findAllByOptionGroupIds(listOf(command.optionGroupId))
+        val existingValue = command.id?.let { optionValueId ->
+            existingValues.firstOrNull { it.id == optionValueId }
+                ?: throw NotFoundException("Option value not found")
+        }
+
+        val duplicateCode = existingValues.firstOrNull { it.id != existingValue?.id && it.code == normalizedCode }
+        if (duplicateCode != null) {
+            throw IllegalArgumentException("Option value code '$normalizedCode' already exists in group '${optionGroup.code}'")
+        }
+
+        val optionValueId = existingValue?.id ?: UUID.randomUUID()
+        optionValueRepository.saveAll(
+            listOf(
+                CatalogProductOptionValue(
+                    id = optionValueId,
+                    optionGroupId = optionGroup.id,
+                    code = normalizedCode,
+                    title = normalizedTitle,
+                    sortOrder = command.sortOrder,
+                )
+            )
+        )
+
+        return getOptionGroup(command.productId, optionGroup.id)
+            ?.values
+            ?.firstOrNull { it.id == optionValueId }
+            ?: throw IllegalStateException("Saved option value was not found")
+    }
+
+    @Transactional
+    fun upsertVariant(command: UpsertProductVariantCommand): CatalogProductVariantDetails {
+        productRepository.findById(command.productId)
+            ?: throw NotFoundException("Product not found")
+
+        val existingVariant = command.id?.let { variantId ->
+            variantRepository.findById(variantId)
+                ?.takeIf { it.productId == command.productId }
+                ?: throw NotFoundException("Product variant not found")
+        }
+
+        val normalizedVariant = normalizeVariant(command)
+        validateVariantSkuUniqueness(
+            sku = normalizedVariant.sku,
+            productId = command.productId,
+            currentVariantId = existingVariant?.id,
+        )
+
+        val optionGroups = optionGroupRepository.findAllByProductId(command.productId)
+        val optionValues = optionValueRepository.findAllByOptionGroupIds(optionGroups.map { it.id })
+        val selectedOptionValues = resolveSelectedOptionValues(
+            sku = normalizedVariant.sku,
+            optionGroups = optionGroups,
+            optionValues = optionValues,
+            optionValueIds = normalizedVariant.optionValueIds,
+        )
+
+        val variantId = existingVariant?.id ?: UUID.randomUUID()
+        val now = Instant.now()
+        imageService.validateVariantImages(
+            existingVariantIds = existingVariant?.let { listOf(it.id) }.orEmpty(),
+            requestedImageIds = normalizedVariant.imageIds,
+        )
+        imageService.detachVariantImages(
+            existingVariantIds = existingVariant?.let { listOf(it.id) }.orEmpty(),
+            retainedImageIds = normalizedVariant.imageIds,
+            now = now,
+        )
+
+        variantOptionValueRepository.deleteAllByVariantIds(listOf(variantId))
+        variantRepository.saveAll(
+            listOf(
+                CatalogProductVariant(
+                    id = variantId,
+                    productId = command.productId,
+                    externalId = normalizedVariant.externalId,
+                    sku = normalizedVariant.sku,
+                    title = normalizedVariant.title,
+                    priceMinor = normalizedVariant.priceMinor,
+                    oldPriceMinor = normalizedVariant.oldPriceMinor,
+                    imageUrls = emptyList(),
+                    sortOrder = normalizedVariant.sortOrder,
+                    isActive = normalizedVariant.isActive,
+                    createdAt = existingVariant?.createdAt ?: now,
+                    updatedAt = now,
+                )
+            )
+        )
+
+        variantOptionValueRepository.saveAll(
+            selectedOptionValues.map { optionValue ->
+                CatalogProductVariantOptionValue(
+                    id = UUID.randomUUID(),
+                    variantId = variantId,
+                    optionGroupId = optionValue.optionGroupId,
+                    optionValueId = optionValue.id,
+                )
+            }
+        )
+
+        imageService.attachVariantImages(
+            imageIdsByVariantId = mapOf(variantId to normalizedVariant.imageIds),
+            now = now,
+        )
+
+        return getVariant(command.productId, variantId)
+            ?: throw IllegalStateException("Saved variant was not found")
     }
 
     @Transactional
@@ -188,6 +366,96 @@ class CatalogProductVariantsService(
             },
             now = now,
         )
+    }
+
+    private fun normalizeVariant(command: UpsertProductVariantCommand): NormalizedVariantSelection {
+        val sku = command.sku.trim().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("variant.sku is required")
+        val externalId = command.externalId?.trim()?.takeIf { it.isNotBlank() }
+        val title = command.title?.trim()?.takeIf { it.isNotBlank() }
+
+        if (command.priceMinor != null && command.priceMinor < 0) {
+            throw IllegalArgumentException("variant.priceMinor must be non-negative")
+        }
+        if (command.oldPriceMinor != null && command.oldPriceMinor < 0) {
+            throw IllegalArgumentException("variant.oldPriceMinor must be non-negative")
+        }
+
+        return NormalizedVariantSelection(
+            externalId = externalId,
+            sku = sku,
+            title = title,
+            priceMinor = command.priceMinor,
+            oldPriceMinor = command.oldPriceMinor,
+            imageIds = command.imageIds,
+            sortOrder = command.sortOrder,
+            isActive = command.isActive,
+            optionValueIds = command.optionValueIds,
+        )
+    }
+
+    private fun resolveSelectedOptionValues(
+        sku: String,
+        optionGroups: List<CatalogProductOptionGroup>,
+        optionValues: List<CatalogProductOptionValue>,
+        optionValueIds: List<UUID>,
+    ): List<CatalogProductOptionValue> {
+        if (optionGroups.isEmpty()) {
+            if (optionValueIds.isNotEmpty()) {
+                throw IllegalArgumentException("Variant '$sku' has options, but option groups are empty")
+            }
+            return emptyList()
+        }
+
+        val optionValuesById = optionValues.associateBy { it.id }
+        val selectedValues = optionValueIds.map { optionValueId ->
+            optionValuesById[optionValueId]
+                ?: throw IllegalArgumentException("Variant '$sku' references unknown option value id '$optionValueId'")
+        }
+
+        val duplicateGroupCodes = selectedValues.groupBy { it.optionGroupId }
+            .filterValues { it.size > 1 }
+            .keys
+            .mapNotNull { groupId -> optionGroups.firstOrNull { it.id == groupId }?.code }
+            .sorted()
+        if (duplicateGroupCodes.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "Variant '$sku' contains multiple values for option group(s): ${duplicateGroupCodes.joinToString(", ")}",
+            )
+        }
+
+        val providedGroupIds = selectedValues.mapTo(linkedSetOf()) { it.optionGroupId }
+        val missingGroupCodes = optionGroups
+            .filterNot { it.id in providedGroupIds }
+            .map { it.code }
+            .sorted()
+        if (missingGroupCodes.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "Variant '$sku' must contain exactly one value for each option group. Missing: ${missingGroupCodes.joinToString(", ")}",
+            )
+        }
+
+        return selectedValues
+    }
+
+    private fun validateVariantSkuUniqueness(
+        sku: String,
+        productId: UUID,
+        currentVariantId: UUID?,
+    ) {
+        val existingVariantConflict = variantRepository.findAllBySkuIn(setOf(sku))
+            .firstOrNull { it.id != currentVariantId }
+        if (existingVariantConflict != null) {
+            throw IllegalArgumentException("Variant sku '${existingVariantConflict.sku}' already exists")
+        }
+
+        val productConflict = productRepository.findAllBySkuIn(setOf(sku)).firstOrNull()
+        if (productConflict != null && productConflict.id == productId) {
+            throw IllegalArgumentException("Variant sku '${productConflict.sku}' conflicts with product sku of this product")
+        }
+        if (productConflict != null && productConflict.id != productId) {
+            throw IllegalArgumentException("Variant sku '${productConflict.sku}' already exists")
+        }
     }
 
     private fun normalizeGroups(groups: List<ReplaceProductOptionGroupCommand>): List<NormalizedOptionGroup> {
@@ -421,6 +689,18 @@ class CatalogProductVariantsService(
     private data class NormalizedVariantOption(
         val optionGroupCode: String,
         val optionValueCode: String,
+    )
+
+    private data class NormalizedVariantSelection(
+        val externalId: String?,
+        val sku: String,
+        val title: String?,
+        val priceMinor: Long?,
+        val oldPriceMinor: Long?,
+        val imageIds: List<UUID>,
+        val sortOrder: Int,
+        val isActive: Boolean,
+        val optionValueIds: List<UUID>,
     )
 }
 

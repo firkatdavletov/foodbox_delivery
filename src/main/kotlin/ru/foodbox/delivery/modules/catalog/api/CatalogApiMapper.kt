@@ -15,6 +15,9 @@ import ru.foodbox.delivery.modules.catalog.api.dto.ProductVariantResponse
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionGroupDetails
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionValueDetails
+import ru.foodbox.delivery.modules.catalog.domain.CatalogProductVariantDetails
 
 internal fun CatalogCategory.toResponse(): CategoryResponse {
     return CategoryResponse(
@@ -86,22 +89,7 @@ internal fun CatalogProductDetails.toPublicDetailsResponse(): ProductDetailsResp
         countStep = product.countStep,
         isActive = product.isActive,
         isConfigured = product.isConfigured,
-        optionGroups = optionGroups.map { optionGroup ->
-            ProductOptionGroupResponse(
-                id = optionGroup.id,
-                code = optionGroup.code,
-                title = optionGroup.title,
-                sortOrder = optionGroup.sortOrder,
-                values = optionGroup.values.map { optionValue ->
-                    ProductOptionValueResponse(
-                        id = optionValue.id,
-                        code = optionValue.code,
-                        title = optionValue.title,
-                        sortOrder = optionValue.sortOrder,
-                    )
-                },
-            )
-        },
+        optionGroups = optionGroups.map(CatalogProductOptionGroupDetails::toResponse),
         modifierGroups = modifierGroups.map { modifierGroup ->
             ProductModifierGroupResponse(
                 id = modifierGroup.id,
@@ -129,20 +117,7 @@ internal fun CatalogProductDetails.toPublicDetailsResponse(): ProductDetailsResp
             )
         },
         defaultVariantId = defaultVariantId,
-        variants = variants.map { variant ->
-            ProductVariantResponse(
-                id = variant.id,
-                externalId = variant.externalId,
-                sku = variant.sku,
-                title = variant.title,
-                priceMinor = variant.priceMinor,
-                oldPriceMinor = variant.oldPriceMinor,
-                imageUrls = variant.imageUrls,
-                sortOrder = variant.sortOrder,
-                isActive = variant.isActive,
-                optionValueIds = variant.optionValueIds,
-            )
-        },
+        variants = variants.map(CatalogProductVariantDetails::toResponse),
     )
 }
 
@@ -162,22 +137,7 @@ internal fun CatalogProductDetails.toAdminDetailsResponse(): AdminProductDetails
         countStep = product.countStep,
         isActive = product.isActive,
         isConfigured = product.isConfigured,
-        optionGroups = optionGroups.map { optionGroup ->
-            ProductOptionGroupResponse(
-                id = optionGroup.id,
-                code = optionGroup.code,
-                title = optionGroup.title,
-                sortOrder = optionGroup.sortOrder,
-                values = optionGroup.values.map { optionValue ->
-                    ProductOptionValueResponse(
-                        id = optionValue.id,
-                        code = optionValue.code,
-                        title = optionValue.title,
-                        sortOrder = optionValue.sortOrder,
-                    )
-                },
-            )
-        },
+        optionGroups = optionGroups.map(CatalogProductOptionGroupDetails::toResponse),
         modifierGroups = modifierGroups.map { modifierGroup ->
             ProductModifierGroupResponse(
                 id = modifierGroup.id,
@@ -205,20 +165,56 @@ internal fun CatalogProductDetails.toAdminDetailsResponse(): AdminProductDetails
             )
         },
         defaultVariantId = defaultVariantId,
-        variants = variants.map { variant ->
-            AdminProductVariantResponse(
-                id = variant.id,
-                externalId = variant.externalId,
-                sku = variant.sku,
-                title = variant.title,
-                priceMinor = variant.priceMinor,
-                oldPriceMinor = variant.oldPriceMinor,
-                imageIds = variant.imageIds,
-                imageUrls = variant.imageUrls,
-                sortOrder = variant.sortOrder,
-                isActive = variant.isActive,
-                optionValueIds = variant.optionValueIds,
-            )
-        },
+        variants = variants.map(CatalogProductVariantDetails::toAdminResponse),
+    )
+}
+
+internal fun CatalogProductOptionGroupDetails.toResponse(): ProductOptionGroupResponse {
+    return ProductOptionGroupResponse(
+        id = id,
+        code = code,
+        title = title,
+        sortOrder = sortOrder,
+        values = values.map(CatalogProductOptionValueDetails::toResponse),
+    )
+}
+
+internal fun CatalogProductOptionValueDetails.toResponse(): ProductOptionValueResponse {
+    return ProductOptionValueResponse(
+        id = id,
+        code = code,
+        title = title,
+        sortOrder = sortOrder,
+    )
+}
+
+internal fun CatalogProductVariantDetails.toResponse(): ProductVariantResponse {
+    return ProductVariantResponse(
+        id = id,
+        externalId = externalId,
+        sku = sku,
+        title = title,
+        priceMinor = priceMinor,
+        oldPriceMinor = oldPriceMinor,
+        imageUrls = imageUrls,
+        sortOrder = sortOrder,
+        isActive = isActive,
+        optionValueIds = optionValueIds,
+    )
+}
+
+internal fun CatalogProductVariantDetails.toAdminResponse(): AdminProductVariantResponse {
+    return AdminProductVariantResponse(
+        id = id,
+        externalId = externalId,
+        sku = sku,
+        title = title,
+        priceMinor = priceMinor,
+        oldPriceMinor = oldPriceMinor,
+        imageIds = imageIds,
+        imageUrls = imageUrls,
+        sortOrder = sortOrder,
+        isActive = isActive,
+        optionValueIds = optionValueIds,
     )
 }
