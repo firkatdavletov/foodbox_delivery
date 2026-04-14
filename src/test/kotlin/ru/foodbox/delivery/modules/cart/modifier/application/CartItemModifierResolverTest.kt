@@ -180,6 +180,18 @@ class CartItemModifierResolverTest {
             return options.filter { it.groupId in groupIds }
         }
 
+        override fun findAllByGroupId(groupId: UUID): List<ModifierOption> {
+            return options.filter { it.groupId == groupId }
+        }
+
+        override fun findAllByGroupIdAndIsActive(groupId: UUID, isActive: Boolean): List<ModifierOption> {
+            return options.filter { it.groupId == groupId && it.isActive == isActive }
+        }
+
+        override fun findById(id: UUID): ModifierOption? {
+            return options.firstOrNull { it.id == id }
+        }
+
         override fun deleteAllByGroupId(groupId: UUID) = error("Not used")
 
         override fun saveAll(options: List<ModifierOption>): List<ModifierOption> = error("Not used")

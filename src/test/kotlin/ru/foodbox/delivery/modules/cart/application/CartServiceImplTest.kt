@@ -768,6 +768,9 @@ class CartServiceImplTest {
 
     private class UnusedModifierOptionRepository : ModifierOptionRepository {
         override fun findAllByGroupIds(groupIds: Collection<UUID>): List<ModifierOption> = error("Not used")
+        override fun findAllByGroupId(groupId: UUID): List<ModifierOption> = error("Not used")
+        override fun findAllByGroupIdAndIsActive(groupId: UUID, isActive: Boolean): List<ModifierOption> = error("Not used")
+        override fun findById(id: UUID): ModifierOption? = error("Not used")
         override fun deleteAllByGroupId(groupId: UUID) = error("Not used")
         override fun saveAll(options: List<ModifierOption>): List<ModifierOption> = error("Not used")
     }

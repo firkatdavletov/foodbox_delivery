@@ -997,6 +997,96 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/catalog/modifier-groups/{groupId}/options:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminModifierGroupOptions
+      summary: List modifier options for group
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModifierGroupIdPathParam'
+        - name: isActive
+          in: query
+          required: false
+          description: When provided, filters modifier options by activity flag.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Modifier options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModifierOptionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Catalog Admin]
+      operationId: upsertAdminModifierGroupOption
+      summary: Create or update modifier option in group
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModifierGroupIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertModifierOptionRequest'
+      responses:
+        '200':
+          description: Saved modifier option
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifierOptionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/catalog/modifier-groups/{groupId}/options/{optionId}:
+    get:
+      tags: [Catalog Admin]
+      operationId: getAdminModifierGroupOptionById
+      summary: Get modifier option by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModifierGroupIdPathParam'
+        - $ref: '#/components/parameters/ModifierOptionIdPathParam'
+      responses:
+        '200':
+          description: Modifier option
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifierOptionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/products/{productId}:
     get:
       tags: [Catalog Admin]
@@ -3289,6 +3379,20 @@ components:
       schema:
         type: string
         format: uuid
+    ModifierGroupIdPathParam:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ModifierOptionIdPathParam:
+      name: optionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     OptionGroupIdPathParam:
       name: optionGroupId
       in: path
@@ -4823,7 +4927,7 @@ components:
 
     ModifierGroupResponse:
       type: object
-      required: [id, code, name, minSelected, maxSelected, isRequired, isActive, sortOrder, options]
+      required: [id, code, name, minSelected, maxSelected, isRequired, isActive, sortOrder]
       properties:
         id:
           type: string
@@ -4845,10 +4949,6 @@ components:
         sortOrder:
           type: integer
           format: int32
-        options:
-          type: array
-          items:
-            $ref: '#/components/schemas/ModifierOptionResponse'
 
     ModifierOptionResponse:
       type: object
@@ -5091,15 +5191,15 @@ components:
           type: integer
           format: int32
           default: 0
-        options:
-          type: array
-          items:
-            $ref: '#/components/schemas/UpsertModifierOptionRequest'
 
     UpsertModifierOptionRequest:
       type: object
-      required: [code, name, priceType, applicationScope]
+      required: [code, name, priceType, price, applicationScope]
       properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
         code:
           type: string
           minLength: 1

@@ -1,6 +1,5 @@
 package ru.foodbox.delivery.modules.catalog.modifier.api.dto
 
-import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -26,12 +25,11 @@ data class UpsertModifierGroupRequest(
     val isRequired: Boolean = false,
     val isActive: Boolean = true,
     val sortOrder: Int = 0,
-
-    @field:Valid
-    val options: List<UpsertModifierOptionRequest> = emptyList(),
 )
 
 data class UpsertModifierOptionRequest(
+    val id: UUID? = null,
+
     @field:NotBlank
     val code: String,
 

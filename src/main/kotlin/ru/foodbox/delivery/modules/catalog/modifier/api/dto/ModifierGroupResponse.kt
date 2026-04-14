@@ -13,7 +13,6 @@ data class ModifierGroupResponse(
     val isRequired: Boolean,
     val isActive: Boolean,
     val sortOrder: Int,
-    val options: List<ModifierOptionResponse>,
 )
 
 data class ModifierOptionResponse(

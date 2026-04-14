@@ -6,5 +6,7 @@ import java.util.UUID
 
 interface ModifierOptionJpaRepository : JpaRepository<ModifierOptionEntity, UUID> {
     fun findAllByGroupIdInOrderBySortOrderAscNameAsc(groupIds: Collection<UUID>): List<ModifierOptionEntity>
+    fun findAllByGroupIdOrderBySortOrderAscNameAsc(groupId: UUID): List<ModifierOptionEntity>
+    fun findAllByGroupIdAndIsActiveOrderBySortOrderAscNameAsc(groupId: UUID, isActive: Boolean): List<ModifierOptionEntity>
     fun deleteAllByGroupId(groupId: UUID)
 }

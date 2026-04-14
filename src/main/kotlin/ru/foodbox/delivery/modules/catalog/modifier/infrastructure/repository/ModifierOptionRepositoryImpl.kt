@@ -5,6 +5,7 @@ import ru.foodbox.delivery.modules.catalog.modifier.domain.ModifierOption
 import ru.foodbox.delivery.modules.catalog.modifier.domain.repository.ModifierOptionRepository
 import ru.foodbox.delivery.modules.catalog.modifier.infrastructure.persistence.entity.ModifierOptionEntity
 import ru.foodbox.delivery.modules.catalog.modifier.infrastructure.persistence.jpa.ModifierOptionJpaRepository
+import kotlin.jvm.optionals.getOrNull
 
 @Repository
 class ModifierOptionRepositoryImpl(
@@ -16,6 +17,18 @@ class ModifierOptionRepositoryImpl(
             return emptyList()
         }
         return jpaRepository.findAllByGroupIdInOrderBySortOrderAscNameAsc(groupIds).map(::toDomain)
+    }
+
+    override fun findAllByGroupId(groupId: java.util.UUID): List<ModifierOption> {
+        return jpaRepository.findAllByGroupIdOrderBySortOrderAscNameAsc(groupId).map(::toDomain)
+    }
+
+    override fun findAllByGroupIdAndIsActive(groupId: java.util.UUID, isActive: Boolean): List<ModifierOption> {
+        return jpaRepository.findAllByGroupIdAndIsActiveOrderBySortOrderAscNameAsc(groupId, isActive).map(::toDomain)
+    }
+
+    override fun findById(id: java.util.UUID): ModifierOption? {
+        return jpaRepository.findById(id).getOrNull()?.let(::toDomain)
     }
 
     override fun deleteAllByGroupId(groupId: java.util.UUID) {
