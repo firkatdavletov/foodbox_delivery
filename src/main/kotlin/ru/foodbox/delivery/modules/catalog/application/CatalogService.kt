@@ -11,6 +11,7 @@ interface CatalogService {
     fun getCategories(activeOnly: Boolean = true): List<CatalogCategory>
     fun getProducts(categoryId: UUID? = null, query: String? = null): List<CatalogProduct>
     fun getAdminCategories(isActive: Boolean): List<CatalogCategory>
+    fun getAdminCategoryDetails(categoryId: UUID): CatalogCategory?
     fun getAdminProducts(isActive: Boolean): List<CatalogProduct>
     fun getProductDetails(productId: UUID): CatalogProductDetails?
     fun getAdminProductDetails(productId: UUID): CatalogProductDetails?

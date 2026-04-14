@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import ru.foodbox.delivery.common.error.NotFoundException
+import ru.foodbox.delivery.modules.catalog.api.dto.AdminCategoryDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.AdminCategoryResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertCategoryRequest
@@ -39,6 +41,16 @@ class CatalogAdminController(
         return catalogService.getAdminCategories(isActive).map { it.toAdminResponse() }
     }
 
+    @GetMapping("/categories/{categoryId}")
+    fun getCategoryDetails(
+        @PathVariable categoryId: UUID,
+    ): AdminCategoryDetailsResponse {
+        val category = catalogService.getAdminCategoryDetails(categoryId)
+            ?: throw NotFoundException("Category not found")
+
+        return category.toAdminDetailsResponse()
+    }
+
     @GetMapping("/products")
     fun getProducts(
         @RequestParam(name = "isActive") isActive: Boolean,
@@ -53,8 +65,11 @@ class CatalogAdminController(
         val category = catalogService.upsertCategory(
             UpsertCategoryCommand(
                 id = request.id,
+                externalId = request.externalId,
                 name = request.name,
                 slug = request.slug,
+                description = request.description,
+                sortOrder = request.sortOrder,
                 imageIds = request.imageIds,
                 isActive = request.isActive,
             )

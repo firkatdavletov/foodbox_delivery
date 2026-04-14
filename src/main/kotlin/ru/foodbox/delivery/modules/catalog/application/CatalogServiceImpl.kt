@@ -46,6 +46,11 @@ class CatalogServiceImpl(
         return enrichCategories(categoryRepository.findAllByIsActive(isActive))
     }
 
+    override fun getAdminCategoryDetails(categoryId: UUID): CatalogCategory? {
+        val category = categoryRepository.findById(categoryId) ?: return null
+        return enrichCategories(listOf(category)).first()
+    }
+
     override fun getAdminProducts(isActive: Boolean): List<CatalogProduct> {
         return enrichProducts(productRepository.findAllByIsActive(isActive), modifierGroupsActiveOnly = false)
     }
@@ -107,15 +112,21 @@ class CatalogServiceImpl(
         val existing = command.id?.let(categoryRepository::findById)
 
         val category = existing?.copy(
+            externalId = resolveOptionalStringUpdate(command.externalId, existing.externalId),
             name = command.name.trim(),
             slug = normalizeSlug(command.slug, command.name),
+            description = resolveOptionalStringUpdate(command.description, existing.description),
+            sortOrder = command.sortOrder ?: existing.sortOrder,
             imageUrls = existing.imageUrls,
             isActive = command.isActive,
             updatedAt = now,
         ) ?: CatalogCategory(
             id = command.id ?: UUID.randomUUID(),
+            externalId = normalizeOptionalString(command.externalId),
             name = command.name.trim(),
             slug = normalizeSlug(command.slug, command.name),
+            description = normalizeOptionalString(command.description),
+            sortOrder = command.sortOrder ?: 0,
             imageUrls = emptyList(),
             isActive = command.isActive,
             createdAt = now,
@@ -302,5 +313,17 @@ class CatalogServiceImpl(
             .replace("[^a-z0-9]+".toRegex(), "-")
             .trim('-')
             .ifBlank { UUID.randomUUID().toString() }
+    }
+
+    private fun resolveOptionalStringUpdate(incoming: String?, existing: String?): String? {
+        return if (incoming == null) {
+            existing
+        } else {
+            normalizeOptionalString(incoming)
+        }
+    }
+
+    private fun normalizeOptionalString(value: String?): String? {
+        return value?.trim()?.takeIf { it.isNotBlank() }
     }
 }

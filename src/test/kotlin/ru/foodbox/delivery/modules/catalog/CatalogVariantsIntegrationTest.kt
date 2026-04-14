@@ -726,6 +726,44 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `admin category details endpoint returns persisted extended fields`() {
+        val imageId = createReadyImage(
+            publicUrl = "https://cdn.example.com/categories/accessories.jpg",
+            targetType = MediaTargetType.CATEGORY,
+        )
+
+        val created = upsertCategoryAsAdmin(
+            mapOf(
+                "externalId" to "cat-accessories",
+                "name" to "Аксессуары",
+                "slug" to "accessories",
+                "description" to "Ремни, сумки и другие аксессуары",
+                "sortOrder" to 15,
+                "imageIds" to listOf(imageId),
+                "isActive" to false,
+            )
+        )
+        val categoryId = UUID.fromString(created["id"].asText())
+
+        val details = getAdminCategoryDetails(categoryId)
+        assertEquals(categoryId.toString(), details["id"].asText())
+        assertEquals("cat-accessories", details["externalId"].asText())
+        assertEquals("Аксессуары", details["name"].asText())
+        assertEquals("accessories", details["slug"].asText())
+        assertEquals("Ремни, сумки и другие аксессуары", details["description"].asText())
+        assertEquals(15, details["sortOrder"].asInt())
+        assertEquals(imageId.toString(), details["imageIds"][0].asText())
+        assertEquals(false, details["isActive"].asBoolean())
+
+        val saved = categoryRepository.findById(categoryId)
+        assertNotNull(saved)
+        assertEquals("cat-accessories", saved.externalId)
+        assertEquals("Ремни, сумки и другие аксессуары", saved.description)
+        assertEquals(15, saved.sortOrder)
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `delete category image removes attachment and marks media image deleted`() {
         val firstImageId = createReadyImage(
             publicUrl = "https://cdn.example.com/categories/sale-first.jpg",
@@ -1319,6 +1357,18 @@ class CatalogVariantsIntegrationTest {
         val response = mockMvc.perform(
             get("/api/v1/admin/catalog/categories")
                 .param("isActive", isActive.toString())
+                .accept(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        return objectMapper.readTree(response)
+    }
+
+    private fun getAdminCategoryDetails(categoryId: UUID): JsonNode {
+        val response = mockMvc.perform(
+            get("/api/v1/admin/catalog/categories/{categoryId}", categoryId)
                 .accept(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk)
             .andReturn()
