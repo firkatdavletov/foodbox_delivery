@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportErrorCode
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportRowError
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportRow
+import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductRowType
 import java.util.UUID
 
 @Component
@@ -19,7 +20,11 @@ class ProductImportRowValidator {
 
             if (hasVariants) {
                 val firstByVariantKey = mutableMapOf<String, Int>()
-                groupedRows.forEach { row ->
+                groupedRows.forEach rowLoop@{ row ->
+                    // New-style product header rows (row_type=product without variant data) are allowed alongside variant rows
+                    if (row.rowType == ProductRowType.PRODUCT && !row.hasVariantData()) {
+                        return@rowLoop
+                    }
                     if (!row.hasVariantData()) {
                         errors += CatalogImportRowError(
                             rowNumber = row.rowNumber,
@@ -27,7 +32,7 @@ class ProductImportRowValidator {
                             errorCode = CatalogImportErrorCode.INVALID_RELATION,
                             message = "Mixed simple and variant rows for product '${row.productKey}'",
                         )
-                        return@forEach
+                        return@rowLoop
                     }
 
                     val variantSku = row.variantSku
@@ -102,6 +107,9 @@ class ProductImportRowValidator {
         existingCategoryIds: Set<UUID>,
     ): List<CatalogImportRowError> {
         return rows.mapNotNull { row ->
+            // Variant rows don't carry category — it belongs to the product row
+            if (row.rowType == ProductRowType.VARIANT) return@mapNotNull null
+
             val hasExternal = row.categoryExternalId?.let(existingCategoryExternalIds::contains) ?: false
             val hasId = row.categoryId?.let(existingCategoryIds::contains) ?: false
 

@@ -3,11 +3,14 @@ package ru.foodbox.delivery.modules.catalogimport.domain.model
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import java.util.UUID
 
+enum class ProductRowType { PRODUCT, VARIANT }
+
 data class ProductImportRow(
     val rowNumber: Int,
+    val rowType: ProductRowType,
     val productExternalId: String?,
     val productSlug: String,
-    val productTitle: String,
+    val productTitle: String?,
     val categoryExternalId: String?,
     val categoryId: UUID?,
     val productDescription: String?,
@@ -31,7 +34,7 @@ data class ProductImportRow(
     val options: List<ProductImportVariantOption>,
 ) {
     val productKey: String
-        get() = productExternalId ?: productSlug
+        get() = productExternalId ?: productSlug.takeIf { it.isNotBlank() } ?: ""
 
     val rowKey: String
         get() = productExternalId ?: variantExternalId ?: variantSku ?: productSlug

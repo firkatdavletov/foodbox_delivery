@@ -104,6 +104,7 @@ class CsvCatalogParser {
         val OPTION_VALUE_TITLE_ALIAS_REGEX = Regex("^название значения опции\\s*(\\d+)$")
 
         val HEADER_ALIASES = mapOf(
+            "тип строки" to "row_type",
             "внешний id товара" to "product_external_id",
             "слаг товара" to "product_slug",
             "название товара" to "product_title",

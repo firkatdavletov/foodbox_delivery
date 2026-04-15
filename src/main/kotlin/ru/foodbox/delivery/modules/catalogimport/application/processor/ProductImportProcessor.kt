@@ -24,6 +24,7 @@ import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportRowError
 import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportType
 import ru.foodbox.delivery.modules.catalogimport.domain.CsvRow
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportRow
+import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductRowType
 
 @Component
 class ProductImportProcessor(
@@ -198,7 +199,8 @@ class ProductImportProcessor(
         bySlug: Map<String, CatalogProduct>,
     ): ProductMatchResolution {
         val productExternalId = rows.firstNotNullOfOrNull { it.productExternalId }
-        val productSlug = rows.first().productSlug
+        val productSlug = rows.firstOrNull { it.rowType == ProductRowType.PRODUCT }?.productSlug
+            ?: rows.first().productSlug
 
         val byExternal = productExternalId?.let(byExternalId::get)
         val bySlugKey = bySlug[productSlug]
@@ -236,14 +238,18 @@ class ProductImportProcessor(
 
     private fun aggregateProduct(rows: List<ProductImportRow>): AggregatedProduct {
         val orderedRows = rows.sortedBy { it.rowNumber }
-        val firstRow = orderedRows.first()
-        val hasVariants = orderedRows.any(ProductImportRow::hasVariantData)
+        val productRow = orderedRows.firstOrNull { it.rowType == ProductRowType.PRODUCT } ?: orderedRows.first()
+        val hasVariants = orderedRows.any { it.rowType == ProductRowType.VARIANT || it.hasVariantData() }
+        val variantSourceRows = orderedRows.filter { it.rowType == ProductRowType.VARIANT || it.hasVariantData() }
+
+        val productPriceMinor = orderedRows.firstNotNullOfOrNull { it.productPriceMinor }
+        val productOldPriceMinor = orderedRows.firstNotNullOfOrNull { it.productOldPriceMinor }
 
         val optionGroupsByCode = linkedMapOf<String, MutableOptionGroup>()
         val variants = mutableListOf<ReplaceProductVariantCommand>()
 
         if (hasVariants) {
-            orderedRows.forEach { row ->
+            variantSourceRows.forEach { row ->
                 row.options.sortedBy { it.position }.forEach { option ->
                     val optionGroup = optionGroupsByCode.getOrPut(option.optionGroupCode) {
                         MutableOptionGroup(
@@ -267,8 +273,8 @@ class ProductImportProcessor(
                     externalId = row.variantExternalId,
                     sku = row.variantSku ?: "",
                     title = row.variantTitle,
-                    priceMinor = row.variantPriceMinor ?: row.productPriceMinor,
-                    oldPriceMinor = row.variantOldPriceMinor ?: row.productOldPriceMinor,
+                    priceMinor = row.variantPriceMinor ?: productPriceMinor,
+                    oldPriceMinor = row.variantOldPriceMinor ?: productOldPriceMinor,
                     imageIds = emptyList(),
                     sortOrder = row.variantSortOrder,
                     isActive = row.variantIsActive,
@@ -299,20 +305,20 @@ class ProductImportProcessor(
 
         return AggregatedProduct(
             productExternalId = orderedRows.firstNotNullOfOrNull { it.productExternalId },
-            productSlug = firstRow.productSlug,
-            productTitle = firstRow.productTitle,
+            productSlug = productRow.productSlug,
+            productTitle = productRow.productTitle ?: orderedRows.firstNotNullOfOrNull { it.productTitle } ?: "",
             categoryExternalId = orderedRows.firstNotNullOfOrNull { it.categoryExternalId },
             categoryId = orderedRows.firstNotNullOfOrNull { it.categoryId },
             productDescription = orderedRows.firstNotNullOfOrNull { it.productDescription },
             productBrand = orderedRows.firstNotNullOfOrNull { it.productBrand },
             productImageUrl = orderedRows.firstNotNullOfOrNull { it.productImageUrl },
-            productPriceMinor = orderedRows.firstNotNullOfOrNull { it.productPriceMinor },
-            productOldPriceMinor = orderedRows.firstNotNullOfOrNull { it.productOldPriceMinor },
+            productPriceMinor = productPriceMinor,
+            productOldPriceMinor = productOldPriceMinor,
             productSku = orderedRows.firstNotNullOfOrNull { it.productSku },
             productUnit = orderedRows.firstNotNullOfOrNull { it.productUnit } ?: ProductUnit.PIECE,
-            productCountStep = orderedRows.firstOrNull()?.productCountStep ?: 1,
-            productIsActive = orderedRows.firstOrNull()?.productIsActive ?: true,
-            productSortOrder = orderedRows.firstOrNull()?.productSortOrder,
+            productCountStep = productRow.productCountStep,
+            productIsActive = productRow.productIsActive,
+            productSortOrder = productRow.productSortOrder,
             optionGroups = optionGroups,
             variants = variants,
         )

@@ -9,6 +9,7 @@ import ru.foodbox.delivery.modules.catalogimport.domain.CatalogImportRowError
 import ru.foodbox.delivery.modules.catalogimport.domain.CsvRow
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportRow
 import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductImportVariantOption
+import ru.foodbox.delivery.modules.catalogimport.domain.model.ProductRowType
 import java.util.UUID
 
 @Component
@@ -19,6 +20,10 @@ class ProductCsvRowMapper(
 
     fun map(csvRow: CsvRow): RowMappingResult<ProductImportRow> {
         val rowNumber = csvRow.rowNumber
+        val rowType = when (readAny(csvRow, "row_type")?.lowercase()) {
+            "variant" -> ProductRowType.VARIANT
+            else -> ProductRowType.PRODUCT
+        }
         val productExternalId = readAny(csvRow, "product_external_id", "external_id")
         val productTitle = readAny(csvRow, "product_title", "name")
         val productSlugRaw = readAny(csvRow, "product_slug", "slug")
@@ -27,15 +32,24 @@ class ProductCsvRowMapper(
         val fallbackRowKey = productExternalId ?: variantExternalId ?: variantSku ?: productSlugRaw
         val errors = mutableListOf<CatalogImportRowError>()
 
-        if (productTitle == null) {
+        if (rowType == ProductRowType.PRODUCT && productTitle == null) {
             errors += requiredFieldError(rowNumber, fallbackRowKey, "product_title")
+        }
+
+        if (rowType == ProductRowType.VARIANT && productExternalId == null) {
+            errors += CatalogImportRowError(
+                rowNumber = rowNumber,
+                rowKey = fallbackRowKey,
+                errorCode = CatalogImportErrorCode.MISSING_REQUIRED_FIELD,
+                message = "Field 'product_external_id' is required for variant rows (row_type=variant)",
+            )
         }
 
         val rowKey = productExternalId ?: variantExternalId ?: variantSku ?: productSlugRaw ?: productTitle
 
         val categoryExternalId = readAny(csvRow, "category_external_id")
         val categoryId = parseCategoryId(csvRow, rowNumber, rowKey, errors)
-        if (categoryExternalId == null && categoryId == null) {
+        if (rowType == ProductRowType.PRODUCT && categoryExternalId == null && categoryId == null) {
             errors += CatalogImportRowError(
                 rowNumber = rowNumber,
                 rowKey = rowKey,
@@ -145,11 +159,16 @@ class ProductCsvRowMapper(
             return RowMappingResult(row = null, errors = errors)
         }
 
-        val normalizedSlug = slugNormalizer.normalize(productSlugRaw, productTitle!!)
+        val normalizedSlug = if (rowType == ProductRowType.PRODUCT) {
+            slugNormalizer.normalize(productSlugRaw, productTitle!!)
+        } else {
+            ""
+        }
 
         return RowMappingResult(
             row = ProductImportRow(
                 rowNumber = rowNumber,
+                rowType = rowType,
                 productExternalId = productExternalId,
                 productSlug = normalizedSlug,
                 productTitle = productTitle,
