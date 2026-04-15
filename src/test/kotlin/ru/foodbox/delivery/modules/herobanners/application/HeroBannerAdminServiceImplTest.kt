@@ -15,6 +15,9 @@ import ru.foodbox.delivery.modules.herobanners.domain.HeroBanner
 import ru.foodbox.delivery.modules.herobanners.domain.HeroBannerTranslation
 import ru.foodbox.delivery.modules.herobanners.domain.PageResult
 import ru.foodbox.delivery.modules.herobanners.domain.repository.HeroBannerRepository
+import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.MediaTargetType
+import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -28,11 +31,12 @@ class HeroBannerAdminServiceImplTest {
 
     private val fixedNow = Instant.parse("2026-04-07T12:00:00Z")
     private val clock = Clock.fixed(fixedNow, ZoneOffset.UTC)
+    private val noOpMediaImageRepository = NoOpMediaImageRepository()
 
     @Test
     fun `createBanner creates a draft banner successfully`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val banner = service.createBanner(
             createCommand(status = BannerStatus.DRAFT)
@@ -49,7 +53,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner with PUBLISHED sets publishedAt`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val banner = service.createBanner(
             createCommand(status = BannerStatus.PUBLISHED)
@@ -62,7 +66,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner with PUBLISHED fails when no translations`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -74,7 +78,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner with PUBLISHED fails when translation title is blank`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -89,7 +93,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner with PUBLISHED fails when desktop image alt is blank`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -104,7 +108,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner fails when endsAt is before startsAt`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -119,7 +123,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner fails when primary label provided without URL`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -134,7 +138,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `createBanner fails when primary URL provided without label`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         assertThrows<IllegalArgumentException> {
             service.createBanner(
@@ -149,7 +153,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `changeBannerStatus from DRAFT to PUBLISHED validates and sets publishedAt`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val created = service.createBanner(createCommand(status = BannerStatus.DRAFT))
         val published = service.changeBannerStatus(
@@ -164,7 +168,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `changeBannerStatus to PUBLISHED fails without translations`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val created = service.createBanner(
             createCommand(status = BannerStatus.DRAFT, translations = emptyList())
@@ -181,7 +185,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `updateBanner correctly updates translations without duplicates`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val created = service.createBanner(
             createCommand(
@@ -229,7 +233,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `reorderBanners changes sort order`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val b1 = service.createBanner(createCommand(code = "b1", sortOrder = 10))
         val b2 = service.createBanner(createCommand(code = "b2", sortOrder = 20))
@@ -252,7 +256,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `deleteBanner soft deletes and clears translations`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val created = service.createBanner(createCommand())
         service.deleteBanner(created.id)
@@ -266,7 +270,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `deleteBanner hides banner from admin list`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         val created = service.createBanner(createCommand())
         service.deleteBanner(created.id)
@@ -279,7 +283,7 @@ class HeroBannerAdminServiceImplTest {
     @Test
     fun `admin list filters by storefront and status and placement`() {
         val repository = InMemoryHeroBannerRepository()
-        val service = HeroBannerAdminServiceImpl(repository, clock)
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
 
         service.createBanner(createCommand(code = "a1", storefrontCode = "site-a", status = BannerStatus.DRAFT))
         service.createBanner(createCommand(code = "a2", storefrontCode = "site-a", status = BannerStatus.PUBLISHED))
@@ -342,6 +346,14 @@ class HeroBannerAdminServiceImplTest {
             primaryActionLabel = primaryActionLabel,
             secondaryActionLabel = secondaryActionLabel,
         )
+    }
+
+    class NoOpMediaImageRepository : MediaImageRepository {
+        override fun findById(id: UUID): MediaImage? = null
+        override fun findAllByIds(ids: Collection<UUID>): List<MediaImage> = emptyList()
+        override fun findAllByTargetTypeAndTargetIdIn(targetType: MediaTargetType, targetIds: Collection<UUID>): List<MediaImage> = emptyList()
+        override fun save(mediaImage: MediaImage): MediaImage = mediaImage
+        override fun saveAll(mediaImages: List<MediaImage>): List<MediaImage> = mediaImages
     }
 
     class InMemoryHeroBannerRepository : HeroBannerRepository {

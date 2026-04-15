@@ -269,6 +269,10 @@ class ImageProcessingServiceTest {
             return ids.mapNotNull(images::get)
         }
 
+        override fun findAllByTargetTypeAndTargetIdIn(targetType: MediaTargetType, targetIds: Collection<UUID>): List<MediaImage> {
+            return images.values.filter { it.targetType == targetType && it.targetId in targetIds }
+        }
+
         override fun save(mediaImage: MediaImage): MediaImage {
             images[mediaImage.id] = mediaImage
             return mediaImage
