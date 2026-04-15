@@ -1270,6 +1270,31 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/products/{productId}/variants/{variantId}/images/{imageId}:
+    delete:
+      tags: [Catalog Admin]
+      operationId: deleteProductVariantImage
+      summary: Delete product variant image
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: '#/components/parameters/VariantIdPathParam'
+        - $ref: '#/components/parameters/ImageIdPathParam'
+      responses:
+        '204':
+          description: Product variant image deleted
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/catalog-import:
     post:
       tags: [Catalog Admin]

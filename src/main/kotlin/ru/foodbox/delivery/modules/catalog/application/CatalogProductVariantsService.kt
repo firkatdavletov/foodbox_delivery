@@ -270,6 +270,38 @@ class CatalogProductVariantsService(
     }
 
     @Transactional
+    fun deleteVariantImage(productId: UUID, variantId: UUID, imageId: UUID) {
+        productRepository.findById(productId)
+            ?: throw NotFoundException("Product not found")
+
+        variantRepository.findById(variantId)
+            ?.takeIf { it.productId == productId }
+            ?: throw NotFoundException("Product variant not found")
+
+        val variantImages = imageService.getVariantImages(listOf(variantId))[variantId].orEmpty()
+        val remainingImageIds = variantImages
+            .filterNot { it.id == imageId }
+            .map { it.id }
+
+        if (remainingImageIds.size == variantImages.size) {
+            throw NotFoundException("Variant image not found")
+        }
+
+        val now = Instant.now()
+        imageService.detachVariantImages(
+            existingVariantIds = listOf(variantId),
+            retainedImageIds = remainingImageIds,
+            now = now,
+        )
+        if (remainingImageIds.isNotEmpty()) {
+            imageService.attachVariantImages(
+                imageIdsByVariantId = mapOf(variantId to remainingImageIds),
+                now = now,
+            )
+        }
+    }
+
+    @Transactional
     fun replaceAll(
         productId: UUID,
         command: ReplaceProductVariantsCommand,
