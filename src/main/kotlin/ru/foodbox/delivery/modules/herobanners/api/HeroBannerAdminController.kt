@@ -17,6 +17,7 @@ import ru.foodbox.delivery.modules.herobanners.api.dto.ChangeHeroBannerStatusReq
 import ru.foodbox.delivery.modules.herobanners.api.dto.CreateHeroBannerRequest
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerAdminPageResponse
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerAdminResponse
+import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerTranslationRequest
 import ru.foodbox.delivery.modules.herobanners.api.dto.ReorderHeroBannersRequest
 import ru.foodbox.delivery.modules.herobanners.api.dto.UpdateHeroBannerRequest
 import ru.foodbox.delivery.modules.herobanners.application.HeroBannerAdminService
@@ -44,15 +45,18 @@ class HeroBannerAdminController(
         @RequestParam(name = "page", defaultValue = "0") page: Int,
         @RequestParam(name = "size", defaultValue = "20") size: Int,
     ): HeroBannerAdminPageResponse {
-        return adminService.getBannerPage(storefrontCode, placement, status, search, page, size)
-            .toAdminPageResponse()
+        val bannerPage = adminService.getBannerPage(storefrontCode, placement, status, search, page, size)
+        val imagesByBannerId = adminService.getBannerImages(bannerPage.content.map { it.id })
+        return bannerPage.toAdminPageResponse(imagesByBannerId)
     }
 
     @GetMapping("/{id}")
     fun getBanner(
         @PathVariable id: UUID,
     ): HeroBannerAdminResponse {
-        return adminService.getBannerById(id).toAdminResponse()
+        val banner = adminService.getBannerById(id)
+        val images = adminService.getBannerImages(listOf(id))[id].orEmpty()
+        return banner.toAdminResponse(images)
     }
 
     @PostMapping
@@ -60,7 +64,7 @@ class HeroBannerAdminController(
     fun createBanner(
         @Valid @RequestBody request: CreateHeroBannerRequest,
     ): HeroBannerAdminResponse {
-        return adminService.createBanner(
+        val banner = adminService.createBanner(
             CreateHeroBannerCommand(
                 code = request.code,
                 storefrontCode = request.storefrontCode,
@@ -77,7 +81,9 @@ class HeroBannerAdminController(
                 endsAt = request.endsAt,
                 translations = request.translations.map { it.toCommand() },
             )
-        ).toAdminResponse()
+        )
+        val images = adminService.getBannerImages(listOf(banner.id))[banner.id].orEmpty()
+        return banner.toAdminResponse(images)
     }
 
     @PutMapping("/{id}")
@@ -85,7 +91,7 @@ class HeroBannerAdminController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: UpdateHeroBannerRequest,
     ): HeroBannerAdminResponse {
-        return adminService.updateBanner(
+        val banner = adminService.updateBanner(
             id = id,
             command = UpdateHeroBannerCommand(
                 code = request.code,
@@ -103,7 +109,9 @@ class HeroBannerAdminController(
                 endsAt = request.endsAt,
                 translations = request.translations.map { it.toCommand() },
             ),
-        ).toAdminResponse()
+        )
+        val images = adminService.getBannerImages(listOf(banner.id))[banner.id].orEmpty()
+        return banner.toAdminResponse(images)
     }
 
     @PatchMapping("/{id}/status")
@@ -111,10 +119,12 @@ class HeroBannerAdminController(
         @PathVariable id: UUID,
         @Valid @RequestBody request: ChangeHeroBannerStatusRequest,
     ): HeroBannerAdminResponse {
-        return adminService.changeBannerStatus(
+        val banner = adminService.changeBannerStatus(
             id = id,
             command = ChangeHeroBannerStatusCommand(status = request.status),
-        ).toAdminResponse()
+        )
+        val images = adminService.getBannerImages(listOf(banner.id))[banner.id].orEmpty()
+        return banner.toAdminResponse(images)
     }
 
     @PatchMapping("/reorder")
@@ -138,9 +148,18 @@ class HeroBannerAdminController(
     ) {
         adminService.deleteBanner(id)
     }
+
+    @DeleteMapping("/{bannerId}/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteBannerImage(
+        @PathVariable bannerId: UUID,
+        @PathVariable imageId: UUID,
+    ) {
+        adminService.deleteBannerImage(bannerId, imageId)
+    }
 }
 
-private fun ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerTranslationRequest.toCommand(): HeroBannerTranslationCommand {
+private fun HeroBannerTranslationRequest.toCommand(): HeroBannerTranslationCommand {
     return HeroBannerTranslationCommand(
         locale = locale,
         title = title,

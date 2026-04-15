@@ -16,6 +16,7 @@ data class HeroBannerAdminResponse(
     val sortOrder: Int,
     val desktopImageUrl: String,
     val mobileImageUrl: String?,
+    val images: List<HeroBannerImageResponse>,
     val primaryActionUrl: String?,
     val secondaryActionUrl: String?,
     val themeVariant: BannerThemeVariant,
@@ -27,6 +28,11 @@ data class HeroBannerAdminResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
     val translations: List<HeroBannerTranslationResponse>,
+)
+
+data class HeroBannerImageResponse(
+    val id: UUID,
+    val url: String,
 )
 
 data class HeroBannerTranslationResponse(

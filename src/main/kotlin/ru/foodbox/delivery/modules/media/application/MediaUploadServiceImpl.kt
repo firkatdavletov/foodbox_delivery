@@ -6,6 +6,7 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductVariantRepository
+import ru.foodbox.delivery.modules.herobanners.domain.repository.HeroBannerRepository
 import ru.foodbox.delivery.modules.media.application.command.CreateUploadSessionCommand
 import ru.foodbox.delivery.modules.media.domain.MediaImage
 import ru.foodbox.delivery.modules.media.domain.ImageProcessingJob
@@ -29,6 +30,7 @@ class MediaUploadServiceImpl(
     private val productRepository: CatalogProductRepository,
     private val categoryRepository: CatalogCategoryRepository,
     private val variantRepository: CatalogProductVariantRepository,
+    private val heroBannerRepository: HeroBannerRepository,
     private val mediaUploadProperties: MediaUploadProperties,
     private val objectKeyFactory: MediaObjectKeyFactory,
     private val jobRepository: ImageProcessingJobRepository,
@@ -187,6 +189,13 @@ class MediaUploadServiceImpl(
             MediaTargetType.VARIANT -> {
                 if (variantRepository.findById(targetId) == null) {
                     throw NotFoundException("Product variant not found")
+                }
+            }
+
+            MediaTargetType.HERO_BANNER -> {
+                val banner = heroBannerRepository.findById(targetId)
+                if (banner == null || banner.deletedAt != null) {
+                    throw NotFoundException("Hero banner not found")
                 }
             }
         }

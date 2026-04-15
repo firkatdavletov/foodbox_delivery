@@ -2,6 +2,7 @@ package ru.foodbox.delivery.modules.media.infrastructure.repository
 
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
@@ -24,6 +25,14 @@ class MediaImageRepositoryImpl(
         }
 
         return jpaRepository.findAllByIdIn(ids).map(::toDomain)
+    }
+
+    override fun findAllByTargetTypeAndTargetIdIn(targetType: MediaTargetType, targetIds: Collection<UUID>): List<MediaImage> {
+        if (targetIds.isEmpty()) {
+            return emptyList()
+        }
+
+        return jpaRepository.findAllByTargetTypeAndTargetIdIn(targetType, targetIds).map(::toDomain)
     }
 
     override fun save(mediaImage: MediaImage): MediaImage {

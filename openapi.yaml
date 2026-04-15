@@ -3376,6 +3376,33 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/hero-banners/{bannerId}/images/{imageId}:
+    delete:
+      tags: [Hero Banners Admin]
+      operationId: deleteHeroBannerImage
+      summary: Delete hero banner image
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bannerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/ImageIdPathParam'
+      responses:
+        '204':
+          description: Hero banner image deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6886,9 +6913,19 @@ components:
           type: string
           nullable: true
 
+    HeroBannerImageResponse:
+      type: object
+      required: [id, url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+
     HeroBannerAdminResponse:
       type: object
-      required: [id, code, storefrontCode, placement, status, sortOrder, desktopImageUrl, themeVariant, textAlignment, version, createdAt, updatedAt, translations]
+      required: [id, code, storefrontCode, placement, status, sortOrder, desktopImageUrl, images, themeVariant, textAlignment, version, createdAt, updatedAt, translations]
       properties:
         id:
           type: string
@@ -6908,6 +6945,10 @@ components:
         mobileImageUrl:
           type: string
           nullable: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/HeroBannerImageResponse'
         primaryActionUrl:
           type: string
           nullable: true

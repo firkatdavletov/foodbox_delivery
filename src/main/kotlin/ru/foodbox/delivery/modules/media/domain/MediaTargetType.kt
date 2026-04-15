@@ -4,4 +4,5 @@ enum class MediaTargetType {
     PRODUCT,
     CATEGORY,
     VARIANT,
+    HERO_BANNER,
 }

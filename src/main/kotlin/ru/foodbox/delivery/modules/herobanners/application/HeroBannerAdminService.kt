@@ -8,6 +8,7 @@ import ru.foodbox.delivery.modules.herobanners.domain.BannerPlacement
 import ru.foodbox.delivery.modules.herobanners.domain.BannerStatus
 import ru.foodbox.delivery.modules.herobanners.domain.HeroBanner
 import ru.foodbox.delivery.modules.herobanners.domain.PageResult
+import ru.foodbox.delivery.modules.media.domain.MediaImage
 import java.util.UUID
 
 interface HeroBannerAdminService {
@@ -26,4 +27,6 @@ interface HeroBannerAdminService {
     fun changeBannerStatus(id: UUID, command: ChangeHeroBannerStatusCommand): HeroBanner
     fun reorderBanners(command: ReorderHeroBannersCommand)
     fun deleteBanner(id: UUID)
+    fun deleteBannerImage(bannerId: UUID, imageId: UUID)
+    fun getBannerImages(bannerIds: Collection<UUID>): Map<UUID, List<MediaImage>>
 }

@@ -14,6 +14,10 @@ import ru.foodbox.delivery.modules.herobanners.domain.HeroBanner
 import ru.foodbox.delivery.modules.herobanners.domain.HeroBannerTranslation
 import ru.foodbox.delivery.modules.herobanners.domain.PageResult
 import ru.foodbox.delivery.modules.herobanners.domain.repository.HeroBannerRepository
+import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
+import ru.foodbox.delivery.modules.media.domain.MediaTargetType
+import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
@@ -21,6 +25,7 @@ import java.util.UUID
 @Service
 class HeroBannerAdminServiceImpl(
     private val repository: HeroBannerRepository,
+    private val mediaImageRepository: MediaImageRepository,
     private val clock: Clock,
 ) : HeroBannerAdminService {
 
@@ -171,6 +176,31 @@ class HeroBannerAdminServiceImpl(
             translations = emptyList(),
         )
         repository.save(deleted)
+    }
+
+    @Transactional(readOnly = true)
+    override fun getBannerImages(bannerIds: Collection<UUID>): Map<UUID, List<MediaImage>> {
+        if (bannerIds.isEmpty()) return emptyMap()
+        return mediaImageRepository
+            .findAllByTargetTypeAndTargetIdIn(MediaTargetType.HERO_BANNER, bannerIds)
+            .filter { it.status != MediaImageStatus.DELETED && it.publicUrl != null }
+            .groupBy { it.targetId!! }
+    }
+
+    @Transactional
+    override fun deleteBannerImage(bannerId: UUID, imageId: UUID) {
+        findBannerOrThrow(bannerId)
+
+        val image = mediaImageRepository.findById(imageId)
+            ?: throw NotFoundException("Image not found")
+
+        if (image.targetType != MediaTargetType.HERO_BANNER || image.targetId != bannerId) {
+            throw NotFoundException("Image not found")
+        }
+
+        if (image.status != MediaImageStatus.DELETED) {
+            mediaImageRepository.save(image.copy(status = MediaImageStatus.DELETED, updatedAt = clock.instant()))
+        }
     }
 
     private fun findBannerOrThrow(id: UUID): HeroBanner {

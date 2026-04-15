@@ -54,6 +54,7 @@ class MediaObjectKeyFactory {
             MediaTargetType.PRODUCT -> "products"
             MediaTargetType.CATEGORY -> "categories"
             MediaTargetType.VARIANT -> "variants"
+            MediaTargetType.HERO_BANNER -> "hero-banners"
         }
     }
 

@@ -2,11 +2,14 @@ package ru.foodbox.delivery.modules.herobanners.api
 
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerAdminPageResponse
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerAdminResponse
+import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerImageResponse
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerStorefrontResponse
 import ru.foodbox.delivery.modules.herobanners.api.dto.HeroBannerTranslationResponse
 import ru.foodbox.delivery.modules.herobanners.application.StorefrontBannerView
 import ru.foodbox.delivery.modules.herobanners.domain.HeroBanner
 import ru.foodbox.delivery.modules.herobanners.domain.PageResult
+import ru.foodbox.delivery.modules.media.domain.MediaImage
+import java.util.UUID
 
 internal fun StorefrontBannerView.toResponse(): HeroBannerStorefrontResponse {
     return HeroBannerStorefrontResponse(
@@ -30,7 +33,7 @@ internal fun StorefrontBannerView.toResponse(): HeroBannerStorefrontResponse {
     )
 }
 
-internal fun HeroBanner.toAdminResponse(): HeroBannerAdminResponse {
+internal fun HeroBanner.toAdminResponse(images: List<MediaImage> = emptyList()): HeroBannerAdminResponse {
     return HeroBannerAdminResponse(
         id = id,
         code = code,
@@ -40,6 +43,10 @@ internal fun HeroBanner.toAdminResponse(): HeroBannerAdminResponse {
         sortOrder = sortOrder,
         desktopImageUrl = desktopImageUrl,
         mobileImageUrl = mobileImageUrl,
+        images = images.mapNotNull { img ->
+            val url = img.publicUrl ?: return@mapNotNull null
+            HeroBannerImageResponse(id = img.id, url = url)
+        },
         primaryActionUrl = primaryActionUrl,
         secondaryActionUrl = secondaryActionUrl,
         themeVariant = themeVariant,
@@ -66,9 +73,9 @@ internal fun HeroBanner.toAdminResponse(): HeroBannerAdminResponse {
     )
 }
 
-internal fun PageResult<HeroBanner>.toAdminPageResponse(): HeroBannerAdminPageResponse {
+internal fun PageResult<HeroBanner>.toAdminPageResponse(imagesByBannerId: Map<UUID, List<MediaImage>> = emptyMap()): HeroBannerAdminPageResponse {
     return HeroBannerAdminPageResponse(
-        content = content.map { it.toAdminResponse() },
+        content = content.map { it.toAdminResponse(imagesByBannerId[it.id].orEmpty()) },
         page = page,
         size = size,
         totalElements = totalElements,
