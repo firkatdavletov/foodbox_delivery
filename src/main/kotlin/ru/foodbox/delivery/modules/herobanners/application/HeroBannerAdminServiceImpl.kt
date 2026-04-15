@@ -49,8 +49,13 @@ class HeroBannerAdminServiceImpl(
     @Transactional
     override fun createBanner(command: CreateHeroBannerCommand): HeroBanner {
         val now = clock.instant()
-        validateDateRange(command.startsAt, command.endsAt)
-        validateCtaConsistency(command.translations, command.primaryActionUrl, command.secondaryActionUrl)
+        validateBannerDraft(
+            translations = command.translations,
+            startsAt = command.startsAt,
+            endsAt = command.endsAt,
+            primaryActionUrl = command.primaryActionUrl,
+            secondaryActionUrl = command.secondaryActionUrl,
+        )
 
         val banner = HeroBanner(
             id = UUID.randomUUID(),
@@ -86,11 +91,16 @@ class HeroBannerAdminServiceImpl(
     override fun updateBanner(id: UUID, command: UpdateHeroBannerCommand): HeroBanner {
         val existing = findBannerOrThrow(id)
         val now = clock.instant()
-        validateDateRange(command.startsAt, command.endsAt)
-        validateCtaConsistency(command.translations, command.primaryActionUrl, command.secondaryActionUrl)
+        validateBannerDraft(
+            translations = command.translations,
+            startsAt = command.startsAt,
+            endsAt = command.endsAt,
+            primaryActionUrl = command.primaryActionUrl,
+            secondaryActionUrl = command.secondaryActionUrl,
+        )
 
         val isPublishing = command.status == BannerStatus.PUBLISHED && existing.status != BannerStatus.PUBLISHED
-        val existingTranslationsByLocale = existing.translations.associateBy { it.locale }
+        val existingTranslationsByLocale = existing.translations.associateBy { it.locale.toLocaleKey() }
 
         val updated = existing.copy(
             code = command.code,
@@ -109,17 +119,7 @@ class HeroBannerAdminServiceImpl(
             publishedAt = if (isPublishing) now else existing.publishedAt,
             updatedAt = now,
             translations = command.translations.map { t ->
-                HeroBannerTranslation(
-                    id = existingTranslationsByLocale[t.locale]?.id ?: UUID.randomUUID(),
-                    locale = t.locale,
-                    title = t.title,
-                    subtitle = t.subtitle,
-                    description = t.description,
-                    desktopImageAlt = t.desktopImageAlt,
-                    mobileImageAlt = t.mobileImageAlt,
-                    primaryActionLabel = t.primaryActionLabel,
-                    secondaryActionLabel = t.secondaryActionLabel,
-                )
+                t.toDomain(existingTranslationsByLocale[t.locale.toLocaleKey()]?.id)
             },
         )
 
@@ -189,7 +189,7 @@ class HeroBannerAdminServiceImpl(
 
     @Transactional
     override fun deleteBannerImage(bannerId: UUID, imageId: UUID) {
-        findBannerOrThrow(bannerId)
+        val banner = findBannerOrThrow(bannerId)
 
         val image = mediaImageRepository.findById(imageId)
             ?: throw NotFoundException("Image not found")
@@ -197,6 +197,8 @@ class HeroBannerAdminServiceImpl(
         if (image.targetType != MediaTargetType.HERO_BANNER || image.targetId != bannerId) {
             throw NotFoundException("Image not found")
         }
+
+        validateImageCanBeDeleted(banner, image)
 
         if (image.status != MediaImageStatus.DELETED) {
             mediaImageRepository.save(image.copy(status = MediaImageStatus.DELETED, updatedAt = clock.instant()))
@@ -231,6 +233,30 @@ class HeroBannerAdminServiceImpl(
         }
     }
 
+    private fun validateBannerDraft(
+        translations: List<HeroBannerTranslationCommand>,
+        startsAt: Instant?,
+        endsAt: Instant?,
+        primaryActionUrl: String?,
+        secondaryActionUrl: String?,
+    ) {
+        validateDateRange(startsAt, endsAt)
+        validateTranslationLocales(translations)
+        validateCtaConsistency(translations, primaryActionUrl, secondaryActionUrl)
+    }
+
+    private fun validateTranslationLocales(translations: List<HeroBannerTranslationCommand>) {
+        val duplicateLocales = translations
+            .groupingBy { it.locale.toLocaleKey() }
+            .eachCount()
+            .filterValues { it > 1 }
+            .keys
+            .sorted()
+        require(duplicateLocales.isEmpty()) {
+            "Duplicate translation locales are not allowed: ${duplicateLocales.joinToString(", ")}"
+        }
+    }
+
     private fun validateCtaConsistency(
         translations: List<HeroBannerTranslationCommand>,
         primaryActionUrl: String?,
@@ -260,9 +286,22 @@ class HeroBannerAdminServiceImpl(
         }
     }
 
-    private fun HeroBannerTranslationCommand.toDomain(): HeroBannerTranslation {
+    private fun validateImageCanBeDeleted(banner: HeroBanner, image: MediaImage) {
+        val imageUrl = normalizeUrl(image.publicUrl) ?: return
+        if (normalizeUrl(banner.desktopImageUrl) == imageUrl || normalizeUrl(banner.mobileImageUrl) == imageUrl) {
+            throw IllegalStateException("Cannot delete image that is currently used by the hero banner")
+        }
+    }
+
+    private fun normalizeUrl(value: String?): String? {
+        return value?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun String.toLocaleKey(): String = trim().lowercase()
+
+    private fun HeroBannerTranslationCommand.toDomain(existingId: UUID? = null): HeroBannerTranslation {
         return HeroBannerTranslation(
-            id = UUID.randomUUID(),
+            id = existingId ?: UUID.randomUUID(),
             locale = locale,
             title = title,
             subtitle = subtitle,

@@ -16,6 +16,7 @@ import ru.foodbox.delivery.modules.herobanners.domain.HeroBannerTranslation
 import ru.foodbox.delivery.modules.herobanners.domain.PageResult
 import ru.foodbox.delivery.modules.herobanners.domain.repository.HeroBannerRepository
 import ru.foodbox.delivery.modules.media.domain.MediaImage
+import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import java.time.Clock
@@ -85,6 +86,23 @@ class HeroBannerAdminServiceImplTest {
                 createCommand(
                     status = BannerStatus.PUBLISHED,
                     translations = listOf(translationCommand(title = "   "))
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `createBanner fails when translations contain duplicate locales`() {
+        val repository = InMemoryHeroBannerRepository()
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
+
+        assertThrows<IllegalArgumentException> {
+            service.createBanner(
+                createCommand(
+                    translations = listOf(
+                        translationCommand(locale = "ru"),
+                        translationCommand(locale = "RU"),
+                    )
                 )
             )
         }
@@ -231,6 +249,46 @@ class HeroBannerAdminServiceImplTest {
     }
 
     @Test
+    fun `updateBanner fails when translations contain duplicate locales`() {
+        val repository = InMemoryHeroBannerRepository()
+        val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
+
+        val created = service.createBanner(
+            createCommand(
+                translations = listOf(
+                    translationCommand(locale = "ru"),
+                    translationCommand(locale = "en"),
+                )
+            )
+        )
+
+        assertThrows<IllegalArgumentException> {
+            service.updateBanner(
+                created.id,
+                UpdateHeroBannerCommand(
+                    code = "hero-1",
+                    storefrontCode = "default",
+                    placement = BannerPlacement.HOME_HERO,
+                    status = BannerStatus.DRAFT,
+                    sortOrder = 10,
+                    desktopImageUrl = "https://cdn.example.com/banner.jpg",
+                    mobileImageUrl = null,
+                    primaryActionUrl = null,
+                    secondaryActionUrl = null,
+                    themeVariant = BannerThemeVariant.LIGHT,
+                    textAlignment = BannerTextAlignment.LEFT,
+                    startsAt = null,
+                    endsAt = null,
+                    translations = listOf(
+                        translationCommand(locale = "ru"),
+                        translationCommand(locale = "RU"),
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `reorderBanners changes sort order`() {
         val repository = InMemoryHeroBannerRepository()
         val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
@@ -281,6 +339,106 @@ class HeroBannerAdminServiceImplTest {
     }
 
     @Test
+    fun `deleteBannerImage marks image as deleted`() {
+        val repository = InMemoryHeroBannerRepository()
+        val created = repository.save(
+            HeroBanner(
+                id = UUID.randomUUID(),
+                code = "hero-1",
+                storefrontCode = "default",
+                placement = BannerPlacement.HOME_HERO,
+                status = BannerStatus.DRAFT,
+                sortOrder = 10,
+                desktopImageUrl = "https://cdn.example.com/banner.jpg",
+                mobileImageUrl = null,
+                primaryActionUrl = null,
+                secondaryActionUrl = null,
+                themeVariant = BannerThemeVariant.LIGHT,
+                textAlignment = BannerTextAlignment.LEFT,
+                startsAt = null,
+                endsAt = null,
+                publishedAt = null,
+                version = 0,
+                deletedAt = null,
+                createdAt = fixedNow,
+                updatedAt = fixedNow,
+                translations = listOf(
+                    HeroBannerTranslation(
+                        id = UUID.randomUUID(),
+                        locale = "ru",
+                        title = "Title",
+                        subtitle = null,
+                        description = null,
+                        desktopImageAlt = "Alt",
+                        mobileImageAlt = null,
+                        primaryActionLabel = null,
+                        secondaryActionLabel = null,
+                    )
+                ),
+            )
+        )
+        val image = MediaImage(
+            id = UUID.randomUUID(),
+            targetType = MediaTargetType.HERO_BANNER,
+            targetId = created.id,
+            bucket = "bucket",
+            objectKey = "hero-banners/${created.id}/1.jpg",
+            originalFilename = "1.jpg",
+            contentType = "image/jpeg",
+            fileSize = 1024,
+            status = MediaImageStatus.READY,
+            publicUrl = "https://cdn.example.com/images/hero-1.jpg",
+            thumbKey = null,
+            cardKey = null,
+            processingError = null,
+            createdAt = fixedNow,
+            updatedAt = fixedNow,
+        )
+        val mediaImageRepository = InMemoryMediaImageRepository(listOf(image))
+        val service = HeroBannerAdminServiceImpl(repository, mediaImageRepository, clock)
+
+        service.deleteBannerImage(created.id, image.id)
+
+        val updatedImage = mediaImageRepository.findById(image.id)
+        assertNotNull(updatedImage)
+        assertEquals(MediaImageStatus.DELETED, updatedImage.status)
+        assertEquals(fixedNow, updatedImage.updatedAt)
+    }
+
+    @Test
+    fun `deleteBannerImage fails when image url is used by banner`() {
+        val repository = InMemoryHeroBannerRepository()
+        val serviceWithoutMedia = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
+        val created = serviceWithoutMedia.createBanner(
+            createCommand(desktopImageUrl = "https://cdn.example.com/images/hero-1.jpg")
+        )
+
+        val image = MediaImage(
+            id = UUID.randomUUID(),
+            targetType = MediaTargetType.HERO_BANNER,
+            targetId = created.id,
+            bucket = "bucket",
+            objectKey = "hero-banners/${created.id}/1.jpg",
+            originalFilename = "1.jpg",
+            contentType = "image/jpeg",
+            fileSize = 1024,
+            status = MediaImageStatus.READY,
+            publicUrl = "https://cdn.example.com/images/hero-1.jpg",
+            thumbKey = null,
+            cardKey = null,
+            processingError = null,
+            createdAt = fixedNow,
+            updatedAt = fixedNow,
+        )
+        val mediaImageRepository = InMemoryMediaImageRepository(listOf(image))
+        val service = HeroBannerAdminServiceImpl(repository, mediaImageRepository, clock)
+
+        assertThrows<IllegalStateException> {
+            service.deleteBannerImage(created.id, image.id)
+        }
+    }
+
+    @Test
     fun `admin list filters by storefront and status and placement`() {
         val repository = InMemoryHeroBannerRepository()
         val service = HeroBannerAdminServiceImpl(repository, noOpMediaImageRepository, clock)
@@ -305,6 +463,7 @@ class HeroBannerAdminServiceImplTest {
         storefrontCode: String = "default",
         status: BannerStatus = BannerStatus.DRAFT,
         sortOrder: Int = 10,
+        desktopImageUrl: String = "https://cdn.example.com/banner.jpg",
         primaryActionUrl: String? = null,
         secondaryActionUrl: String? = null,
         startsAt: Instant? = null,
@@ -317,7 +476,7 @@ class HeroBannerAdminServiceImplTest {
             placement = BannerPlacement.HOME_HERO,
             status = status,
             sortOrder = sortOrder,
-            desktopImageUrl = "https://cdn.example.com/banner.jpg",
+            desktopImageUrl = desktopImageUrl,
             mobileImageUrl = null,
             primaryActionUrl = primaryActionUrl,
             secondaryActionUrl = secondaryActionUrl,
@@ -354,6 +513,36 @@ class HeroBannerAdminServiceImplTest {
         override fun findAllByTargetTypeAndTargetIdIn(targetType: MediaTargetType, targetIds: Collection<UUID>): List<MediaImage> = emptyList()
         override fun save(mediaImage: MediaImage): MediaImage = mediaImage
         override fun saveAll(mediaImages: List<MediaImage>): List<MediaImage> = mediaImages
+    }
+
+    class InMemoryMediaImageRepository(
+        images: List<MediaImage> = emptyList(),
+    ) : MediaImageRepository {
+        private val store = linkedMapOf<UUID, MediaImage>()
+
+        init {
+            images.forEach { store[it.id] = it }
+        }
+
+        override fun findById(id: UUID): MediaImage? = store[id]
+
+        override fun findAllByIds(ids: Collection<UUID>): List<MediaImage> {
+            return ids.mapNotNull(store::get)
+        }
+
+        override fun findAllByTargetTypeAndTargetIdIn(targetType: MediaTargetType, targetIds: Collection<UUID>): List<MediaImage> {
+            return store.values.filter { it.targetType == targetType && it.targetId in targetIds }
+        }
+
+        override fun save(mediaImage: MediaImage): MediaImage {
+            store[mediaImage.id] = mediaImage
+            return mediaImage
+        }
+
+        override fun saveAll(mediaImages: List<MediaImage>): List<MediaImage> {
+            mediaImages.forEach(::save)
+            return mediaImages
+        }
     }
 
     class InMemoryHeroBannerRepository : HeroBannerRepository {

@@ -1326,6 +1326,7 @@ class CatalogVariantsIntegrationTest {
             MediaTargetType.PRODUCT -> "products"
             MediaTargetType.CATEGORY -> "categories"
             MediaTargetType.VARIANT -> "variants"
+            MediaTargetType.HERO_BANNER -> "hero-banners"
         }
         val image = MediaImageEntity(
             id = UUID.randomUUID(),

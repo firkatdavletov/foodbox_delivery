@@ -19,6 +19,7 @@ import ru.foodbox.delivery.modules.media.domain.repository.MediaImageRepository
 import ru.foodbox.delivery.modules.media.domain.storage.CreateDirectUploadRequest
 import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
 import ru.foodbox.delivery.modules.media.domain.storage.StoredObjectMetadata
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -35,6 +36,7 @@ class MediaUploadServiceImpl(
     private val objectKeyFactory: MediaObjectKeyFactory,
     private val jobRepository: ImageProcessingJobRepository,
     private val imageProcessingProperties: ImageProcessingProperties,
+    private val clock: Clock,
 ) : MediaUploadService {
 
     @Transactional
@@ -46,6 +48,7 @@ class MediaUploadServiceImpl(
         command.targetId?.let { targetId ->
             ensureTargetExists(command.targetType, targetId)
         }
+        val now = clock.instant()
 
         val objectKey = objectKeyFactory.newUploadKey(
             targetType = command.targetType,
@@ -68,8 +71,8 @@ class MediaUploadServiceImpl(
             thumbKey = null,
             cardKey = null,
             processingError = null,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
+            createdAt = now,
+            updatedAt = now,
         )
 
         val upload = storagePort.createDirectUpload(
@@ -100,7 +103,7 @@ class MediaUploadServiceImpl(
             throw IllegalArgumentException("Upload session is deleted")
         }
 
-        if (uploadSession.status in setOf(MediaImageStatus.READY, MediaImageStatus.PROCESSING)) {
+        if (uploadSession.status in TERMINAL_OR_IN_PROGRESS_STATUSES) {
             return uploadSession
         }
 
@@ -109,7 +112,7 @@ class MediaUploadServiceImpl(
 
         validateUploadedObject(uploadSession, objectMetadata)
 
-        val now = Instant.now()
+        val now = clock.instant()
         val processingImage = uploadSession.copy(
             status = MediaImageStatus.PROCESSING,
             publicUrl = storagePort.buildPublicUrl(uploadSession.objectKey),
@@ -153,11 +156,7 @@ class MediaUploadServiceImpl(
     }
 
     private fun validateContentType(contentType: String) {
-        val allowed = mediaUploadProperties.allowedContentTypes
-            .map(::normalizeContentType)
-            .toSet()
-
-        if (!allowed.contains(contentType)) {
+        if (!allowedContentTypes.contains(contentType)) {
             throw IllegalArgumentException("Unsupported content type: $contentType")
         }
     }
@@ -228,5 +227,9 @@ class MediaUploadServiceImpl(
     private companion object {
         const val MIN_PRESIGN_MINUTES = 1L
         const val MAX_PRESIGN_MINUTES = 60L
+        val TERMINAL_OR_IN_PROGRESS_STATUSES = setOf(MediaImageStatus.READY, MediaImageStatus.PROCESSING)
     }
+
+    private val allowedContentTypes: Set<String>
+        get() = mediaUploadProperties.allowedContentTypes.map(::normalizeContentType).toSet()
 }
