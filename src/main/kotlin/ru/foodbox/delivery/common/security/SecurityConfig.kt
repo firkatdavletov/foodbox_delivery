@@ -40,6 +40,7 @@ class SecurityConfig(
                 it.requestMatchers("/api/v1/payments/**").permitAll()
                 it.requestMatchers("/api/v1/virtual-try-on/**").permitAll()
                 it.requestMatchers("/api/v1/orders/**").permitAll()
+                it.requestMatchers("/api/v1/contact-form/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 it.requestMatchers("/ws/virtual-try-on/**").permitAll()
@@ -90,6 +91,10 @@ class SecurityConfig(
         )
         source.registerCorsConfiguration(
             "/api/v1/public/**",
+            buildCorsConfiguration(corsProps.siteAllowedOrigins)
+        )
+        source.registerCorsConfiguration(
+            "/api/v1/contact-form/**",
             buildCorsConfiguration(corsProps.siteAllowedOrigins)
         )
         source.registerCorsConfiguration(

@@ -47,6 +47,8 @@ tags:
     description: Public legal document retrieval
   - name: Legal Documents Admin
     description: Admin legal document management
+  - name: Contact Form
+    description: Public contact form submission from the website
 paths:
   /api/v1/auth/methods:
     get:
@@ -3400,6 +3402,25 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/contact-form:
+    post:
+      tags: [Contact Form]
+      operationId: submitContactForm
+      summary: Submit a question from the website contact form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactFormRequest'
+      responses:
+        '200':
+          description: Question submitted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -7144,3 +7165,25 @@ components:
                 format: uuid
               sortOrder:
                 type: integer
+
+    ContactFormRequest:
+      type: object
+      required: [name, contact, question]
+      properties:
+        name:
+          type: string
+          description: Full name of the person submitting the form
+          example: Иван Иванов
+        contact:
+          type: string
+          description: Contact information — email, phone number, or Telegram handle
+          example: '+7 999 123-45-67'
+        question:
+          type: string
+          description: The question or inquiry
+          example: Как оформить заказ?
+        comment:
+          type: string
+          nullable: true
+          description: Optional additional comment
+          example: Хочу уточнить детали доставки
