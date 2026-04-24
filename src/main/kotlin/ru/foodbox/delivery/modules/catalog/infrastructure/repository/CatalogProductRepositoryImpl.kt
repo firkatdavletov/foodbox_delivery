@@ -14,17 +14,12 @@ class CatalogProductRepositoryImpl(
 ) : CatalogProductRepository {
 
     override fun findAllActive(categoryId: UUID?, query: String?): List<CatalogProduct> {
+        val normalizedQuery = query?.trim()?.takeIf { it.isNotBlank() }
         val entities = when {
-            categoryId != null && !query.isNullOrBlank() -> {
-                jpaRepository.findAllByIsActiveTrueAndCategoryIdAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(
-                    categoryId = categoryId,
-                    title = query,
-                )
-            }
             categoryId != null -> jpaRepository.findAllByIsActiveTrueAndCategoryIdOrderByCreatedAtDesc(categoryId)
-            !query.isNullOrBlank() -> jpaRepository.findAllByIsActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(query)
             else -> jpaRepository.findAllByIsActiveTrueOrderByCreatedAtDesc()
         }
+            .filterByTitleQuery(normalizedQuery)
 
         return entities.map(::toDomain)
     }
@@ -107,6 +102,14 @@ class CatalogProductRepositoryImpl(
 
         val saved = jpaRepository.save(entity)
         return toDomain(saved)
+    }
+
+    private fun List<CatalogProductEntity>.filterByTitleQuery(query: String?): List<CatalogProductEntity> {
+        if (query == null) {
+            return this
+        }
+
+        return filter { it.title.contains(query, ignoreCase = true) }
     }
 
     private fun toDomain(entity: CatalogProductEntity): CatalogProduct {
