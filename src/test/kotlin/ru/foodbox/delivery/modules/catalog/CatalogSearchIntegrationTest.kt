@@ -105,6 +105,38 @@ class CatalogSearchIntegrationTest {
         assertEquals(listOf("Манишка"), titles)
     }
 
+    @Test
+    fun `catalog categories are limited by query parameter`() {
+        repeat(101) { index ->
+            createCategory(slug = "category-${(index + 1).toString().padStart(3, '0')}")
+        }
+
+        val limitedResponse = mockMvc.perform(
+            get("/api/v1/catalog/categories")
+                .param("limit", "2")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        val limitedCategories = objectMapper.readTree(limitedResponse)
+        val limitedNames = limitedCategories.map { it.get("name").asText() }
+        assertEquals(listOf("category-001", "category-002"), limitedNames)
+
+        val defaultResponse = mockMvc.perform(
+            get("/api/v1/catalog/categories")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        assertEquals(100, objectMapper.readTree(defaultResponse).size())
+    }
+
     private fun createCategory(slug: String = "category"): UUID {
         val now = Instant.now()
         val category = categoryRepository.save(

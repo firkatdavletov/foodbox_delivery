@@ -4,7 +4,7 @@ import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import java.util.UUID
 
 interface CatalogCategoryRepository {
-    fun findAll(activeOnly: Boolean): List<CatalogCategory>
+    fun findAll(activeOnly: Boolean, limit: Int): List<CatalogCategory>
     fun findAllByIsActive(isActive: Boolean): List<CatalogCategory>
     fun findById(id: UUID): CatalogCategory?
     fun findByExternalId(externalId: String): CatalogCategory?

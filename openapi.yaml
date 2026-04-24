@@ -678,6 +678,15 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of categories to return.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 100
       responses:
         '200':
           description: Category list

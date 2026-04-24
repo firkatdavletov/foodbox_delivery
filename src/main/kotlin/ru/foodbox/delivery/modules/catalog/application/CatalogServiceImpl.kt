@@ -30,8 +30,9 @@ class CatalogServiceImpl(
     private val imageService: CatalogImageService,
 ) : CatalogService, ProductReadService {
 
-    override fun getCategories(activeOnly: Boolean): List<CatalogCategory> {
-        return enrichCategories(categoryRepository.findAll(activeOnly))
+    override fun getCategories(activeOnly: Boolean, limit: Int): List<CatalogCategory> {
+        require(limit > 0) { "limit must be greater than zero" }
+        return enrichCategories(categoryRepository.findAll(activeOnly, limit))
     }
 
     override fun getProducts(categoryId: UUID?, query: String?): List<CatalogProduct> {

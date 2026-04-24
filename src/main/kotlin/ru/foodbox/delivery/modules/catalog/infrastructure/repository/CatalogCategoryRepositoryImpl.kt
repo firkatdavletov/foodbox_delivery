@@ -1,5 +1,7 @@
 package ru.foodbox.delivery.modules.catalog.infrastructure.repository
 
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Repository
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
@@ -13,11 +15,12 @@ class CatalogCategoryRepositoryImpl(
     private val jpaRepository: CatalogCategoryJpaRepository,
 ) : CatalogCategoryRepository {
 
-    override fun findAll(activeOnly: Boolean): List<CatalogCategory> {
+    override fun findAll(activeOnly: Boolean, limit: Int): List<CatalogCategory> {
+        val pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "name"))
         val entities = if (activeOnly) {
-            jpaRepository.findAllByIsActiveTrueOrderByNameAsc()
+            jpaRepository.findAllByIsActiveTrue(pageable)
         } else {
-            jpaRepository.findAll().sortedBy { it.name }
+            jpaRepository.findAll(pageable).content
         }
 
         return entities.map(::toDomain)

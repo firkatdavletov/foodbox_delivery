@@ -21,8 +21,9 @@ class CatalogController(
     @GetMapping("/categories")
     fun getCategories(
         @RequestParam(name = "activeOnly", defaultValue = "true") activeOnly: Boolean,
+        @RequestParam(name = "limit", defaultValue = "100") limit: Int,
     ): List<CategoryResponse> {
-        return catalogService.getCategories(activeOnly).map { it.toResponse() }
+        return catalogService.getCategories(activeOnly, limit).map { it.toResponse() }
     }
 
     @GetMapping("/products")

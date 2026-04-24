@@ -8,7 +8,7 @@ import ru.foodbox.delivery.modules.catalog.domain.CatalogProductDetails
 import java.util.UUID
 
 interface CatalogService {
-    fun getCategories(activeOnly: Boolean = true): List<CatalogCategory>
+    fun getCategories(activeOnly: Boolean = true, limit: Int = 100): List<CatalogCategory>
     fun getProducts(categoryId: UUID? = null, query: String? = null): List<CatalogProduct>
     fun getAdminCategories(isActive: Boolean): List<CatalogCategory>
     fun getAdminCategoryDetails(categoryId: UUID): CatalogCategory?

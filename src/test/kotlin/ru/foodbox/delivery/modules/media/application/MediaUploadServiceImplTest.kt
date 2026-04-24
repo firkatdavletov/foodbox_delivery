@@ -401,7 +401,7 @@ class MediaUploadServiceImplTest {
     }
 
     private class NoOpCatalogCategoryRepository : CatalogCategoryRepository {
-        override fun findAll(activeOnly: Boolean): List<CatalogCategory> = emptyList()
+        override fun findAll(activeOnly: Boolean, limit: Int): List<CatalogCategory> = emptyList()
         override fun findAllByIsActive(isActive: Boolean): List<CatalogCategory> = emptyList()
         override fun findById(id: UUID): CatalogCategory? = null
         override fun findByExternalId(externalId: String): CatalogCategory? = null
