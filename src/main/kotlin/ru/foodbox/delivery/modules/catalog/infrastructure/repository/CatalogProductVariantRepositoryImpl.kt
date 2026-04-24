@@ -22,11 +22,22 @@ class CatalogProductVariantRepositoryImpl(
         return jpaRepository.findAllByProductIdOrderBySortOrderAscCreatedAtAsc(productId).map(::toDomain)
     }
 
+    override fun findAllActiveByProductId(productId: UUID): List<CatalogProductVariant> {
+        return jpaRepository.findAllByProductIdAndIsActiveTrueOrderBySortOrderAscCreatedAtAsc(productId).map(::toDomain)
+    }
+
     override fun findAllByProductIds(productIds: Collection<UUID>): List<CatalogProductVariant> {
         if (productIds.isEmpty()) {
             return emptyList()
         }
         return jpaRepository.findAllByProductIdIn(productIds).map(::toDomain)
+    }
+
+    override fun findAllActiveByProductIds(productIds: Collection<UUID>): List<CatalogProductVariant> {
+        if (productIds.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllByProductIdInAndIsActiveTrue(productIds).map(::toDomain)
     }
 
     override fun findAllBySkuIn(skus: Collection<String>): List<CatalogProductVariant> {

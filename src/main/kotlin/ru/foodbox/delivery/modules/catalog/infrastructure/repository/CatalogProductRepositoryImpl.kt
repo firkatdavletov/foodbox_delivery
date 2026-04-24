@@ -33,6 +33,11 @@ class CatalogProductRepositoryImpl(
         return toDomain(entity)
     }
 
+    override fun findActiveById(id: UUID): CatalogProduct? {
+        val entity = jpaRepository.findByIdAndIsActiveTrue(id) ?: return null
+        return toDomain(entity)
+    }
+
     override fun findByExternalId(externalId: String): CatalogProduct? {
         val entity = jpaRepository.findByExternalId(externalId) ?: return null
         return toDomain(entity)

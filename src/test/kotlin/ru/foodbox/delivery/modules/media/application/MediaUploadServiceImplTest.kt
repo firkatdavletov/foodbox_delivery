@@ -391,6 +391,7 @@ class MediaUploadServiceImplTest {
         override fun findAllActive(categoryId: UUID?, query: String?): List<CatalogProduct> = emptyList()
         override fun findAllByIsActive(isActive: Boolean): List<CatalogProduct> = emptyList()
         override fun findById(id: UUID): CatalogProduct? = null
+        override fun findActiveById(id: UUID): CatalogProduct? = null
         override fun findByExternalId(externalId: String): CatalogProduct? = null
         override fun findBySku(sku: String): CatalogProduct? = null
         override fun findAllByExternalIdIn(externalIds: Collection<String>): List<CatalogProduct> = emptyList()
@@ -413,7 +414,9 @@ class MediaUploadServiceImplTest {
     private class NoOpCatalogProductVariantRepository : CatalogProductVariantRepository {
         override fun findById(id: UUID): CatalogProductVariant? = null
         override fun findAllByProductId(productId: UUID): List<CatalogProductVariant> = emptyList()
+        override fun findAllActiveByProductId(productId: UUID): List<CatalogProductVariant> = emptyList()
         override fun findAllByProductIds(productIds: Collection<UUID>): List<CatalogProductVariant> = emptyList()
+        override fun findAllActiveByProductIds(productIds: Collection<UUID>): List<CatalogProductVariant> = emptyList()
         override fun findAllBySkuIn(skus: Collection<String>): List<CatalogProductVariant> = emptyList()
         override fun deleteAllByProductId(productId: UUID) = Unit
         override fun saveAll(variants: List<CatalogProductVariant>): List<CatalogProductVariant> = variants

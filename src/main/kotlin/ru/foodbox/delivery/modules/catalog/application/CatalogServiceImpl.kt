@@ -39,7 +39,7 @@ class CatalogServiceImpl(
             categoryId = categoryId,
             query = query?.trim()?.takeIf { it.isNotBlank() },
         )
-        return enrichProducts(products, modifierGroupsActiveOnly = true)
+        return enrichProducts(products, configurationActiveOnly = true)
     }
 
     override fun getAdminCategories(isActive: Boolean): List<CatalogCategory> {
@@ -52,44 +52,36 @@ class CatalogServiceImpl(
     }
 
     override fun getAdminProducts(isActive: Boolean): List<CatalogProduct> {
-        return enrichProducts(productRepository.findAllByIsActive(isActive), modifierGroupsActiveOnly = false)
+        return enrichProducts(productRepository.findAllByIsActive(isActive), configurationActiveOnly = false)
     }
 
     override fun getProductDetails(productId: UUID): CatalogProductDetails? {
-        val product = productRepository.findById(productId) ?: return null
-        if (!product.isActive) {
-            return null
-        }
+        val product = productRepository.findActiveById(productId) ?: return null
 
-        return buildProductDetails(product.id, activeOnly = true)
+        return buildProductDetails(
+            product = product,
+            variantDetails = productVariantsService.getActiveDetails(product.id),
+            modifierGroupsActiveOnly = true,
+        )
     }
 
     override fun getAdminProductDetails(productId: UUID): CatalogProductDetails? {
         val product = productRepository.findById(productId) ?: return null
-        return buildProductDetails(product.id, activeOnly = false)
+        return buildProductDetails(
+            product = product,
+            variantDetails = productVariantsService.getDetails(product.id),
+            modifierGroupsActiveOnly = false,
+        )
     }
 
     override fun getActiveProductSnapshot(productId: UUID, variantId: UUID?): ProductSnapshot? {
-        val product = productRepository.findById(productId) ?: return null
-        if (!product.isActive) {
-            return null
-        }
+        val product = productRepository.findActiveById(productId) ?: return null
 
-        val variantDetails = productVariantsService.getDetails(product.id).variants
+        val variantDetails = productVariantsService.getActiveDetails(product.id).variants
         val resolvedVariant = when {
             variantDetails.isEmpty() -> null
-            else -> {
-                val activeVariants = variantDetails.filter { it.isActive }
-                if (activeVariants.isEmpty()) {
-                    return null
-                }
-
-                if (variantId == null) {
-                    activeVariants.first()
-                } else {
-                    activeVariants.firstOrNull { it.id == variantId } ?: return null
-                }
-            }
+            variantId == null -> variantDetails.first()
+            else -> variantDetails.firstOrNull { it.id == variantId } ?: return null
         }
 
         val resolvedTitle = resolvedVariant?.title?.takeIf { it.isNotBlank() }?.let {
@@ -155,13 +147,14 @@ class CatalogServiceImpl(
         imageService.syncCategoryImages(categoryId, remainingImageIds, Instant.now())
     }
 
-    private fun buildProductDetails(productId: UUID, activeOnly: Boolean): CatalogProductDetails {
-        val product = productRepository.findById(productId)
-            ?: throw NotFoundException("Product not found")
-        val variantDetails = productVariantsService.getDetails(product.id)
+    private fun buildProductDetails(
+        product: CatalogProduct,
+        variantDetails: ProductVariantsDetails,
+        modifierGroupsActiveOnly: Boolean,
+    ): CatalogProductDetails {
         val modifierGroups = productModifiersService.getProductModifierGroups(
             productId = product.id,
-            activeOnly = activeOnly,
+            activeOnly = modifierGroupsActiveOnly,
         )
         val productImages = imageService.getProductCardImages(listOf(product.id))[product.id].orEmpty()
         return CatalogProductDetails(
@@ -251,7 +244,7 @@ class CatalogServiceImpl(
                 commands = command.modifierGroups,
             )
         }
-        return enrichProducts(listOf(saved), modifierGroupsActiveOnly = false).first()
+        return enrichProducts(listOf(saved), configurationActiveOnly = false).first()
     }
 
     @Transactional
@@ -286,7 +279,7 @@ class CatalogServiceImpl(
         }
     }
 
-    private fun enrichProducts(products: List<CatalogProduct>, modifierGroupsActiveOnly: Boolean): List<CatalogProduct> {
+    private fun enrichProducts(products: List<CatalogProduct>, configurationActiveOnly: Boolean): List<CatalogProduct> {
         if (products.isEmpty()) {
             return emptyList()
         }
@@ -294,11 +287,11 @@ class CatalogServiceImpl(
         val productIds = products.map { it.id }
         val imageUrlsByProductId = imageService.getProductThumbUrls(products.map { it.id })
         val configuredProductIds = buildSet {
-            addAll(productVariantsService.findProductIdsWithVariants(productIds))
+            addAll(productVariantsService.findProductIdsWithVariants(productIds, activeOnly = configurationActiveOnly))
             addAll(
                 productModifiersService.findProductIdsWithModifierGroups(
                     productIds = productIds,
-                    activeOnly = modifierGroupsActiveOnly,
+                    activeOnly = configurationActiveOnly,
                 )
             )
         }

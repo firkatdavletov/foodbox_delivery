@@ -36,18 +36,40 @@ class CatalogProductVariantsService(
     private val imageService: CatalogImageService,
 ) {
 
-    fun findProductIdsWithVariants(productIds: Collection<UUID>): Set<UUID> {
-        return variantRepository.findAllByProductIds(productIds)
+    fun findProductIdsWithVariants(productIds: Collection<UUID>, activeOnly: Boolean): Set<UUID> {
+        val variants = if (activeOnly) {
+            variantRepository.findAllActiveByProductIds(productIds)
+        } else {
+            variantRepository.findAllByProductIds(productIds)
+        }
+
+        return variants
             .mapTo(linkedSetOf()) { it.productId }
     }
 
     fun getDetails(productId: UUID): ProductVariantsDetails {
+        return buildDetails(
+            productId = productId,
+            variants = variantRepository.findAllByProductId(productId),
+        )
+    }
+
+    fun getActiveDetails(productId: UUID): ProductVariantsDetails {
+        return buildDetails(
+            productId = productId,
+            variants = variantRepository.findAllActiveByProductId(productId),
+        )
+    }
+
+    private fun buildDetails(
+        productId: UUID,
+        variants: List<CatalogProductVariant>,
+    ): ProductVariantsDetails {
         val optionGroups = optionGroupRepository.findAllByProductId(productId)
         val optionGroupIds = optionGroups.map { it.id }
         val optionValues = optionValueRepository.findAllByOptionGroupIds(optionGroupIds)
         val optionValuesByGroupId = optionValues.groupBy { it.optionGroupId }
 
-        val variants = variantRepository.findAllByProductId(productId)
         val variantIds = variants.map { it.id }
         val imagesByVariantId = imageService.getVariantCardImages(variantIds)
         val linksByVariantId = variantOptionValueRepository.findAllByVariantIds(variantIds)

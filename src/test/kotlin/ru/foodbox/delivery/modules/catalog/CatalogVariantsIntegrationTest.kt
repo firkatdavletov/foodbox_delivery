@@ -824,7 +824,7 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `details api returns variants and defaultVariantId`() {
+    fun `public details api returns only active variants and defaultVariantId`() {
         val categoryId = createCategory(externalId = "cat-sneakers", slug = "sneakers")
 
         val request = mapOf(
@@ -868,10 +868,65 @@ class CatalogVariantsIntegrationTest {
         val productId = UUID.fromString(created.get("id").asText())
 
         val details = getProductDetails(productId)
-        assertEquals(2, details.get("variants").size())
+        assertEquals(1, details.get("variants").size())
         val defaultVariantId = details.get("defaultVariantId").asText()
-        val activeVariantId = details.get("variants")[1].get("id").asText()
+        val activeVariantId = details.get("variants")[0].get("id").asText()
         assertEquals(activeVariantId, defaultVariantId)
+        assertEquals("SNKR-43", details.get("variants")[0].get("sku").asText())
+        assertEquals(true, details.get("variants")[0].get("isActive").asBoolean())
+
+        val adminDetails = getAdminProductDetails(productId)
+        assertEquals(2, adminDetails.get("variants").size())
+        assertEquals(false, adminDetails.get("variants")[0].get("isActive").asBoolean())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `public catalog ignores inactive-only variants when resolving configuration`() {
+        val categoryId = createCategory(externalId = "cat-inactive-variants", slug = "inactive-variants")
+
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Кеды",
+                "priceMinor" to 5100,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(mapOf("code" to "41", "title" to "41")),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "sku" to "SNEAKER-41",
+                        "sortOrder" to 0,
+                        "isActive" to false,
+                        "options" to listOf(
+                            mapOf("optionGroupCode" to "size", "optionValueCode" to "41"),
+                        ),
+                    )
+                ),
+            )
+        )
+        assertEquals(true, created.get("isConfigured").asBoolean())
+        val productId = UUID.fromString(created.get("id").asText())
+
+        val publicDetails = getProductDetails(productId)
+        assertEquals(false, publicDetails.get("isConfigured").asBoolean())
+        assertEquals(0, publicDetails.get("variants").size())
+        assertTrue(publicDetails.get("defaultVariantId").isNull)
+
+        val products = getProducts(categoryId)
+        val listItem = products.first { it.get("id").asText() == productId.toString() }
+        assertEquals(false, listItem.get("isConfigured").asBoolean())
+
+        val adminDetails = getAdminProductDetails(productId)
+        assertEquals(1, adminDetails.get("variants").size())
+        assertEquals(false, adminDetails.get("variants")[0].get("isActive").asBoolean())
     }
 
     @Test

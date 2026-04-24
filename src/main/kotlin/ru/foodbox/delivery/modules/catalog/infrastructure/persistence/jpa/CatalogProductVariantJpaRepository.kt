@@ -6,7 +6,9 @@ import java.util.UUID
 
 interface CatalogProductVariantJpaRepository : JpaRepository<CatalogProductVariantEntity, UUID> {
     fun findAllByProductIdOrderBySortOrderAscCreatedAtAsc(productId: UUID): List<CatalogProductVariantEntity>
+    fun findAllByProductIdAndIsActiveTrueOrderBySortOrderAscCreatedAtAsc(productId: UUID): List<CatalogProductVariantEntity>
     fun findAllByProductIdIn(productIds: Collection<UUID>): List<CatalogProductVariantEntity>
+    fun findAllByProductIdInAndIsActiveTrue(productIds: Collection<UUID>): List<CatalogProductVariantEntity>
     fun findAllBySkuIn(skus: Collection<String>): List<CatalogProductVariantEntity>
     fun deleteAllByProductId(productId: UUID)
 }
