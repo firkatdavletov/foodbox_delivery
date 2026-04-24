@@ -48,6 +48,7 @@ import ru.foodbox.delivery.modules.media.domain.storage.ObjectStoragePort
 import ru.foodbox.delivery.modules.media.domain.storage.StoredObjectMetadata
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
+import ru.foodbox.delivery.modules.productstats.infrastructure.persistence.jpa.ProductPopularityStatsJpaRepository
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -119,6 +120,9 @@ class CatalogVariantsIntegrationTest {
     @Autowired
     private lateinit var mediaImageJpaRepository: MediaImageJpaRepository
 
+    @Autowired
+    private lateinit var productPopularityStatsJpaRepository: ProductPopularityStatsJpaRepository
+
     @MockBean
     private lateinit var storagePort: ObjectStoragePort
 
@@ -133,6 +137,7 @@ class CatalogVariantsIntegrationTest {
         productImageJpaRepository.deleteAllInBatch()
         categoryImageJpaRepository.deleteAllInBatch()
         mediaImageJpaRepository.deleteAllInBatch()
+        productPopularityStatsJpaRepository.deleteAllInBatch()
         productModifierGroupJpaRepository.deleteAllInBatch()
         modifierOptionJpaRepository.deleteAllInBatch()
         modifierGroupJpaRepository.deleteAllInBatch()

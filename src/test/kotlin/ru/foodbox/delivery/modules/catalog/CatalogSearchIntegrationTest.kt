@@ -7,10 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProduct
@@ -47,6 +49,7 @@ class CatalogSearchIntegrationTest {
             "catalog_product_variant_images",
             "catalog_product_images",
             "catalog_category_images",
+            "product_popularity_stats",
             "product_modifier_groups",
             "modifier_options",
             "modifier_groups",
@@ -137,6 +140,88 @@ class CatalogSearchIntegrationTest {
         assertEquals(100, objectMapper.readTree(defaultResponse).size())
     }
 
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `popular products are returned by manual product stats score`() {
+        val categoryId = createCategory()
+        val lowScoreProductId = createProduct(categoryId = categoryId, title = "Low score", slug = "low-score")
+        val highScoreProductId = createProduct(categoryId = categoryId, title = "High score", slug = "high-score")
+        val disabledProductId = createProduct(categoryId = categoryId, title = "Disabled", slug = "disabled")
+
+        upsertPopularity(lowScoreProductId, enabled = true, manualScore = 50)
+        upsertPopularity(highScoreProductId, enabled = true, manualScore = 100)
+        upsertPopularity(disabledProductId, enabled = false, manualScore = 1000)
+
+        val response = mockMvc.perform(
+            get("/api/v1/catalog/products/popular")
+                .param("limit", "10")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        val titles = objectMapper.readTree(response).map { it.get("title").asText() }
+        assertEquals(listOf("High score", "Low score"), titles)
+
+        val statsResponse = mockMvc.perform(
+            get("/api/v1/admin/product-stats/popularity/{productId}", lowScoreProductId)
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        val stats = objectMapper.readTree(statsResponse)
+        assertEquals(lowScoreProductId.toString(), stats.get("productId").asText())
+        assertEquals(true, stats.get("enabled").asBoolean())
+        assertEquals(50, stats.get("manualScore").asInt())
+
+        val adminListResponse = mockMvc.perform(
+            get("/api/v1/admin/product-stats/popularity")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        val adminItems = objectMapper.readTree(adminListResponse)
+        assertEquals(listOf("High score", "Low score"), adminItems.map { it.get("product").get("title").asText() })
+        assertEquals(listOf(true, true), adminItems.map { it.get("enabled").asBoolean() })
+        assertEquals(listOf(100, 50), adminItems.map { it.get("manualScore").asInt() })
+
+        mockMvc.perform(
+            put("/api/v1/admin/product-stats/popularity/reorder")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        mapOf(
+                            "productIds" to listOf(lowScoreProductId, highScoreProductId),
+                        )
+                    )
+                )
+        )
+            .andExpect(status().isOk)
+
+        val reorderedResponse = mockMvc.perform(
+            get("/api/v1/catalog/products/popular")
+                .param("limit", "10")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+            .response
+            .contentAsString
+
+        assertEquals(
+            listOf("Low score", "High score"),
+            objectMapper.readTree(reorderedResponse).map { it.get("title").asText() },
+        )
+    }
+
     private fun createCategory(slug: String = "category"): UUID {
         val now = Instant.now()
         val category = categoryRepository.save(
@@ -172,5 +257,21 @@ class CatalogSearchIntegrationTest {
             )
         )
         return product.id
+    }
+
+    private fun upsertPopularity(productId: UUID, enabled: Boolean, manualScore: Int) {
+        mockMvc.perform(
+            put("/api/v1/admin/product-stats/popularity/{productId}", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        mapOf(
+                            "enabled" to enabled,
+                            "manualScore" to manualScore,
+                        )
+                    )
+                )
+        )
+            .andExpect(status().isOk)
     }
 }

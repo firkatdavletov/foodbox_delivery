@@ -34,6 +34,8 @@ interface CatalogProductJpaRepository : JpaRepository<CatalogProductEntity, UUID
     fun findAllByIsActiveOrderByCreatedAtDesc(isActive: Boolean): List<CatalogProductEntity>
 
     fun findAllByIsActiveTrueAndCategoryIdOrderByCreatedAtDesc(categoryId: UUID): List<CatalogProductEntity>
+    fun findAllByIdIn(ids: Collection<UUID>): List<CatalogProductEntity>
+    fun findAllByIdInAndIsActiveTrue(ids: Collection<UUID>): List<CatalogProductEntity>
 
     fun findByIdAndIsActiveTrue(id: UUID): CatalogProductEntity?
     fun findByExternalId(externalId: String): CatalogProductEntity?

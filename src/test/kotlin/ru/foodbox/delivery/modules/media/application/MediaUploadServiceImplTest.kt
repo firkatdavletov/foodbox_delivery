@@ -389,6 +389,8 @@ class MediaUploadServiceImplTest {
 
     private class NoOpCatalogProductRepository : CatalogProductRepository {
         override fun findAllActive(categoryId: UUID?, query: String?): List<CatalogProduct> = emptyList()
+        override fun findAllByIds(ids: Collection<UUID>): List<CatalogProduct> = emptyList()
+        override fun findAllActiveByIds(ids: Collection<UUID>): List<CatalogProduct> = emptyList()
         override fun findAllByIsActive(isActive: Boolean): List<CatalogProduct> = emptyList()
         override fun findById(id: UUID): CatalogProduct? = null
         override fun findActiveById(id: UUID): CatalogProduct? = null

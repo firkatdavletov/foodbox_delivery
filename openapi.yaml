@@ -20,6 +20,8 @@ tags:
     description: Public product and category catalog
   - name: Catalog Admin
     description: Admin catalog management
+  - name: Product Stats Admin
+    description: Admin product popularity and statistics management
   - name: Delivery Admin
     description: Admin delivery and pickup configuration
   - name: Payments
@@ -735,6 +737,39 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/catalog/products/popular:
+    get:
+      tags: [Catalog]
+      operationId: getPopularProducts
+      summary: List popular catalog products
+      description: |
+        Returns active products selected for the "Popular" collection, sorted by manual popularity score.
+        The MVP ranking is managed through the Product Stats Admin API.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of popular products to return.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Popular product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/catalog/products/{productId}:
     get:
       tags: [Catalog]
@@ -940,6 +975,125 @@ paths:
       responses:
         '204':
           description: Product image deleted
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/product-stats/popularity:
+    get:
+      tags: [Product Stats Admin]
+      operationId: getPopularProductsAdmin
+      summary: List products in the manual popular collection
+      description: Returns products currently enabled for the manual "Popular" collection, sorted as they appear in the admin collection.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Manual popular product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductPopularityAdminItemResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/product-stats/popularity/reorder:
+    put:
+      tags: [Product Stats Admin]
+      operationId: reorderProductPopularity
+      summary: Reorder the manual popular collection
+      description: |
+        Replaces the manual "Popular" collection order with the provided product IDs.
+        Listed products are enabled and receive descending manual scores.
+        Products that were enabled but are omitted from `productIds` are disabled.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderProductPopularityRequest'
+      responses:
+        '200':
+          description: Reordered manual popular product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductPopularityAdminItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/product-stats/popularity/{productId}:
+    get:
+      tags: [Product Stats Admin]
+      operationId: getProductPopularity
+      summary: Get manual popularity settings for a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      responses:
+        '200':
+          description: Product popularity settings. Missing settings are returned as disabled with zero score.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPopularityStatsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Product Stats Admin]
+      operationId: upsertProductPopularity
+      summary: Create or update manual popularity settings for a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertProductPopularityRequest'
+      responses:
+        '200':
+          description: Saved product popularity settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPopularityStatsResponse'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':
@@ -4780,6 +4934,40 @@ components:
         isConfigured:
           type: boolean
 
+    ProductPopularityStatsResponse:
+      type: object
+      required: [productId, enabled, manualScore, updatedAt]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        manualScore:
+          type: integer
+          format: int32
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ProductPopularityAdminItemResponse:
+      type: object
+      required: [product, enabled, manualScore, updatedAt]
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductResponse'
+        enabled:
+          type: boolean
+        manualScore:
+          type: integer
+          format: int32
+          minimum: 0
+        updatedAt:
+          type: string
+          format: date-time
+
     ProductDetailsResponse:
       type: object
       required:
@@ -5240,6 +5428,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UpsertProductModifierGroupLinkRequest'
+
+    UpsertProductPopularityRequest:
+      type: object
+      required: [enabled, manualScore]
+      properties:
+        enabled:
+          type: boolean
+        manualScore:
+          type: integer
+          format: int32
+          minimum: 0
+
+    ReorderProductPopularityRequest:
+      type: object
+      required: [productIds]
+      properties:
+        productIds:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
 
     UpsertModifierGroupRequest:
       type: object

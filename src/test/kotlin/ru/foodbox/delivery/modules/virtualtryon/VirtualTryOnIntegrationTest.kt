@@ -29,6 +29,7 @@ import ru.foodbox.delivery.modules.media.domain.MediaImageStatus
 import ru.foodbox.delivery.modules.media.domain.MediaTargetType
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.entity.MediaImageEntity
 import ru.foodbox.delivery.modules.media.infrastructure.persistence.jpa.MediaImageJpaRepository
+import ru.foodbox.delivery.modules.productstats.infrastructure.persistence.jpa.ProductPopularityStatsJpaRepository
 import ru.foodbox.delivery.modules.virtualtryon.application.StartVirtualTryOnProviderResponse
 import ru.foodbox.delivery.modules.virtualtryon.application.VirtualTryOnProviderGateway
 import ru.foodbox.delivery.modules.virtualtryon.application.VirtualTryOnProviderStatusResponse
@@ -74,6 +75,9 @@ class VirtualTryOnIntegrationTest {
     @Autowired
     private lateinit var mediaImageJpaRepository: MediaImageJpaRepository
 
+    @Autowired
+    private lateinit var productPopularityStatsJpaRepository: ProductPopularityStatsJpaRepository
+
     @MockBean
     private lateinit var providerGateway: VirtualTryOnProviderGateway
 
@@ -86,6 +90,7 @@ class VirtualTryOnIntegrationTest {
         productImageJpaRepository.deleteAllInBatch()
         mediaImageJpaRepository.deleteAllInBatch()
         variantJpaRepository.deleteAllInBatch()
+        productPopularityStatsJpaRepository.deleteAllInBatch()
         productJpaRepository.deleteAllInBatch()
         categoryJpaRepository.deleteAllInBatch()
         Mockito.reset(providerGateway, updatePublisher)

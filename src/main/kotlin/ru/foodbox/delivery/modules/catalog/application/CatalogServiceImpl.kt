@@ -15,6 +15,7 @@ import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryImag
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogCategoryRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductImageRepository
 import ru.foodbox.delivery.modules.catalog.domain.repository.CatalogProductRepository
+import ru.foodbox.delivery.modules.productstats.application.ProductPopularityService
 import java.time.Instant
 import java.util.Locale
 import java.util.UUID
@@ -28,6 +29,7 @@ class CatalogServiceImpl(
     private val productVariantsService: CatalogProductVariantsService,
     private val productModifiersService: CatalogProductModifiersService,
     private val imageService: CatalogImageService,
+    private val productPopularityService: ProductPopularityService,
 ) : CatalogService, ProductReadService {
 
     override fun getCategories(activeOnly: Boolean, limit: Int): List<CatalogCategory> {
@@ -41,6 +43,27 @@ class CatalogServiceImpl(
             query = query?.trim()?.takeIf { it.isNotBlank() },
         )
         return enrichProducts(products, configurationActiveOnly = true)
+    }
+
+    override fun getPopularProducts(limit: Int): List<CatalogProduct> {
+        val productIds = productPopularityService.findPopularProductIds(limit)
+        if (productIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val productsById = productRepository.findAllActiveByIds(productIds).associateBy { it.id }
+        val products = productIds.mapNotNull(productsById::get)
+        return enrichProducts(products, configurationActiveOnly = true)
+    }
+
+    override fun getAdminProductsByIds(productIds: Collection<UUID>): List<CatalogProduct> {
+        if (productIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val productsById = productRepository.findAllByIds(productIds).associateBy { it.id }
+        val products = productIds.mapNotNull(productsById::get)
+        return enrichProducts(products, configurationActiveOnly = false)
     }
 
     override fun getAdminCategories(isActive: Boolean): List<CatalogCategory> {

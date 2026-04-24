@@ -24,6 +24,20 @@ class CatalogProductRepositoryImpl(
         return entities.map(::toDomain)
     }
 
+    override fun findAllByIds(ids: Collection<UUID>): List<CatalogProduct> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllByIdIn(ids).map(::toDomain)
+    }
+
+    override fun findAllActiveByIds(ids: Collection<UUID>): List<CatalogProduct> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+        return jpaRepository.findAllByIdInAndIsActiveTrue(ids).map(::toDomain)
+    }
+
     override fun findAllByIsActive(isActive: Boolean): List<CatalogProduct> {
         return jpaRepository.findAllByIsActiveOrderByCreatedAtDesc(isActive).map(::toDomain)
     }

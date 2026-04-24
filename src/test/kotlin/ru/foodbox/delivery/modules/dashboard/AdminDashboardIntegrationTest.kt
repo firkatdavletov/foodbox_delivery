@@ -64,6 +64,7 @@ class AdminDashboardIntegrationTest {
         jdbcTemplate.execute("delete from catalog_product_variant_images")
         jdbcTemplate.execute("delete from catalog_product_images")
         jdbcTemplate.execute("delete from catalog_product_variants")
+        jdbcTemplate.execute("delete from product_popularity_stats")
         jdbcTemplate.execute("delete from catalog_products")
         jdbcTemplate.execute("delete from catalog_categories")
         jdbcTemplate.execute(

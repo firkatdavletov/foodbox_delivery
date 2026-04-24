@@ -35,6 +35,14 @@ class CatalogController(
             .map { it.toResponse() }
     }
 
+    @GetMapping("/products/popular")
+    fun getPopularProducts(
+        @RequestParam(name = "limit", defaultValue = "20") limit: Int,
+    ): List<ProductResponse> {
+        return catalogService.getPopularProducts(limit = limit)
+            .map { it.toResponse() }
+    }
+
     @GetMapping("/products/{productId}")
     fun getProduct(
         @PathVariable productId: UUID,

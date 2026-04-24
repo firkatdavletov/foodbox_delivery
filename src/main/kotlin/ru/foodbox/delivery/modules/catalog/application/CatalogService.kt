@@ -10,6 +10,8 @@ import java.util.UUID
 interface CatalogService {
     fun getCategories(activeOnly: Boolean = true, limit: Int = 100): List<CatalogCategory>
     fun getProducts(categoryId: UUID? = null, query: String? = null): List<CatalogProduct>
+    fun getPopularProducts(limit: Int = 20): List<CatalogProduct>
+    fun getAdminProductsByIds(productIds: Collection<UUID>): List<CatalogProduct>
     fun getAdminCategories(isActive: Boolean): List<CatalogCategory>
     fun getAdminCategoryDetails(categoryId: UUID): CatalogCategory?
     fun getAdminProducts(isActive: Boolean): List<CatalogProduct>

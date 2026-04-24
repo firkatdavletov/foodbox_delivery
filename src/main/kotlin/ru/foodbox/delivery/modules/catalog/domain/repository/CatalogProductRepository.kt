@@ -5,6 +5,8 @@ import java.util.UUID
 
 interface CatalogProductRepository {
     fun findAllActive(categoryId: UUID? = null, query: String? = null): List<CatalogProduct>
+    fun findAllByIds(ids: Collection<UUID>): List<CatalogProduct>
+    fun findAllActiveByIds(ids: Collection<UUID>): List<CatalogProduct>
     fun findAllByIsActive(isActive: Boolean): List<CatalogProduct>
     fun findById(id: UUID): CatalogProduct?
     fun findActiveById(id: UUID): CatalogProduct?
