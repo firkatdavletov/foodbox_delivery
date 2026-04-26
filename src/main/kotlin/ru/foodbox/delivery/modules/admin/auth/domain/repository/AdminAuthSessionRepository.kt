@@ -8,4 +8,5 @@ interface AdminAuthSessionRepository {
     fun save(session: AdminAuthSession): AdminAuthSession
     fun findByRefreshTokenHash(hash: String): AdminAuthSession?
     fun revokeById(sessionId: UUID, revokedAt: Instant)
+    fun revokeAllByAdminId(adminId: UUID, revokedAt: Instant)
 }

@@ -4,11 +4,11 @@ import ru.foodbox.delivery.modules.admin.auth.domain.AdminRole
 import java.time.Instant
 import java.util.UUID
 
-data class AdminAuthTokensResponse(
-    val accessToken: String,
-    val accessTokenExpiresAt: Instant,
-    val refreshToken: String,
-    val refreshTokenExpiresAt: Instant,
-    val adminId: UUID,
+data class AdminUserResponse(
+    val id: UUID,
+    val login: String,
     val role: AdminRole,
+    val active: Boolean,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )

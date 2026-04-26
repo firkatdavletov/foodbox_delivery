@@ -6,6 +6,7 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.common.security.HashEncoder
+import ru.foodbox.delivery.modules.admin.auth.domain.AdminRole
 import ru.foodbox.delivery.modules.admin.auth.domain.AdminUser
 import ru.foodbox.delivery.modules.admin.auth.domain.repository.AdminUserRepository
 import java.time.Instant
@@ -41,6 +42,9 @@ class AdminBootstrapInitializer(
                 login = login,
                 normalizedLogin = login.lowercase(Locale.ROOT),
                 passwordHash = hashEncoder.encode(password),
+                role = AdminRole.SUPERADMIN,
+                active = true,
+                deletedAt = null,
                 createdAt = now,
                 updatedAt = now,
             )

@@ -5,7 +5,6 @@ import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import ru.foodbox.delivery.common.security.UserPrincipal
-import ru.foodbox.delivery.common.security.UserRole
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
@@ -18,11 +17,11 @@ class JwtAccessTokenServiceImpl(
 
     private val secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret))
 
-    override fun generateAccessToken(userId: UUID, sessionId: UUID, roles: List<UserRole>, expiresAt: Instant): String {
+    override fun generateAccessToken(userId: UUID, sessionId: UUID, roles: Collection<String>, expiresAt: Instant): String {
         return Jwts.builder()
             .subject(userId.toString())
             .claim("sid", sessionId.toString())
-            .claim(ROLE_CLAIM, roles.map { it.name })
+            .claim(ROLE_CLAIM, roles.map { it.trim() }.filter(String::isNotEmpty).distinct())
             .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
             .issuedAt(Date.from(Instant.now()))
             .expiration(Date.from(expiresAt))

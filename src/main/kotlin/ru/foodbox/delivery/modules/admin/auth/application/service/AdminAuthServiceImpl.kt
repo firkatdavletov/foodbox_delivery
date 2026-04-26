@@ -12,6 +12,7 @@ import ru.foodbox.delivery.modules.admin.auth.api.request.AdminLogoutRequest
 import ru.foodbox.delivery.modules.admin.auth.api.request.AdminRefreshTokenRequest
 import ru.foodbox.delivery.modules.admin.auth.api.response.AdminAuthTokensResponse
 import ru.foodbox.delivery.modules.admin.auth.domain.AdminAuthSession
+import ru.foodbox.delivery.modules.admin.auth.domain.AdminUser
 import ru.foodbox.delivery.modules.admin.auth.domain.repository.AdminAuthSessionRepository
 import ru.foodbox.delivery.modules.admin.auth.domain.repository.AdminUserRepository
 import ru.foodbox.delivery.modules.auth.application.service.RefreshTokenService
@@ -34,6 +35,9 @@ class AdminAuthServiceImpl(
         val normalizedLogin = normalizeLogin(request.login)
         val admin = adminUserRepository.findByNormalizedLogin(normalizedLogin)
             ?: throw UnauthorizedException("Invalid login or password")
+        if (!admin.canAuthenticate()) {
+            throw UnauthorizedException("Invalid login or password")
+        }
 
         val isPasswordValid = hashEncoder.matches(request.password, admin.passwordHash)
         if (!isPasswordValid) {
@@ -41,12 +45,12 @@ class AdminAuthServiceImpl(
         }
 
         val issued = issueTokens(
-            adminId = admin.id,
+            admin = admin,
             deviceId = request.deviceId,
             httpRequest = httpRequest,
         )
 
-        return issued.toResponse(admin.id)
+        return issued.toResponse(admin)
     }
 
     override fun refresh(
@@ -67,15 +71,22 @@ class AdminAuthServiceImpl(
             throw ForbiddenException("Refresh token is expired or revoked")
         }
 
+        val admin = adminUserRepository.findById(oldSession.adminId)
+            ?: throw ForbiddenException("Admin user is not available")
+        if (!admin.canAuthenticate()) {
+            adminAuthSessionRepository.revokeById(oldSession.id, now)
+            throw ForbiddenException("Admin user is not active")
+        }
+
         adminAuthSessionRepository.revokeById(oldSession.id, now)
 
         val issued = issueTokens(
-            adminId = oldSession.adminId,
+            admin = admin,
             deviceId = request.deviceId ?: oldSession.deviceId,
             httpRequest = httpRequest,
         )
 
-        return issued.toResponse(oldSession.adminId)
+        return issued.toResponse(admin)
     }
 
     override fun logout(adminId: UUID, currentSessionId: UUID, request: AdminLogoutRequest?) {
@@ -95,7 +106,7 @@ class AdminAuthServiceImpl(
     }
 
     private fun issueTokens(
-        adminId: UUID,
+        admin: AdminUser,
         deviceId: String?,
         httpRequest: HttpServletRequest
     ): IssuedAdminSessionTokens {
@@ -110,7 +121,7 @@ class AdminAuthServiceImpl(
         adminAuthSessionRepository.save(
             AdminAuthSession(
                 id = sessionId,
-                adminId = adminId,
+                adminId = admin.id,
                 deviceId = deviceId,
                 userAgent = httpRequest.getHeader("User-Agent"),
                 ip = httpRequest.remoteAddr,
@@ -123,9 +134,9 @@ class AdminAuthServiceImpl(
         )
 
         val accessToken = jwtAccessTokenService.generateAccessToken(
-            userId = adminId,
+            userId = admin.id,
             sessionId = sessionId,
-            roles = listOf(UserRole.ADMIN),
+            roles = listOf(UserRole.ADMIN.name, admin.role.name),
             expiresAt = accessTokenExpiresAt,
         )
 
@@ -137,13 +148,14 @@ class AdminAuthServiceImpl(
         )
     }
 
-    private fun IssuedAdminSessionTokens.toResponse(adminId: UUID): AdminAuthTokensResponse =
+    private fun IssuedAdminSessionTokens.toResponse(admin: AdminUser): AdminAuthTokensResponse =
         AdminAuthTokensResponse(
             accessToken = accessToken,
             accessTokenExpiresAt = accessTokenExpiresAt,
             refreshToken = refreshToken,
             refreshTokenExpiresAt = refreshTokenExpiresAt,
-            adminId = adminId,
+            adminId = admin.id,
+            role = admin.role,
         )
 
     private fun normalizeLogin(login: String): String = login.trim().lowercase(Locale.ROOT)

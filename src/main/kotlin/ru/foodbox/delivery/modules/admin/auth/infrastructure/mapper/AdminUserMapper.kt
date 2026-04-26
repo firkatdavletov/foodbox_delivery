@@ -11,6 +11,9 @@ object AdminUserMapper {
             login = entity.login,
             normalizedLogin = entity.normalizedLogin,
             passwordHash = entity.passwordHash,
+            role = entity.role,
+            active = entity.active,
+            deletedAt = entity.deletedAt,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,
         )

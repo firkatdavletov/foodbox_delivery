@@ -48,7 +48,7 @@ class AuthSessionIssuerImpl(
         val accessToken = jwtAccessTokenService.generateAccessToken(
             userId = userId,
             sessionId = session.id,
-            roles = listOf(UserRole.CUSTOMER),
+            roles = listOf(UserRole.CUSTOMER.name),
             expiresAt = accessTokenExpiresAt,
         )
 

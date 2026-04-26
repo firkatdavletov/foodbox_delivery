@@ -8,6 +8,11 @@ data class AdminUser(
     val login: String,
     val normalizedLogin: String,
     val passwordHash: String,
+    val role: AdminRole,
+    val active: Boolean,
+    val deletedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    fun canAuthenticate(): Boolean = active && deletedAt == null
+}

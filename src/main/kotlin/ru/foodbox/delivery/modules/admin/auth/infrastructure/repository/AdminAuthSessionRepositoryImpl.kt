@@ -51,4 +51,8 @@ class AdminAuthSessionRepositoryImpl(
         existing.revokedAt = revokedAt
         jpaRepository.save(existing)
     }
+
+    override fun revokeAllByAdminId(adminId: UUID, revokedAt: Instant) {
+        jpaRepository.revokeAllByAdminId(adminId, revokedAt)
+    }
 }
