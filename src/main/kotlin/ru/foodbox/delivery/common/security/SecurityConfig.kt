@@ -45,6 +45,7 @@ class SecurityConfig(
                 it.requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 it.requestMatchers("/ws/virtual-try-on/**").permitAll()
                 it.requestMatchers("/api/v1/admin/login").permitAll()
+                it.requestMatchers("/api/v1/app-config/**").permitAll()
                 it.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 it.requestMatchers("/api/admin/**").hasRole("ADMIN")
                 it.anyRequest().authenticated()
