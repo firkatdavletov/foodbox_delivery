@@ -33,6 +33,8 @@ import ru.foodbox.delivery.modules.orders.domain.OrderStateType
 import ru.foodbox.delivery.modules.orders.modifier.domain.OrderItemModifier
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderRepository
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
+import ru.foodbox.delivery.modules.promotions.application.PromotionService
+import ru.foodbox.delivery.modules.promotions.application.command.ApplyOrderPromotionsCommand
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
 import java.time.Instant
 import java.util.UUID
@@ -47,6 +49,7 @@ class OrderServiceImpl(
     private val cartItemPricingService: CartItemPricingService,
     private val checkoutService: CheckoutService,
     private val deliveryOrderRequestService: DeliveryOrderRequestService,
+    private val promotionService: PromotionService,
     private val applicationEventPublisher: ApplicationEventPublisher,
     private val orderStatusService: OrderStatusService,
 ) : OrderService {
@@ -149,6 +152,12 @@ class OrderServiceImpl(
                 actor = OrderStatusChangeActor.system(),
             )
         }
+        saved = applyPromotions(
+            order = saved,
+            userId = (actor as? CurrentActor.User)?.userId,
+            promoCode = command.promoCode,
+            giftCertificateCode = command.giftCertificateCode,
+        )
         cartService.markOrdered(cart.id)
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
@@ -256,6 +265,12 @@ class OrderServiceImpl(
                 actor = OrderStatusChangeActor.system(),
             )
         }
+        saved = applyPromotions(
+            order = saved,
+            userId = null,
+            promoCode = command.promoCode,
+            giftCertificateCode = command.giftCertificateCode,
+        )
         applicationEventPublisher.publishEvent(OrderCreatedEvent(saved))
         return saved
     }
@@ -475,6 +490,36 @@ class OrderServiceImpl(
                 modifiers = modifiers,
             )
         }
+    }
+
+    private fun applyPromotions(
+        order: Order,
+        userId: UUID?,
+        promoCode: String?,
+        giftCertificateCode: String?,
+    ): Order {
+        if (promoCode.isNullOrBlank() && giftCertificateCode.isNullOrBlank()) {
+            return order
+        }
+
+        val adjustment = promotionService.applyOrderPromotions(
+            ApplyOrderPromotionsCommand(
+                orderId = order.id,
+                userId = userId,
+                grossTotalMinor = order.grossTotalMinor(),
+                currency = order.delivery.currency,
+                promoCode = promoCode,
+                giftCertificateCode = giftCertificateCode,
+            )
+        )
+        order.applyPricingAdjustments(
+            promoCode = adjustment.promoCode,
+            promoDiscountMinor = adjustment.promoDiscountMinor,
+            giftCertificateId = adjustment.giftCertificateId,
+            giftCertificateCodeLast4 = adjustment.giftCertificateCodeLast4,
+            giftCertificateAmountMinor = adjustment.giftCertificateAmountMinor,
+        )
+        return orderRepository.save(order)
     }
 }
 

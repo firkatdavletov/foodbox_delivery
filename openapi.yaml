@@ -26,6 +26,8 @@ tags:
     description: Admin product popularity and statistics management
   - name: Delivery Admin
     description: Admin delivery and pickup configuration
+  - name: Promo Codes Admin
+    description: Admin promo code management
   - name: Payments
     description: Payment methods and payment operations
   - name: Orders
@@ -3521,6 +3523,207 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # ── Promo Codes Admin ──────────────────────────────────────────────
+  /api/v1/admin/promo-codes:
+    get:
+      tags: [Promo Codes Admin]
+      operationId: getPromoCodes
+      summary: List promo codes with optional filtering
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: discountType
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PromoCodeDiscountType'
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive partial search by promo code value.
+        - name: validAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Returns only promo codes valid at the specified timestamp.
+      responses:
+        '200':
+          description: Promo codes list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromoCodeAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Promo Codes Admin]
+      operationId: createPromoCode
+      summary: Create promo code
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertPromoCodeRequest'
+      responses:
+        '200':
+          description: Created promo code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoCodeAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/promo-codes/search:
+    get:
+      tags: [Promo Codes Admin]
+      operationId: searchPromoCode
+      summary: Search promo code by exact code value
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Promo code details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoCodeAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/admin/promo-codes/{promoCodeId}:
+    get:
+      tags: [Promo Codes Admin]
+      operationId: getPromoCodeById
+      summary: Get promo code by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: promoCodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Promo code details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoCodeAdminResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [Promo Codes Admin]
+      operationId: updatePromoCode
+      summary: Update promo code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: promoCodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertPromoCodeRequest'
+      responses:
+        '200':
+          description: Updated promo code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoCodeAdminResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Promo Codes Admin]
+      operationId: deletePromoCode
+      summary: Delete promo code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: promoCodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Promo code deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   # ── Hero Banners (public) ──────────────────────────────────────────
   /api/v1/public/hero-banners:
     get:
@@ -6057,6 +6260,12 @@ components:
         comment:
           type: string
           nullable: true
+        promoCode:
+          type: string
+          nullable: true
+        giftCertificateCode:
+          type: string
+          nullable: true
 
     CancelOrderRequest:
       type: object
@@ -6099,6 +6308,12 @@ components:
           type: string
           nullable: true
         comment:
+          type: string
+          nullable: true
+        promoCode:
+          type: string
+          nullable: true
+        giftCertificateCode:
           type: string
           nullable: true
 
@@ -6340,6 +6555,8 @@ components:
           statusHistory,
           subtotalMinor,
           deliveryFeeMinor,
+          promoDiscountMinor,
+          giftCertificateAmountMinor,
           totalMinor,
           statusChangedAt,
           createdAt,
@@ -6400,6 +6617,18 @@ components:
           type: integer
           format: int64
         deliveryFeeMinor:
+          type: integer
+          format: int64
+        promoCode:
+          type: string
+          nullable: true
+        promoDiscountMinor:
+          type: integer
+          format: int64
+        giftCertificateCodeLast4:
+          type: string
+          nullable: true
+        giftCertificateAmountMinor:
           type: integer
           format: int64
         totalMinor:
@@ -7105,6 +7334,119 @@ components:
         text:
           type: string
 
+    PromoCodeAdminResponse:
+      type: object
+      required:
+        [
+          id,
+          code,
+          discountType,
+          discountValue,
+          usedCount,
+          active,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        discountType:
+          $ref: '#/components/schemas/PromoCodeDiscountType'
+        discountValue:
+          type: integer
+          format: int64
+        minOrderAmountMinor:
+          type: integer
+          format: int64
+          nullable: true
+        maxDiscountMinor:
+          type: integer
+          format: int64
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        usageLimitTotal:
+          type: integer
+          format: int32
+          nullable: true
+        usageLimitPerUser:
+          type: integer
+          format: int32
+          nullable: true
+        usedCount:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UpsertPromoCodeRequest:
+      type: object
+      required: [code, discountType, discountValue, active]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        discountType:
+          $ref: '#/components/schemas/PromoCodeDiscountType'
+        discountValue:
+          type: integer
+          format: int64
+          minimum: 1
+        minOrderAmountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        maxDiscountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        usageLimitTotal:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+        usageLimitPerUser:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+        active:
+          type: boolean
+
     SendTelegramTestMessageRequest:
       type: object
       required: [message]
@@ -7235,6 +7577,10 @@ components:
     LegalDocumentType:
       type: string
       enum: [public-offer, personal-data-consent, personal-data-policy]
+
+    PromoCodeDiscountType:
+      type: string
+      enum: [FIXED, PERCENT]
 
     CreateVirtualTryOnSessionRequest:
       type: object

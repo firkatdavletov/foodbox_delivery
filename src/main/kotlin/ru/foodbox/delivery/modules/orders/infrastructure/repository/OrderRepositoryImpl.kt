@@ -46,6 +46,11 @@ class OrderRepositoryImpl(
             paymentMethodName = order.payment?.methodName,
             subtotalMinor = order.subtotalMinor,
             deliveryFeeMinor = order.deliveryFeeMinor,
+            promoCode = order.promoCode,
+            promoDiscountMinor = order.promoDiscountMinor,
+            giftCertificateId = order.giftCertificateId,
+            giftCertificateCodeLast4 = order.giftCertificateCodeLast4,
+            giftCertificateAmountMinor = order.giftCertificateAmountMinor,
             totalMinor = order.totalMinor,
             statusChangedAt = order.statusChangedAt,
             createdAt = order.createdAt,
@@ -64,6 +69,11 @@ class OrderRepositoryImpl(
         entity.paymentMethodName = order.payment?.methodName
         entity.subtotalMinor = order.subtotalMinor
         entity.deliveryFeeMinor = order.deliveryFeeMinor
+        entity.promoCode = order.promoCode
+        entity.promoDiscountMinor = order.promoDiscountMinor
+        entity.giftCertificateId = order.giftCertificateId
+        entity.giftCertificateCodeLast4 = order.giftCertificateCodeLast4
+        entity.giftCertificateAmountMinor = order.giftCertificateAmountMinor
         entity.totalMinor = order.totalMinor
         entity.statusChangedAt = order.statusChangedAt
         entity.updatedAt = order.updatedAt
@@ -248,6 +258,11 @@ class OrderRepositoryImpl(
             },
             subtotalMinor = entity.subtotalMinor,
             deliveryFeeMinor = entity.deliveryFeeMinor,
+            promoCode = entity.promoCode,
+            promoDiscountMinor = entity.promoDiscountMinor,
+            giftCertificateId = entity.giftCertificateId,
+            giftCertificateCodeLast4 = entity.giftCertificateCodeLast4,
+            giftCertificateAmountMinor = entity.giftCertificateAmountMinor,
             totalMinor = entity.totalMinor,
             statusChangedAt = entity.statusChangedAt,
             createdAt = entity.createdAt,

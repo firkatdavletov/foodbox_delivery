@@ -76,6 +76,21 @@ class OrderEntity(
     @Column(name = "delivery_fee_minor", nullable = false)
     var deliveryFeeMinor: Long,
 
+    @Column(name = "promo_code", length = 64)
+    var promoCode: String? = null,
+
+    @Column(name = "promo_discount_minor", nullable = false)
+    var promoDiscountMinor: Long = 0,
+
+    @Column(name = "gift_certificate_id")
+    var giftCertificateId: UUID? = null,
+
+    @Column(name = "gift_certificate_code_last4", length = 4)
+    var giftCertificateCodeLast4: String? = null,
+
+    @Column(name = "gift_certificate_amount_minor", nullable = false)
+    var giftCertificateAmountMinor: Long = 0,
+
     @Column(name = "total_minor", nullable = false)
     var totalMinor: Long,
 

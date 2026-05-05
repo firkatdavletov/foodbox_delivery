@@ -35,6 +35,8 @@ data class GuestCheckoutRequest(
     val pickupPointId: UUID? = null,
     val pickupPointExternalId: String? = null,
     val comment: String? = null,
+    val promoCode: String? = null,
+    val giftCertificateCode: String? = null,
 )
 
 data class GuestCheckoutItemRequest(

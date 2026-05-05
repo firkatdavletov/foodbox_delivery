@@ -18,6 +18,11 @@ data class Order(
     val items: List<OrderItem>,
     val subtotalMinor: Long,
     var deliveryFeeMinor: Long,
+    var promoCode: String? = null,
+    var promoDiscountMinor: Long = 0,
+    var giftCertificateId: UUID? = null,
+    var giftCertificateCodeLast4: String? = null,
+    var giftCertificateAmountMinor: Long = 0,
     var totalMinor: Long,
     var statusChangedAt: Instant,
     val createdAt: Instant,
@@ -54,7 +59,26 @@ data class Order(
             currency = currency,
         )
         deliveryFeeMinor = priceMinor
-        totalMinor = subtotalMinor + priceMinor
+        totalMinor = calculateTotalMinor()
+        updatedAt = Instant.now()
+    }
+
+    fun applyPricingAdjustments(
+        promoCode: String?,
+        promoDiscountMinor: Long,
+        giftCertificateId: UUID?,
+        giftCertificateCodeLast4: String?,
+        giftCertificateAmountMinor: Long,
+    ) {
+        require(promoDiscountMinor >= 0) { "promoDiscountMinor must be non-negative" }
+        require(giftCertificateAmountMinor >= 0) { "giftCertificateAmountMinor must be non-negative" }
+
+        this.promoCode = promoCode?.trim()?.takeIf { it.isNotBlank() }
+        this.promoDiscountMinor = promoDiscountMinor
+        this.giftCertificateId = giftCertificateId
+        this.giftCertificateCodeLast4 = giftCertificateCodeLast4?.trim()?.takeIf { it.isNotBlank() }
+        this.giftCertificateAmountMinor = giftCertificateAmountMinor
+        this.totalMinor = calculateTotalMinor()
         updatedAt = Instant.now()
     }
 
@@ -70,5 +94,15 @@ data class Order(
                 timestamp = statusChangedAt,
             )
         )
+    }
+
+    fun grossTotalMinor(): Long {
+        return subtotalMinor + deliveryFeeMinor
+    }
+
+    private fun calculateTotalMinor(): Long {
+        val total = grossTotalMinor() - promoDiscountMinor - giftCertificateAmountMinor
+        require(total >= 0) { "Order total must be non-negative" }
+        return total
     }
 }

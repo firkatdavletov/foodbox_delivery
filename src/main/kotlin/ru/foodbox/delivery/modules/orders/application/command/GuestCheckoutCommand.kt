@@ -15,6 +15,8 @@ data class GuestCheckoutCommand(
     val pickupPointId: java.util.UUID?,
     val pickupPointExternalId: String?,
     val comment: String?,
+    val promoCode: String? = null,
+    val giftCertificateCode: String? = null,
 )
 
 data class GuestCheckoutItemCommand(

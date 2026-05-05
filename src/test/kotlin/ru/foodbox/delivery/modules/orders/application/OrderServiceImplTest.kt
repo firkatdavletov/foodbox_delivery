@@ -48,6 +48,9 @@ import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusHistoryRe
 import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusTransitionRepository
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodInfo
+import ru.foodbox.delivery.modules.promotions.application.OrderPricingAdjustment
+import ru.foodbox.delivery.modules.promotions.application.PromotionService
+import ru.foodbox.delivery.modules.promotions.application.command.ApplyOrderPromotionsCommand
 import ru.foodbox.delivery.modules.user.domain.User
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
 import java.time.Instant
@@ -119,6 +122,7 @@ class OrderServiceImplTest {
                 )
             ),
             deliveryOrderRequestService = deliveryOrderRequestService,
+            promotionService = StubPromotionService(),
             applicationEventPublisher = eventPublisher,
             orderStatusService = orderStatusService,
         )
@@ -229,6 +233,7 @@ class OrderServiceImplTest {
                 )
             ),
             deliveryOrderRequestService = deliveryOrderRequestService,
+            promotionService = StubPromotionService(),
             applicationEventPublisher = eventPublisher,
             orderStatusService = orderStatusService,
         )
@@ -357,6 +362,7 @@ class OrderServiceImplTest {
                 )
             ),
             deliveryOrderRequestService = RecordingDeliveryOrderRequestService(),
+            promotionService = StubPromotionService(),
             applicationEventPublisher = eventPublisher,
             orderStatusService = orderStatusService,
         )
@@ -448,6 +454,7 @@ class OrderServiceImplTest {
                 )
             ),
             deliveryOrderRequestService = RecordingDeliveryOrderRequestService(),
+            promotionService = StubPromotionService(),
             applicationEventPublisher = eventPublisher,
             orderStatusService = orderStatusService,
         )
@@ -695,6 +702,19 @@ class OrderServiceImplTest {
         override fun createAndConfirm(order: Order): DeliveryOrderRequestConfirmation? {
             lastOrder = order.copyOrder()
             return confirmation
+        }
+    }
+
+    private class StubPromotionService : PromotionService {
+        override fun applyOrderPromotions(command: ApplyOrderPromotionsCommand): OrderPricingAdjustment {
+            return OrderPricingAdjustment(
+                promoCode = null,
+                promoDiscountMinor = 0L,
+                giftCertificateId = null,
+                giftCertificateCodeLast4 = null,
+                giftCertificateAmountMinor = 0L,
+                totalMinor = command.grossTotalMinor,
+            )
         }
     }
 

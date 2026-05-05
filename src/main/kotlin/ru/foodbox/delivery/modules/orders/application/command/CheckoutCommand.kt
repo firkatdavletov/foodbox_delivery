@@ -10,4 +10,6 @@ data class CheckoutCommand(
     val customerEmail: String?,
     val deliveryAddress: DeliveryAddress?,
     val comment: String?,
+    val promoCode: String? = null,
+    val giftCertificateCode: String? = null,
 )

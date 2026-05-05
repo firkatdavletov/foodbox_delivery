@@ -14,4 +14,6 @@ data class CheckoutRequest(
     @field:Valid
     val address: DeliveryAddressRequest? = null,
     val comment: String? = null,
+    val promoCode: String? = null,
+    val giftCertificateCode: String? = null,
 )

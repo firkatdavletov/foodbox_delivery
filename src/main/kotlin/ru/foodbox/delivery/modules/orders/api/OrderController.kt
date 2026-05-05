@@ -44,6 +44,8 @@ class OrderController(
                 customerEmail = request.customerEmail,
                 deliveryAddress = request.address?.toDomain(),
                 comment = request.comment,
+                promoCode = request.promoCode,
+                giftCertificateCode = request.giftCertificateCode,
             ),
         ).toResponseWithImages()
     }
@@ -66,6 +68,8 @@ class OrderController(
                 pickupPointId = request.pickupPointId,
                 pickupPointExternalId = request.pickupPointExternalId,
                 comment = request.comment,
+                promoCode = request.promoCode,
+                giftCertificateCode = request.giftCertificateCode,
             ),
             installId = deviceId?.trim()?.takeIf { it.isNotBlank() }
                 ?: installId?.trim()?.takeIf { it.isNotBlank() },
