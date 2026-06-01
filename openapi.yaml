@@ -1666,6 +1666,40 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/v1/admin/products/{productId}/variant-configuration:
+    put:
+      tags: [Catalog Admin]
+      operationId: replaceProductVariantConfiguration
+      summary: Replace product variant configuration
+      description: Replaces all option groups, option values, variants, and variant option links for the product.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceProductVariantConfigurationRequest'
+      responses:
+        '200':
+          description: Product details with replaced variant configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductDetailsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /api/v1/admin/products/{productId}/variants/{variantId}/images/{imageId}:
     delete:
       tags: [Catalog Admin]
@@ -6154,6 +6188,114 @@ components:
           items:
             type: string
             format: uuid
+        options:
+          type: array
+          nullable: true
+          description: Option selection by codes. Use either optionValueIds or options, not both.
+          items:
+            $ref: '#/components/schemas/UpsertProductVariantOptionRequest'
+
+    UpsertProductVariantOptionRequest:
+      type: object
+      required: [optionGroupCode, optionValueCode]
+      properties:
+        optionGroupCode:
+          type: string
+          minLength: 1
+        optionValueCode:
+          type: string
+          minLength: 1
+
+    ReplaceProductVariantConfigurationRequest:
+      type: object
+      properties:
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceProductOptionGroupRequest'
+          default: []
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceProductVariantRequest'
+          default: []
+
+    ReplaceProductOptionGroupRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplaceProductOptionValueRequest'
+          default: []
+
+    ReplaceProductOptionValueRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+
+    ReplaceProductVariantRequest:
+      type: object
+      required: [sku]
+      properties:
+        externalId:
+          type: string
+          nullable: true
+        sku:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        oldPriceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        imageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          default: []
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        isActive:
+          type: boolean
+          default: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpsertProductVariantOptionRequest'
+          default: []
 
     CatalogImportMultipartRequest:
       type: object
