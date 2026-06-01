@@ -7,6 +7,8 @@ data class CartResponse(
     val id: UUID,
     val status: CartStatus,
     val items: List<CartItemResponse>,
+    val promoCode: String?,
+    val promoDiscountMinor: Long,
     val totalPriceMinor: Long,
     val delivery: CartDeliveryDraftResponse?,
 )

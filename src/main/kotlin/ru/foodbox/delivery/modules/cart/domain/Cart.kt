@@ -9,6 +9,8 @@ data class Cart(
     var status: CartStatus,
     val items: MutableList<CartItem>,
     var deliveryDraft: CartDeliveryDraft?,
+    var promoCode: String? = null,
+    var promoDiscountMinor: Long = 0,
     var totalPriceMinor: Long,
     val createdAt: Instant,
     var updatedAt: Instant,
@@ -87,6 +89,25 @@ data class Cart(
         touch(recalculateTotal = true, invalidateDeliveryQuote = true)
     }
 
+    fun applyPromoCode(
+        code: String,
+        discountMinor: Long,
+    ) {
+        ensureActive()
+        require(code.isNotBlank()) { "Promo code must not be blank" }
+        require(discountMinor >= 0) { "promoDiscountMinor must be non-negative" }
+        promoCode = code
+        promoDiscountMinor = discountMinor
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
+    }
+
+    fun clearPromoCode() {
+        ensureActive()
+        promoCode = null
+        promoDiscountMinor = 0
+        touch(recalculateTotal = true, invalidateDeliveryQuote = false)
+    }
+
     fun upsertDeliveryDraft(draft: CartDeliveryDraft) {
         ensureActive()
         deliveryDraft = draft
@@ -120,7 +141,8 @@ data class Cart(
     }
 
     fun recalculateTotalPrice(now: Instant = Instant.now()) {
-        totalPriceMinor = itemsSubtotalMinor() + deliveryFeeMinor(now)
+        val grossTotal = itemsSubtotalMinor() + deliveryFeeMinor(now)
+        totalPriceMinor = (grossTotal - promoDiscountMinor).coerceAtLeast(0)
     }
 
     private fun touch(recalculateTotal: Boolean, invalidateDeliveryQuote: Boolean) {

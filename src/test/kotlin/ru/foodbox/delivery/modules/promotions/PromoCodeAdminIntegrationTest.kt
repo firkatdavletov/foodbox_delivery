@@ -123,6 +123,14 @@ class PromoCodeAdminIntegrationTest {
             .andExpect(jsonPath("$.discountValue").value(20))
             .andExpect(jsonPath("$.active").value(false))
 
+        mockMvc.perform(post("/api/v1/admin/promo-codes/{promoCodeId}/activate", promoCodeId))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.active").value(true))
+
+        mockMvc.perform(post("/api/v1/admin/promo-codes/{promoCodeId}/deactivate", promoCodeId))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.active").value(false))
+
         mockMvc.perform(delete("/api/v1/admin/promo-codes/{promoCodeId}", promoCodeId))
             .andExpect(status().isNoContent)
 

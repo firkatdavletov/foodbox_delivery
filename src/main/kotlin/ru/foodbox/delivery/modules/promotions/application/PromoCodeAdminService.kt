@@ -105,6 +105,22 @@ class PromoCodeAdminService(
         promoCodeRepository.deleteById(existing.id)
     }
 
+    @Transactional
+    fun activatePromoCode(promoCodeId: UUID): PromoCode {
+        return setPromoCodeActiveState(
+            promoCodeId = promoCodeId,
+            active = true,
+        )
+    }
+
+    @Transactional
+    fun deactivatePromoCode(promoCodeId: UUID): PromoCode {
+        return setPromoCodeActiveState(
+            promoCodeId = promoCodeId,
+            active = false,
+        )
+    }
+
     private fun validateCommand(command: UpsertPromoCodeCommand) {
         require(command.discountValue > 0) { "discountValue must be positive" }
         if (command.discountType == PromoCodeDiscountType.PERCENT) {
@@ -149,5 +165,22 @@ class PromoCodeAdminService(
         val normalized = currency?.trim()?.takeIf { it.isNotBlank() }?.uppercase() ?: return null
         require(normalized.length == 3) { "currency must be ISO-4217 code" }
         return normalized
+    }
+
+    private fun setPromoCodeActiveState(
+        promoCodeId: UUID,
+        active: Boolean,
+    ): PromoCode {
+        val existing = promoCodeRepository.findById(promoCodeId)
+            ?: throw NotFoundException("Promo code not found")
+        if (existing.active == active) {
+            return existing
+        }
+        return promoCodeRepository.save(
+            existing.copy(
+                active = active,
+                updatedAt = clock.instant(),
+            )
+        )
     }
 }

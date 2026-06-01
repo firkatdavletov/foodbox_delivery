@@ -52,6 +52,8 @@ internal fun Cart.toResponse(
                 },
             )
         },
+        promoCode = promoCode,
+        promoDiscountMinor = promoDiscountMinor,
         totalPriceMinor = totalPriceMinor,
         delivery = deliveryDraft.toResponse(),
     )

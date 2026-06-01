@@ -411,13 +411,16 @@ class AdminDashboardIntegrationTest {
     private fun insertCart(status: CartStatus, now: Instant) {
         jdbcTemplate.update(
             """
-            insert into carts (id, owner_type, owner_id, status, total_price_minor, created_at, updated_at)
-            values (?, ?, ?, ?, ?, ?, ?)
+            insert into carts (
+                id, owner_type, owner_id, status, promo_discount_minor, total_price_minor, created_at, updated_at
+            )
+            values (?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             UUID.randomUUID(),
             "INSTALLATION",
             UUID.randomUUID().toString(),
             status.name,
+            0L,
             0L,
             now,
             now,

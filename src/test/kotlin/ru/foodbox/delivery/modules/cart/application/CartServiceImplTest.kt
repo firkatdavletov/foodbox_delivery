@@ -5,6 +5,8 @@ import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.catalog.domain.ProductSnapshot
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
+import ru.foodbox.delivery.modules.cart.application.command.ApplyCartPromoCodeCommand
+import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.application.policy.CartMergePolicy
 import ru.foodbox.delivery.modules.cart.domain.Cart
@@ -33,6 +35,11 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
 import ru.foodbox.delivery.modules.delivery.domain.PickupPoint
 import ru.foodbox.delivery.modules.delivery.domain.YandexDeliveryLocationVariant
 import ru.foodbox.delivery.modules.delivery.domain.YandexPickupPointOption
+import ru.foodbox.delivery.modules.promotions.application.OrderPricingAdjustment
+import ru.foodbox.delivery.modules.promotions.application.PromoDiscountPreview
+import ru.foodbox.delivery.modules.promotions.application.PromotionService
+import ru.foodbox.delivery.modules.promotions.application.command.ApplyOrderPromotionsCommand
+import ru.foodbox.delivery.modules.promotions.application.command.CalculatePromoDiscountCommand
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -92,6 +99,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = geocoder,
+            promotionService = StubPromotionService(),
         )
 
         val draft = service.detectCourierDeliveryDraft(
@@ -155,6 +163,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = geocoder,
+            promotionService = StubPromotionService(),
         )
 
         val draft = service.detectCourierDeliveryDraft(
@@ -242,6 +251,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         val deliveryDraft = service.updateDeliveryDraft(
@@ -295,6 +305,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         val deliveryDraft = service.updateDeliveryDraft(
@@ -379,6 +390,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         val deliveryDraft = service.updateDeliveryDraft(
@@ -481,6 +493,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         val refreshedCart = service.getOrCreateActiveCart(actor)
@@ -553,6 +566,7 @@ class CartServiceImplTest {
             cartItemModifierResolver = unusedCartItemModifierResolver(),
             deliveryService = deliveryService,
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         val refreshedCart = service.getOrCreateActiveCart(actor)
@@ -562,6 +576,217 @@ class CartServiceImplTest {
         assertEquals(200L, refreshedCart.totalPriceMinor)
         assertEquals(200L, refreshedCart.deliveryDraft?.quote?.priceMinor)
         assertEquals(200L, cartRepository.savedCart?.totalPriceMinor)
+    }
+
+    @Test
+    fun `applies promo code to cart and updates total`() {
+        val actor = CurrentActor.User(UUID.randomUUID())
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.USER, actor.userId.toString()),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = UUID.randomUUID(),
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 2_000,
+                )
+            ),
+            deliveryDraft = null,
+            totalPriceMinor = 2_000,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val promotionService = StubPromotionService(
+            preview = PromoDiscountPreview(
+                promoCode = "SPRING15",
+                promoDiscountMinor = 300,
+            )
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = CapturingDeliveryService(
+                quoteToReturn = DeliveryQuote(
+                    deliveryMethod = DeliveryMethodType.COURIER,
+                    available = true,
+                    priceMinor = 0,
+                    currency = "RUB",
+                    zoneCode = null,
+                    zoneName = null,
+                    estimatedDays = null,
+                )
+            ),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = promotionService,
+        )
+
+        val updatedCart = service.applyPromoCode(
+            actor = actor,
+            command = ApplyCartPromoCodeCommand("spring15"),
+        )
+
+        assertEquals("SPRING15", updatedCart.promoCode)
+        assertEquals(300L, updatedCart.promoDiscountMinor)
+        assertEquals(1_700L, updatedCart.totalPriceMinor)
+    }
+
+    @Test
+    fun `refreshes expired delivery quote before applying promo code`() {
+        val now = Instant.now()
+        val actor = CurrentActor.User(UUID.randomUUID())
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.USER, actor.userId.toString()),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(
+                CartItem(
+                    productId = UUID.randomUUID(),
+                    variantId = null,
+                    title = "T-Shirt",
+                    unit = ProductUnit.PIECE,
+                    countStep = 1,
+                    quantity = 1,
+                    priceMinor = 2_000,
+                )
+            ),
+            deliveryDraft = CartDeliveryDraft(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                deliveryAddress = DeliveryAddress(
+                    city = "Yekaterinburg",
+                    street = "Lenina",
+                    house = "1",
+                ),
+                pickupPointId = null,
+                pickupPointExternalId = null,
+                pickupPointName = null,
+                pickupPointAddress = null,
+                quote = CartDeliveryQuote(
+                    available = true,
+                    priceMinor = 450,
+                    currency = "USD",
+                    zoneCode = "OLD",
+                    zoneName = "Old zone",
+                    estimatedDays = 1,
+                    message = null,
+                    calculatedAt = now.minusSeconds(1_800),
+                    expiresAt = now.minusSeconds(60),
+                ),
+                createdAt = now.minusSeconds(1_800),
+                updatedAt = now.minusSeconds(1_800),
+            ),
+            totalPriceMinor = 2_000,
+            createdAt = now.minusSeconds(1_800),
+            updatedAt = now.minusSeconds(1_800),
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val deliveryService = CapturingDeliveryService(
+            quoteToReturn = DeliveryQuote(
+                deliveryMethod = DeliveryMethodType.COURIER,
+                available = true,
+                priceMinor = 700,
+                currency = "RUB",
+                zoneCode = "EKB",
+                zoneName = "Yekaterinburg",
+                estimatedDays = 1,
+            )
+        )
+        val promotionService = StubPromotionService(
+            preview = PromoDiscountPreview(
+                promoCode = "SPRING15",
+                promoDiscountMinor = 300,
+            )
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = deliveryService,
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = promotionService,
+        )
+
+        val updatedCart = service.applyPromoCode(
+            actor = actor,
+            command = ApplyCartPromoCodeCommand("spring15"),
+        )
+
+        assertEquals(2_000L, deliveryService.lastContext?.subtotalMinor)
+        assertEquals(2_700L, promotionService.lastCalculateCommand?.grossTotalMinor)
+        assertEquals("RUB", promotionService.lastCalculateCommand?.currency)
+        assertEquals(700L, updatedCart.deliveryDraft?.quote?.priceMinor)
+        assertEquals("SPRING15", updatedCart.promoCode)
+        assertEquals(300L, updatedCart.promoDiscountMinor)
+        assertEquals(2_400L, updatedCart.totalPriceMinor)
+    }
+
+    @Test
+    fun `clears promo code when it becomes invalid during cart update`() {
+        val actor = CurrentActor.User(UUID.randomUUID())
+        val cartItem = CartItem(
+            productId = UUID.randomUUID(),
+            variantId = null,
+            title = "T-Shirt",
+            unit = ProductUnit.PIECE,
+            countStep = 1,
+            quantity = 1,
+            priceMinor = 1_000,
+        )
+        val cart = Cart(
+            id = UUID.randomUUID(),
+            owner = CartOwner(CartOwnerType.USER, actor.userId.toString()),
+            status = CartStatus.ACTIVE,
+            items = mutableListOf(cartItem),
+            deliveryDraft = null,
+            promoCode = "SPRING10",
+            promoDiscountMinor = 100,
+            totalPriceMinor = 900,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+        val cartRepository = InMemoryCartRepository(cart)
+        val promotionService = StubPromotionService(
+            exceptionToThrow = IllegalArgumentException("Promo code is invalid")
+        )
+        val service = CartServiceImpl(
+            cartRepository = cartRepository,
+            productReadService = UnusedProductReadService(),
+            cartMergePolicy = PassthroughCartMergePolicy(),
+            cartItemModifierResolver = unusedCartItemModifierResolver(),
+            deliveryService = CapturingDeliveryService(
+                quoteToReturn = DeliveryQuote(
+                    deliveryMethod = DeliveryMethodType.COURIER,
+                    available = true,
+                    priceMinor = 0,
+                    currency = "RUB",
+                    zoneCode = null,
+                    zoneName = null,
+                    estimatedDays = null,
+                )
+            ),
+            deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = promotionService,
+        )
+
+        val updatedCart = service.changeQuantity(
+            actor = actor,
+            command = ChangeCartItemQuantityCommand(
+                itemId = cartItem.id,
+                quantity = 2,
+            ),
+        )
+
+        assertNull(updatedCart.promoCode)
+        assertEquals(0L, updatedCart.promoDiscountMinor)
+        assertEquals(2_000L, updatedCart.totalPriceMinor)
     }
 
     @Test
@@ -635,6 +860,7 @@ class CartServiceImplTest {
                 )
             ),
             deliveryAddressGeocoder = StubDeliveryAddressGeocoder(),
+            promotionService = StubPromotionService(),
         )
 
         service.markOrdered(cart.id)
@@ -726,6 +952,33 @@ class CartServiceImplTest {
             lastLatitude = latitude
             lastLongitude = longitude
             return address
+        }
+    }
+
+    private class StubPromotionService(
+        private val preview: PromoDiscountPreview = PromoDiscountPreview(
+            promoCode = "PROMO",
+            promoDiscountMinor = 100,
+        ),
+        private val exceptionToThrow: IllegalArgumentException? = null,
+    ) : PromotionService {
+        var lastCalculateCommand: CalculatePromoDiscountCommand? = null
+
+        override fun applyOrderPromotions(command: ApplyOrderPromotionsCommand): OrderPricingAdjustment {
+            return OrderPricingAdjustment(
+                promoCode = null,
+                promoDiscountMinor = 0,
+                giftCertificateId = null,
+                giftCertificateCodeLast4 = null,
+                giftCertificateAmountMinor = 0,
+                totalMinor = command.grossTotalMinor,
+            )
+        }
+
+        override fun calculatePromoDiscount(command: CalculatePromoDiscountCommand): PromoDiscountPreview {
+            lastCalculateCommand = command
+            exceptionToThrow?.let { throw it }
+            return preview
         }
     }
 

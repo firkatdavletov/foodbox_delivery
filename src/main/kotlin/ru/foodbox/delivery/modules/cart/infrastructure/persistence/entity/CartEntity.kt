@@ -33,6 +33,12 @@ class CartEntity(
     @Column(nullable = false, length = 32)
     var status: CartStatus,
 
+    @Column(name = "promo_code", length = 64)
+    var promoCode: String? = null,
+
+    @Column(name = "promo_discount_minor", nullable = false)
+    var promoDiscountMinor: Long = 0,
+
     @Column(name = "total_price_minor", nullable = false)
     var totalPriceMinor: Long,
 

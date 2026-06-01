@@ -80,6 +80,20 @@ class PromoCodeAdminController(
         ).toAdminResponse()
     }
 
+    @PostMapping("/{promoCodeId}/activate")
+    fun activatePromoCode(
+        @PathVariable promoCodeId: UUID,
+    ): PromoCodeAdminResponse {
+        return promoCodeAdminService.activatePromoCode(promoCodeId).toAdminResponse()
+    }
+
+    @PostMapping("/{promoCodeId}/deactivate")
+    fun deactivatePromoCode(
+        @PathVariable promoCodeId: UUID,
+    ): PromoCodeAdminResponse {
+        return promoCodeAdminService.deactivatePromoCode(promoCodeId).toAdminResponse()
+    }
+
     @DeleteMapping("/{promoCodeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun deletePromoCode(

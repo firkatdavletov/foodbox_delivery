@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.common.web.CurrentActorParam
 import ru.foodbox.delivery.modules.cart.api.dto.AddCartItemRequest
+import ru.foodbox.delivery.modules.cart.api.dto.ApplyCartPromoCodeRequest
 import ru.foodbox.delivery.modules.cart.api.dto.CartDeliveryDraftResponse
 import ru.foodbox.delivery.modules.cart.api.dto.CartResponse
 import ru.foodbox.delivery.modules.cart.api.dto.ChangeCartItemQuantityRequest
@@ -20,6 +21,7 @@ import ru.foodbox.delivery.modules.cart.api.dto.PutCartDeliveryRequest
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemModifierCommand
+import ru.foodbox.delivery.modules.cart.application.command.ApplyCartPromoCodeCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.domain.Cart
@@ -83,6 +85,19 @@ class CartController(
                     )
                 },
             ),
+        ).toResponseWithImages()
+    }
+
+    @PostMapping("/promo-code")
+    fun applyPromoCode(
+        @CurrentActorParam actor: CurrentActor,
+        @Valid @RequestBody request: ApplyCartPromoCodeRequest,
+    ): CartResponse {
+        return cartService.applyPromoCode(
+            actor = actor,
+            command = ApplyCartPromoCodeCommand(
+                code = request.code,
+            )
         ).toResponseWithImages()
     }
 

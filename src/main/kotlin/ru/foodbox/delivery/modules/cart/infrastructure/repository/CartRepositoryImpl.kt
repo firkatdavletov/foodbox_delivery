@@ -46,6 +46,8 @@ class CartRepositoryImpl(
             ownerType = cart.owner.type,
             ownerId = cart.owner.value,
             status = cart.status,
+            promoCode = cart.promoCode,
+            promoDiscountMinor = cart.promoDiscountMinor,
             totalPriceMinor = cart.totalPriceMinor,
             createdAt = cart.createdAt,
             updatedAt = cart.updatedAt,
@@ -54,6 +56,8 @@ class CartRepositoryImpl(
         entity.ownerType = cart.owner.type
         entity.ownerId = cart.owner.value
         entity.status = cart.status
+        entity.promoCode = cart.promoCode
+        entity.promoDiscountMinor = cart.promoDiscountMinor
         entity.totalPriceMinor = cart.totalPriceMinor
         entity.updatedAt = cart.updatedAt
 
@@ -160,6 +164,8 @@ class CartRepositoryImpl(
                 )
             }.toMutableList(),
             deliveryDraft = entity.deliveryDraft?.toDomain(),
+            promoCode = entity.promoCode,
+            promoDiscountMinor = entity.promoDiscountMinor,
             totalPriceMinor = entity.totalPriceMinor,
             createdAt = entity.createdAt,
             updatedAt = entity.updatedAt,

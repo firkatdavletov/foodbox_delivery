@@ -155,7 +155,7 @@ class OrderServiceImpl(
         saved = applyPromotions(
             order = saved,
             userId = (actor as? CurrentActor.User)?.userId,
-            promoCode = command.promoCode,
+            promoCode = command.promoCode?.trim()?.takeIf { it.isNotBlank() } ?: cart.promoCode,
             giftCertificateCode = command.giftCertificateCode,
         )
         cartService.markOrdered(cart.id)

@@ -8,6 +8,7 @@ import ru.foodbox.delivery.modules.catalog.domain.ProductSnapshot
 import ru.foodbox.delivery.modules.catalog.domain.ProductUnit
 import ru.foodbox.delivery.modules.cart.application.CartService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
+import ru.foodbox.delivery.modules.cart.application.command.ApplyCartPromoCodeCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.domain.Cart
@@ -49,8 +50,10 @@ import ru.foodbox.delivery.modules.orders.domain.repository.OrderStatusTransitio
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodCode
 import ru.foodbox.delivery.modules.payments.domain.PaymentMethodInfo
 import ru.foodbox.delivery.modules.promotions.application.OrderPricingAdjustment
+import ru.foodbox.delivery.modules.promotions.application.PromoDiscountPreview
 import ru.foodbox.delivery.modules.promotions.application.PromotionService
 import ru.foodbox.delivery.modules.promotions.application.command.ApplyOrderPromotionsCommand
+import ru.foodbox.delivery.modules.promotions.application.command.CalculatePromoDiscountCommand
 import ru.foodbox.delivery.modules.user.domain.User
 import ru.foodbox.delivery.modules.user.domain.repository.UserRepository
 import java.time.Instant
@@ -597,6 +600,10 @@ class OrderServiceImplTest {
             throw UnsupportedOperationException("Not used in order service tests")
         }
 
+        override fun applyPromoCode(actor: CurrentActor, command: ApplyCartPromoCodeCommand): Cart {
+            throw UnsupportedOperationException("Not used in order service tests")
+        }
+
         override fun changeQuantity(actor: CurrentActor, command: ChangeCartItemQuantityCommand): Cart {
             throw UnsupportedOperationException("Not used in order service tests")
         }
@@ -706,6 +713,10 @@ class OrderServiceImplTest {
     }
 
     private class StubPromotionService : PromotionService {
+        override fun calculatePromoDiscount(command: CalculatePromoDiscountCommand): PromoDiscountPreview {
+            throw UnsupportedOperationException("Not used in order service tests")
+        }
+
         override fun applyOrderPromotions(command: ApplyOrderPromotionsCommand): OrderPricingAdjustment {
             return OrderPricingAdjustment(
                 promoCode = null,

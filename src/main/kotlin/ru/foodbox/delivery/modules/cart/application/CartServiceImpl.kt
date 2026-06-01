@@ -6,6 +6,7 @@ import ru.foodbox.delivery.common.error.NotFoundException
 import ru.foodbox.delivery.common.web.CurrentActor
 import ru.foodbox.delivery.modules.catalog.application.ProductReadService
 import ru.foodbox.delivery.modules.cart.application.command.AddCartItemCommand
+import ru.foodbox.delivery.modules.cart.application.command.ApplyCartPromoCodeCommand
 import ru.foodbox.delivery.modules.cart.application.command.ChangeCartItemQuantityCommand
 import ru.foodbox.delivery.modules.cart.application.command.UpdateCartDeliveryCommand
 import ru.foodbox.delivery.modules.cart.application.policy.CartMergePolicy
@@ -24,6 +25,8 @@ import ru.foodbox.delivery.modules.delivery.domain.DeliveryAddress
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryMethodType
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuote
 import ru.foodbox.delivery.modules.delivery.domain.DeliveryQuoteContext
+import ru.foodbox.delivery.modules.promotions.application.PromotionService
+import ru.foodbox.delivery.modules.promotions.application.command.CalculatePromoDiscountCommand
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -36,10 +39,12 @@ class CartServiceImpl(
     private val cartItemModifierResolver: CartItemModifierResolver,
     private val deliveryService: DeliveryService,
     private val deliveryAddressGeocoder: DeliveryAddressGeocoder,
+    private val promotionService: PromotionService,
 ) : CartService {
 
     override fun getOrCreateActiveCart(actor: CurrentActor): Cart {
-        return refreshExpiredDeliveryDraftIfNeeded(loadOrCreateActiveCart(actor))
+        val cart = refreshExpiredDeliveryDraftIfNeeded(loadOrCreateActiveCart(actor))
+        return refreshPromoDiscountIfNeeded(cart)
     }
 
     @Transactional
@@ -67,6 +72,27 @@ class CartServiceImpl(
             )
         )
         recalculateDeliveryQuoteIfNeeded(cart)
+        recalculatePromoDiscountIfNeeded(cart)
+        return cartRepository.save(cart)
+    }
+
+    @Transactional
+    override fun applyPromoCode(actor: CurrentActor, command: ApplyCartPromoCodeCommand): Cart {
+        val cart = refreshExpiredDeliveryDraftIfNeeded(loadOrCreateActiveCart(actor))
+        val normalizedCode = command.code.trim().uppercase().takeIf { it.isNotBlank() }
+            ?: throw IllegalArgumentException("Promo code must not be blank")
+        val adjustment = promotionService.calculatePromoDiscount(
+            CalculatePromoDiscountCommand(
+                userId = actor.userIdOrNull(),
+                grossTotalMinor = calculateCartGrossTotalMinor(cart),
+                currency = resolveCartCurrency(cart),
+                promoCode = normalizedCode,
+            )
+        )
+        cart.applyPromoCode(
+            code = adjustment.promoCode,
+            discountMinor = adjustment.promoDiscountMinor,
+        )
         return cartRepository.save(cart)
     }
 
@@ -75,6 +101,7 @@ class CartServiceImpl(
         val cart = loadOrCreateActiveCart(actor)
         cart.changeQuantity(command.itemId, command.quantity)
         recalculateDeliveryQuoteIfNeeded(cart)
+        recalculatePromoDiscountIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -83,6 +110,7 @@ class CartServiceImpl(
         val cart = loadOrCreateActiveCart(actor)
         cart.removeItem(itemId)
         recalculateDeliveryQuoteIfNeeded(cart)
+        recalculatePromoDiscountIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -90,6 +118,7 @@ class CartServiceImpl(
     override fun clear(actor: CurrentActor): Cart {
         val cart = loadOrCreateActiveCart(actor)
         cart.clear()
+        recalculatePromoDiscountIfNeeded(cart)
         return cartRepository.save(cart)
     }
 
@@ -133,6 +162,7 @@ class CartServiceImpl(
                 now = now,
             )
         )
+        recalculatePromoDiscountIfNeeded(cart)
 
         return cartRepository.save(cart).deliveryDraft
             ?: throw IllegalStateException("Cart delivery draft was not saved")
@@ -180,6 +210,7 @@ class CartServiceImpl(
                 now = now,
             )
         )
+        recalculatePromoDiscountIfNeeded(cart)
 
         return cartRepository.save(cart).deliveryDraft
             ?: throw IllegalStateException("Cart delivery draft was not saved")
@@ -282,6 +313,14 @@ class CartServiceImpl(
         return cartRepository.save(cart)
     }
 
+    private fun refreshPromoDiscountIfNeeded(cart: Cart): Cart {
+        return if (recalculatePromoDiscountIfNeeded(cart)) {
+            cartRepository.save(cart)
+        } else {
+            cart
+        }
+    }
+
     private fun recalculateDeliveryQuoteIfNeeded(cart: Cart) {
         val draft = cart.deliveryDraft ?: return
         val quote = draft.quote ?: return
@@ -313,6 +352,33 @@ class CartServiceImpl(
                 now = now,
             )
         )
+    }
+
+    private fun recalculatePromoDiscountIfNeeded(cart: Cart): Boolean {
+        val promoCode = cart.promoCode ?: return false
+        val previousCode = cart.promoCode
+        val previousDiscount = cart.promoDiscountMinor
+
+        try {
+            val adjustment = promotionService.calculatePromoDiscount(
+                CalculatePromoDiscountCommand(
+                    userId = cart.owner.userIdOrNull(),
+                    grossTotalMinor = calculateCartGrossTotalMinor(cart),
+                    currency = resolveCartCurrency(cart),
+                    promoCode = promoCode,
+                )
+            )
+            if (adjustment.promoCode != previousCode || adjustment.promoDiscountMinor != previousDiscount) {
+                cart.applyPromoCode(
+                    code = adjustment.promoCode,
+                    discountMinor = adjustment.promoDiscountMinor,
+                )
+            }
+        } catch (_: IllegalArgumentException) {
+            cart.clearPromoCode()
+        }
+
+        return previousCode != cart.promoCode || previousDiscount != cart.promoDiscountMinor
     }
 
     private fun buildDeliveryDraft(
@@ -408,8 +474,29 @@ class CartServiceImpl(
         require(longitude in -180.0..180.0) { "longitude must be between -180 and 180" }
     }
 
+    private fun calculateCartGrossTotalMinor(cart: Cart, now: Instant = Instant.now()): Long {
+        val deliveryFeeMinor = cart.deliveryDraft?.quote
+            ?.takeIf { it.available && !it.isExpired(now) }
+            ?.priceMinor
+            ?: 0L
+        return cart.itemsSubtotalMinor() + deliveryFeeMinor
+    }
+
+    private fun resolveCartCurrency(cart: Cart): String {
+        return cart.deliveryDraft?.quote?.currency ?: DEFAULT_CURRENCY
+    }
+
     private companion object {
         private const val DEFAULT_CURRENCY = "RUB"
         private const val QUOTE_TTL_MINUTES = 15L
     }
+}
+
+private fun CurrentActor.userIdOrNull(): UUID? = (this as? CurrentActor.User)?.userId
+
+private fun CartOwner.userIdOrNull(): UUID? {
+    if (type != CartOwnerType.USER) {
+        return null
+    }
+    return runCatching { UUID.fromString(value) }.getOrNull()
 }

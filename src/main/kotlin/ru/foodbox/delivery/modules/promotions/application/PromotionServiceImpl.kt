@@ -3,9 +3,11 @@ package ru.foodbox.delivery.modules.promotions.application
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.foodbox.delivery.modules.promotions.application.command.ApplyOrderPromotionsCommand
+import ru.foodbox.delivery.modules.promotions.application.command.CalculatePromoDiscountCommand
 import ru.foodbox.delivery.modules.promotions.domain.GiftCertificateTransaction
 import ru.foodbox.delivery.modules.promotions.domain.GiftCertificateTransactionType
 import ru.foodbox.delivery.modules.promotions.domain.PromoCodeDiscountType
+import ru.foodbox.delivery.modules.promotions.domain.PromoCode
 import ru.foodbox.delivery.modules.promotions.domain.PromoCodeRedemption
 import ru.foodbox.delivery.modules.promotions.domain.repository.GiftCertificateRepository
 import ru.foodbox.delivery.modules.promotions.domain.repository.PromoCodeRepository
@@ -18,6 +20,27 @@ class PromotionServiceImpl(
     private val giftCertificateRepository: GiftCertificateRepository,
     private val clock: Clock,
 ) : PromotionService {
+
+    @Transactional(readOnly = true)
+    override fun calculatePromoDiscount(command: CalculatePromoDiscountCommand): PromoDiscountPreview {
+        require(command.grossTotalMinor >= 0) { "grossTotalMinor must be non-negative" }
+        val normalizedPromoCode = normalizeCode(command.promoCode)
+            ?: throw IllegalArgumentException("Promo code is invalid")
+        val now = clock.instant()
+        val promoCode = promoCodeRepository.findByCode(normalizedPromoCode)
+            ?: throw IllegalArgumentException("Promo code is invalid")
+        val promoDiscountMinor = calculatePromoDiscountMinor(
+            promoCode = promoCode,
+            grossTotalMinor = command.grossTotalMinor,
+            currency = command.currency,
+            userId = command.userId,
+            now = now,
+        )
+        return PromoDiscountPreview(
+            promoCode = promoCode.code,
+            promoDiscountMinor = promoDiscountMinor,
+        )
+    }
 
     @Transactional
     override fun applyOrderPromotions(command: ApplyOrderPromotionsCommand): OrderPricingAdjustment {
@@ -33,22 +56,13 @@ class PromotionServiceImpl(
             val promoCode = promoCodeRepository.findByCodeForUpdate(normalizedPromoCode)
                 ?: throw IllegalArgumentException("Promo code is invalid")
 
-            validatePromoDiscountConfig(promoCode.discountType, promoCode.discountValue)
-            promoCode.validateAvailability(
-                orderAmountMinor = command.grossTotalMinor,
-                orderCurrency = command.currency,
+            promoDiscountMinor = calculatePromoDiscountMinor(
+                promoCode = promoCode,
+                grossTotalMinor = command.grossTotalMinor,
+                currency = command.currency,
+                userId = command.userId,
                 now = now,
             )
-
-            promoCode.usageLimitPerUser?.let { perUserLimit ->
-                val userId = command.userId
-                    ?: throw IllegalArgumentException("Promo code requires authenticated user")
-                val userRedemptions = promoCodeRepository.countUserRedemptions(promoCode.id, userId)
-                require(userRedemptions < perUserLimit) { "Promo code per-user usage limit reached" }
-            }
-
-            promoDiscountMinor = promoCode.calculateDiscount(command.grossTotalMinor)
-            require(promoDiscountMinor > 0L) { "Promo code does not provide discount for current order" }
 
             promoCode.markRedeemed(now)
             promoCodeRepository.save(promoCode)
@@ -114,6 +128,32 @@ class PromotionServiceImpl(
 
     private fun normalizeCode(rawCode: String?): String? {
         return rawCode?.trim()?.uppercase()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun calculatePromoDiscountMinor(
+        promoCode: PromoCode,
+        grossTotalMinor: Long,
+        currency: String,
+        userId: UUID?,
+        now: java.time.Instant,
+    ): Long {
+        validatePromoDiscountConfig(promoCode.discountType, promoCode.discountValue)
+        promoCode.validateAvailability(
+            orderAmountMinor = grossTotalMinor,
+            orderCurrency = currency,
+            now = now,
+        )
+
+        promoCode.usageLimitPerUser?.let { perUserLimit ->
+            val requiredUserId = userId
+                ?: throw IllegalArgumentException("Promo code requires authenticated user")
+            val userRedemptions = promoCodeRepository.countUserRedemptions(promoCode.id, requiredUserId)
+            require(userRedemptions < perUserLimit) { "Promo code per-user usage limit reached" }
+        }
+
+        val promoDiscountMinor = promoCode.calculateDiscount(grossTotalMinor)
+        require(promoDiscountMinor > 0L) { "Promo code does not provide discount for current order" }
+        return promoDiscountMinor
     }
 
     private fun validatePromoDiscountConfig(
