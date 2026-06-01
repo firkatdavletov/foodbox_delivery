@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -15,14 +16,25 @@ import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductDetailsResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.AdminProductVariantResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductOptionGroupResponse
 import ru.foodbox.delivery.modules.catalog.api.dto.ProductOptionValueResponse
+import ru.foodbox.delivery.modules.catalog.api.dto.ReplaceProductOptionGroupRequest
+import ru.foodbox.delivery.modules.catalog.api.dto.ReplaceProductOptionValueRequest
+import ru.foodbox.delivery.modules.catalog.api.dto.ReplaceProductVariantConfigurationRequest
+import ru.foodbox.delivery.modules.catalog.api.dto.ReplaceProductVariantRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductOptionGroupRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductOptionValueRequest
+import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductVariantOptionRequest
 import ru.foodbox.delivery.modules.catalog.api.dto.UpsertProductVariantRequest
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionGroupCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductOptionValueCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantOptionCommand
+import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVariantsCommand
 import ru.foodbox.delivery.modules.catalog.application.CatalogProductVariantsService
 import ru.foodbox.delivery.modules.catalog.application.CatalogService
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionGroupCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionValueCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductVariantCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductVariantOptionCommand
 import java.util.UUID
 
 @RestController
@@ -112,8 +124,26 @@ class CatalogAdminProductsController(
                 sortOrder = request.sortOrder,
                 isActive = request.isActive,
                 optionValueIds = request.optionValueIds,
+                options = request.options?.map(UpsertProductVariantOptionRequest::toCommand),
             )
         ).toAdminResponse()
+    }
+
+    @PutMapping("/{productId}/variant-configuration")
+    fun replaceProductVariantConfiguration(
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: ReplaceProductVariantConfigurationRequest,
+    ): AdminProductDetailsResponse {
+        productVariantsService.replaceAll(
+            productId = productId,
+            command = ReplaceProductVariantsCommand(
+                optionGroups = request.optionGroups.map(ReplaceProductOptionGroupRequest::toCommand),
+                variants = request.variants.map(ReplaceProductVariantRequest::toCommand),
+            ),
+        )
+
+        return catalogService.getAdminProductDetails(productId)?.toAdminDetailsResponse()
+            ?: throw NotFoundException("Product not found")
     }
 
     @DeleteMapping("/{productId}/variants/{variantId}/images/{imageId}")
@@ -125,4 +155,49 @@ class CatalogAdminProductsController(
     ) {
         productVariantsService.deleteVariantImage(productId, variantId, imageId)
     }
+}
+
+private fun ReplaceProductOptionGroupRequest.toCommand(): ReplaceProductOptionGroupCommand {
+    return ReplaceProductOptionGroupCommand(
+        code = code,
+        title = title,
+        sortOrder = sortOrder,
+        values = values.map(ReplaceProductOptionValueRequest::toCommand),
+    )
+}
+
+private fun ReplaceProductOptionValueRequest.toCommand(): ReplaceProductOptionValueCommand {
+    return ReplaceProductOptionValueCommand(
+        code = code,
+        title = title,
+        sortOrder = sortOrder,
+    )
+}
+
+private fun ReplaceProductVariantRequest.toCommand(): ReplaceProductVariantCommand {
+    return ReplaceProductVariantCommand(
+        externalId = externalId,
+        sku = sku,
+        title = title,
+        priceMinor = priceMinor,
+        oldPriceMinor = oldPriceMinor,
+        imageIds = imageIds,
+        sortOrder = sortOrder,
+        isActive = isActive,
+        options = options.map(UpsertProductVariantOptionRequest::toReplaceCommand),
+    )
+}
+
+private fun UpsertProductVariantOptionRequest.toCommand(): UpsertProductVariantOptionCommand {
+    return UpsertProductVariantOptionCommand(
+        optionGroupCode = optionGroupCode,
+        optionValueCode = optionValueCode,
+    )
+}
+
+private fun UpsertProductVariantOptionRequest.toReplaceCommand(): ReplaceProductVariantOptionCommand {
+    return ReplaceProductVariantOptionCommand(
+        optionGroupCode = optionGroupCode,
+        optionValueCode = optionValueCode,
+    )
 }

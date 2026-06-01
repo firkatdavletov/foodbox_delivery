@@ -11,6 +11,7 @@ import ru.foodbox.delivery.modules.catalog.application.command.ReplaceProductVar
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionGroupCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductOptionValueCommand
 import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductVariantCommand
+import ru.foodbox.delivery.modules.catalog.application.command.UpsertProductVariantOptionCommand
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionGroup
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionGroupDetails
 import ru.foodbox.delivery.modules.catalog.domain.CatalogProductOptionValue
@@ -237,6 +238,7 @@ class CatalogProductVariantsService(
             optionGroups = optionGroups,
             optionValues = optionValues,
             optionValueIds = normalizedVariant.optionValueIds,
+            options = normalizedVariant.options,
         )
 
         val variantId = existingVariant?.id ?: UUID.randomUUID()
@@ -321,6 +323,21 @@ class CatalogProductVariantsService(
                 now = now,
             )
         }
+    }
+
+    @Transactional
+    fun replaceAll(
+        productId: UUID,
+        command: ReplaceProductVariantsCommand,
+    ) {
+        productRepository.findById(productId)
+            ?: throw NotFoundException("Product not found")
+
+        replaceAll(
+            productId = productId,
+            command = command,
+            now = Instant.now(),
+        )
     }
 
     @Transactional
@@ -445,6 +462,7 @@ class CatalogProductVariantsService(
             sortOrder = command.sortOrder,
             isActive = command.isActive,
             optionValueIds = command.optionValueIds,
+            options = command.options,
         )
     }
 
@@ -453,18 +471,46 @@ class CatalogProductVariantsService(
         optionGroups: List<CatalogProductOptionGroup>,
         optionValues: List<CatalogProductOptionValue>,
         optionValueIds: List<UUID>,
+        options: List<UpsertProductVariantOptionCommand>?,
     ): List<CatalogProductOptionValue> {
+        if (options != null && optionValueIds.isNotEmpty()) {
+            throw IllegalArgumentException("Variant '$sku' must use either optionValueIds or options, not both")
+        }
+
         if (optionGroups.isEmpty()) {
-            if (optionValueIds.isNotEmpty()) {
+            if (optionValueIds.isNotEmpty() || options?.isNotEmpty() == true) {
                 throw IllegalArgumentException("Variant '$sku' has options, but option groups are empty")
             }
             return emptyList()
         }
 
         val optionValuesById = optionValues.associateBy { it.id }
-        val selectedValues = optionValueIds.map { optionValueId ->
-            optionValuesById[optionValueId]
-                ?: throw IllegalArgumentException("Variant '$sku' references unknown option value id '$optionValueId'")
+        val selectedValues = if (options == null) {
+            optionValueIds.map { optionValueId ->
+                optionValuesById[optionValueId]
+                    ?: throw IllegalArgumentException("Variant '$sku' references unknown option value id '$optionValueId'")
+            }
+        } else {
+            val optionGroupByCode = optionGroups.associateBy { it.code }
+            val optionValuesByGroupAndCode = optionValues.associateBy { optionValue ->
+                val group = optionGroups.firstOrNull { it.id == optionValue.optionGroupId }
+                    ?: throw IllegalStateException("Option value references unknown option group")
+                group.code to optionValue.code
+            }
+
+            options.map { option ->
+                val optionGroupCode = option.optionGroupCode.trim()
+                val optionValueCode = option.optionValueCode.trim()
+                if (optionGroupCode !in optionGroupByCode) {
+                    throw IllegalArgumentException(
+                        "Variant '$sku' references unknown option group code '$optionGroupCode'",
+                    )
+                }
+                optionValuesByGroupAndCode[optionGroupCode to optionValueCode]
+                    ?: throw IllegalArgumentException(
+                        "Variant '$sku' references unknown option value '$optionValueCode' in group '$optionGroupCode'",
+                    )
+            }
         }
 
         val duplicateGroupCodes = selectedValues.groupBy { it.optionGroupId }
@@ -755,6 +801,7 @@ class CatalogProductVariantsService(
         val sortOrder: Int,
         val isActive: Boolean,
         val optionValueIds: List<UUID>,
+        val options: List<UpsertProductVariantOptionCommand>?,
     )
 }
 

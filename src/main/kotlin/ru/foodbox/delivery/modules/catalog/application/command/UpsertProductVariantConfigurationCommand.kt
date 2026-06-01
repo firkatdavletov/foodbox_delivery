@@ -31,4 +31,10 @@ data class UpsertProductVariantCommand(
     val sortOrder: Int = 0,
     val isActive: Boolean = true,
     val optionValueIds: List<UUID> = emptyList(),
+    val options: List<UpsertProductVariantOptionCommand>? = null,
+)
+
+data class UpsertProductVariantOptionCommand(
+    val optionGroupCode: String,
+    val optionValueCode: String,
 )

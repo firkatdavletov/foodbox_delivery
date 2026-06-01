@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.foodbox.delivery.modules.catalog.application.CatalogService
 import ru.foodbox.delivery.modules.catalog.domain.CatalogCategory
@@ -1016,6 +1017,98 @@ class CatalogVariantsIntegrationTest {
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
+    fun `replace variant configuration creates option groups and variants atomically`() {
+        val categoryId = createCategory(externalId = "cat-replace-configuration", slug = "replace-configuration")
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Куртка",
+                "priceMinor" to 9000,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+
+        val details = putProductVariantConfigurationAsAdmin(
+            productId = productId,
+            request = mapOf(
+                "optionGroups" to listOf(
+                    mapOf(
+                        "code" to "size",
+                        "title" to "Размер",
+                        "values" to listOf(
+                            mapOf("code" to "m", "title" to "M"),
+                            mapOf("code" to "l", "title" to "L"),
+                        ),
+                    )
+                ),
+                "variants" to listOf(
+                    mapOf(
+                        "externalId" to "jacket-m",
+                        "sku" to "JACKET-M",
+                        "title" to "Размер M",
+                        "priceMinor" to 9200,
+                        "options" to listOf(
+                            mapOf("optionGroupCode" to "size", "optionValueCode" to "m"),
+                        ),
+                    )
+                ),
+            ),
+        )
+
+        assertEquals(true, details["isConfigured"].asBoolean())
+        assertEquals(1, details["optionGroups"].size())
+        assertEquals(2, details["optionGroups"][0]["values"].size())
+        assertEquals(1, details["variants"].size())
+        assertEquals("JACKET-M", details["variants"][0]["sku"].asText())
+        assertEquals(1, details["variants"][0]["optionValueIds"].size())
+        assertEquals(details["variants"][0]["id"].asText(), details["defaultVariantId"].asText())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `variant endpoint accepts option codes`() {
+        val categoryId = createCategory(externalId = "cat-variant-option-codes", slug = "variant-option-codes")
+        val created = upsertProductAsAdmin(
+            mapOf(
+                "categoryId" to categoryId,
+                "title" to "Толстовка",
+                "priceMinor" to 5000,
+                "unit" to "PIECE",
+                "countStep" to 1,
+                "isActive" to true,
+            )
+        )
+        val productId = UUID.fromString(created["id"].asText())
+        val optionGroup = postProductOptionGroupAsAdmin(
+            productId,
+            mapOf("code" to "color", "title" to "Цвет"),
+        )
+        postProductOptionValueAsAdmin(
+            productId = productId,
+            optionGroupId = UUID.fromString(optionGroup["id"].asText()),
+            request = mapOf("code" to "green", "title" to "Зеленый"),
+        )
+
+        val variant = postProductVariantAsAdmin(
+            productId,
+            mapOf(
+                "sku" to "HOODIE-GREEN",
+                "title" to "Зеленый",
+                "options" to listOf(
+                    mapOf("optionGroupCode" to "color", "optionValueCode" to "green"),
+                ),
+            ),
+        )
+
+        assertEquals("HOODIE-GREEN", variant["sku"].asText())
+        assertEquals(1, variant["optionValueIds"].size())
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
     fun `admin product details endpoint returns inactive product`() {
         val categoryId = createCategory(externalId = "cat-admin-details", slug = "admin-details")
 
@@ -1769,6 +1862,16 @@ class CatalogVariantsIntegrationTest {
         return response.second
     }
 
+    private fun putProductVariantConfigurationAsAdmin(productId: UUID, request: Map<String, Any?>): JsonNode {
+        val response = putJson(
+            path = "/api/v1/admin/products/{productId}/variant-configuration",
+            body = request,
+            uriVariables = arrayOf(productId),
+        )
+        assertEquals(200, response.first)
+        return objectMapper.readTree(response.second)
+    }
+
     private fun postJson(
         path: String,
         body: Any,
@@ -1776,6 +1879,20 @@ class CatalogVariantsIntegrationTest {
     ): Pair<Int, String> {
         val response = mockMvc.perform(
             post(path, *uriVariables)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(body))
+        ).andReturn().response
+
+        return response.status to response.contentAsString
+    }
+
+    private fun putJson(
+        path: String,
+        body: Any,
+        uriVariables: Array<out Any> = emptyArray(),
+    ): Pair<Int, String> {
+        val response = mockMvc.perform(
+            put(path, *uriVariables)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(body))
         ).andReturn().response
